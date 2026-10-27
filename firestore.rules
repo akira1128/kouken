@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 暗証番号を入れた携帯（members に登録された人）だけが読み書きできる
+    function member() {
+      return request.auth != null && exists(/databases/$(database)/documents/members/$(request.auth.uid));
+    }
+    // 暗証番号の本体：だれも読めない（ルールの中でだけ比べる）
+    match /secret/{d} { allow read, write: if false; }
+    // 番号が合っていたら、その携帯を登録できる
+    match /members/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.pin == get(/databases/$(database)/documents/secret/pin).data.pin;
+      allow update, delete: if false;
+    }
+    match /items/{id} { allow read, write: if member(); }
+    match /sites/{id} { allow read, write: if member(); }
+    // 履歴は足すだけ（直したり消したりはできない）
+    match /logs/{id} { allow read, create: if member(); allow update, delete: if false; }
+  }
+}

@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>コウケン工場在庫</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Dela+Gothic+One&display=swap">
+<style>
+/* 携帯1画面のアプリ：上にだれが入力するか、まん中に材料の一覧、下にタブ。亜鉛めっき鋼板の灰青＋作業用の青 */
+:root{
+  --bg:#eef1f3; --surface:#ffffff; --line:#d5dbe0; --ink:#1b2630; --muted:#5d6b77;
+  --accent:#1d5fa6; --accent-ink:#ffffff; --accent-soft:#dde9f6;
+  --low:#c0362c; --low-soft:#fbe5e2; --in:#1f7a46; --in-soft:#def1e5; --out:#9a5b00; --out-soft:#fbeed8;
+  --shadow:0 1px 2px rgba(20,35,50,.08);
+  --f-body:"BIZ UDPGothic","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --f-disp:"Dela Gothic One","BIZ UDPGothic","Hiragino Sans",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141a20; --surface:#1d252d; --line:#323d47; --ink:#e7edf2; --muted:#9aa8b4;
+  --accent:#6aa8ec; --accent-ink:#0d1a28; --accent-soft:#1f3248;
+  --low:#ff7d70; --low-soft:#3d2120; --in:#62c98d; --in-soft:#1b3326; --out:#f0b45a; --out-soft:#3a2c17;
+  --shadow:none; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#141a20; --surface:#1d252d; --line:#323d47; --ink:#e7edf2; --muted:#9aa8b4;
+  --accent:#6aa8ec; --accent-ink:#0d1a28; --accent-soft:#1f3248;
+  --low:#ff7d70; --low-soft:#3d2120; --in:#62c98d; --in-soft:#1b3326; --out:#f0b45a; --out-soft:#3a2c17;
+  --shadow:none; color-scheme:dark }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 calc(84px + env(safe-area-inset-bottom,0px));font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px 10px;border-bottom:1px solid var(--line)}
+.brand{font-family:var(--f-disp);font-size:20px;letter-spacing:.02em;line-height:1.1}
+.brand small{display:block;font-family:var(--f-body);font-size:11px;color:var(--muted);letter-spacing:.12em;font-weight:700}
+.who{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px;max-width:55%}
+.who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who b{color:var(--muted);font-weight:400;font-size:12px;flex:none}
+.banner{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--out-soft);color:var(--ink);font-size:14px}
+main{display:grid;gap:16px;padding-top:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.alert{padding:12px 14px;display:grid;gap:8px}
+.alert h2{margin:0;font-size:15px;display:flex;align-items:center;gap:8px}
+.alert.has{border-color:var(--low);background:var(--low-soft)}
+.alert.has h2{color:var(--low)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--in);flex:none}
+.alert.has .dot{background:var(--low)}
+.lowlist{display:flex;flex-wrap:wrap;gap:6px}
+.lowlist button{border:1px solid var(--low);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 10px;font-size:13px}
+.tools{display:grid;gap:10px}
+.search{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.group h3{margin:0;padding:10px 14px 6px;font-size:12px;letter-spacing:.12em;color:var(--muted)}
+.row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:12px 14px;min-height:60px}
+.group .row:first-of-type{border-top:0}
+.row .nm{min-width:0;font-weight:700;overflow-wrap:anywhere}
+.row .sub{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.qty{font-size:22px;font-weight:700;text-align:right;white-space:nowrap}
+.qty small{font-size:13px;font-weight:400;color:var(--muted);margin-left:2px}
+.row.low .qty{color:var(--low)}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--low);color:var(--surface);margin-left:6px;vertical-align:2px}
+.empty{padding:24px 16px;text-align:center;color:var(--muted);display:grid;gap:10px;justify-items:center}
+.empty strong{color:var(--ink);font-size:16px}
+.btn{border:0;border-radius:10px;padding:14px 16px;font-weight:700;font-size:17px;background:var(--accent);color:var(--accent-ink);width:100%}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);font-weight:400;font-size:15px;padding:10px 14px}
+.btn.danger{background:var(--low);color:var(--surface)}
+.btn:disabled{opacity:.45}
+.log{list-style:none;margin:0;padding:0}
+.log li{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:baseline;padding:11px 14px;border-top:1px solid var(--line)}
+.log li:first-child{border-top:0}
+.tag{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.tag.in{background:var(--in-soft);color:var(--in)}
+.tag.out{background:var(--out-soft);color:var(--out)}
+.tag.set,.tag.new,.tag.del{background:var(--accent-soft);color:var(--accent)}
+.log .what{min-width:0;overflow-wrap:anywhere;font-weight:700;font-size:15px}
+.log .n{font-weight:700;white-space:nowrap}
+.log .meta{grid-column:2/4;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+form.f{padding:16px;display:grid;gap:14px}
+label.fl{display:grid;gap:6px;font-size:14px;font-weight:700}
+label.fl em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
+.inp{width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hint{font-size:13px;color:var(--muted);margin:0}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);
+  padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);
+  display:grid;grid-template-columns:repeat(3,1fr)}
+nav.tabs button{border:0;background:none;padding:10px 4px 12px;font-size:14px;color:var(--muted);display:grid;justify-items:center;gap:3px}
+nav.tabs button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2}
+nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
+.scrim{position:fixed;inset:0;z-index:10;background:rgba(10,18,26,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:640px;max-height:92%;overflow-y:auto;border-radius:16px 16px 0 0;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:grid;gap:14px}
+.sheet h2{margin:0;font-size:19px;overflow-wrap:anywhere;text-wrap:balance}
+.now{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:12px 14px;border-radius:10px;background:var(--bg)}
+.now b{font-size:30px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg button{border:2px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 4px;font-weight:700;font-size:15px}
+.seg button[data-k="out"][aria-pressed="true"]{border-color:var(--out);background:var(--out-soft);color:var(--out)}
+.seg button[data-k="in"][aria-pressed="true"]{border-color:var(--in);background:var(--in-soft);color:var(--in)}
+.seg button[data-k="set"][aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.stepper{display:grid;grid-template-columns:64px 1fr 64px;gap:8px}
+.stepper button{border:1px solid var(--line);background:var(--bg);border-radius:10px;font-size:28px;font-weight:700}
+.stepper input{text-align:center;font-size:30px;font-weight:700;padding:8px}
+.quick{display:flex;gap:6px;flex-wrap:wrap}
+.quick button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 14px;font-size:15px}
+.after{font-size:14px;color:var(--muted);margin:0}
+.after b{color:var(--ink)}
+.err{color:var(--low);font-weight:700;font-size:14px;margin:0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:20;background:var(--ink);color:var(--bg);
+  padding:10px 18px;border-radius:999px;font-weight:700;font-size:15px;max-width:calc(100% - 32px);text-align:center}
+.names{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.names button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:14px 8px;font-size:16px;font-weight:700}
+.names button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.names button small.full{display:block;font-size:11px;font-weight:400;color:var(--muted);overflow-wrap:anywhere}
+.log .site{display:inline-block;font-size:12px;font-weight:700;color:var(--out);margin-right:6px}
+.logtools{display:grid;gap:6px}
+.rowbtns{display:flex;gap:8px;flex-wrap:wrap}
+.rowbtns .btn{width:auto;flex:1}
+details.edit summary{cursor:pointer;color:var(--muted);font-size:14px;padding:4px 0}
+details.edit form{padding:12px 0 0}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">工場在庫<small>株式会社コウケン</small></div>
+    <button class="who" id="whoBtn" type="button" aria-label="入力する人を変える"><b>入力</b><span id="whoName">名前をえらぶ</span></button>
+  </header>
+  <p class="banner" id="banner" hidden></p>
+
+  <main id="vStock">
+    <section class="panel alert" id="alert" aria-live="polite">
+      <h2><span class="dot"></span><span id="alertTitle">読み込み中…</span></h2>
+      <div class="lowlist" id="lowList"></div>
+    </section>
+    <div class="tools">
+      <input class="search" id="q" type="search" placeholder="さがす（例：25A、ガルバ、テープ）" aria-label="材料をさがす">
+      <div class="chips" id="cats" role="toolbar" aria-label="種類でしぼる"></div>
+    </div>
+    <div id="list" class="tools"></div>
+  </main>
+
+  <main id="vLog" hidden>
+    <label class="fl logtools">現場でしぼる
+      <select class="inp" id="logSite"></select>
+    </label>
+    <section class="panel">
+      <ul class="log" id="log"></ul>
+    </section>
+    <p class="hint">新しい順に300件まで表示します。</p>
+  </main>
+
+  <main id="vAdd" hidden>
+    <section class="panel">
+      <form class="f" id="addForm" autocomplete="off">
+        <label class="fl">材料の名前
+          <input class="inp" id="aName" required maxlength="60" placeholder="例：スチロール保温筒 25A×20t">
+        </label>
+        <div class="two">
+          <label class="fl">種類
+            <select class="inp" id="aCat"></select>
+          </label>
+          <label class="fl">数え方
+            <select class="inp" id="aUnit"></select>
+          </label>
+        </div>
+        <div class="two">
+          <label class="fl">今ある数
+            <input class="inp" id="aQty" type="number" inputmode="decimal" min="0" step="any" value="0">
+          </label>
+          <label class="fl">少ないと知らせる数 <em>この数以下で赤くなる</em>
+            <input class="inp" id="aMin" type="number" inputmode="decimal" min="0" step="any" value="0">
+          </label>
+        </div>
+        <p class="err" id="aErr" hidden></p>
+        <button class="btn" type="submit" id="aBtn">材料を登録する</button>
+        <p class="hint">同じ材料でもサイズや厚みがちがうものは、別々に登録してください。</p>
+      </form>
+    </section>
+  </main>
+</div>
+
+<nav class="tabs" aria-label="画面の切りかえ">
+  <button type="button" data-v="vStock" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3 9l9-5 9 5v11H3z"/><path d="M8 20v-6h8v6"/></svg>在庫</button>
+  <button type="button" data-v="vLog"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>履歴</button>
+  <button type="button" data-v="vAdd"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>材料を追加</button>
+</nav>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,getDocs,setDoc,onSnapshot,query,orderBy,limit,runTransaction,writeBatch} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {FIREBASE_CONFIG} from "./firebase-config.js";
+import {SEED_SITES,SEED_ITEMS} from "./seed.js";
+(function(){
+/* 社員：[正式名, 呼び名]。正式名は原田さんの勤怠台帳と同じ（後で統合するとき名前でつなぐ）。記録には正式名を残す */
+const STAFF=[["西崎剣","西崎"],["原田弓子","原田"],["福島正純","福島"],["田中嗣音","嗣穏"],["NGUYEN VAN HIEU","ヒエウ"],["DANG BINH DUONG","ズオン"],["NGUYEN NGOC LONG","ロン"]];
+const NICK=Object.fromEntries(STAFF);
+const nick=n=>NICK[n]||n||"";
+const FACTORY="工場（加工）", OTHER="その他（メモに書く）";
+const CATS=["保温筒","ロール","ジャケット・エルボ","コイル","テープ・副資材","その他"];
+const UNITS=["本","個","巻","枚","ケース","箱","m","kg"];
+const KIND={in:"入庫",out:"持ち出し",set:"数を直す",new:"登録",del:"削除"};
+const tabId="t"+Math.random().toString(36).slice(2,10);
+
+const $=id=>document.getElementById(id);
+function h(tag,attrs,...kids){const e=document.createElement(tag);
+  if(attrs)for(const k in attrs){const v=attrs[k];if(v==null||v===false)continue;
+    if(k==="class")e.className=v;else if(k==="text")e.textContent=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?"":v);}
+  for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(String(c)));}
+  return e;}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null}}
+const fmtN=n=>{n=Number(n)||0;return Number.isInteger(n)?String(n):String(Math.round(n*100)/100)};
+const fmtT=t=>{const d=new Date(t);const p=x=>String(x).padStart(2,"0");return (d.getMonth()+1)+"/"+d.getDate()+" "+p(d.getHours())+":"+p(d.getMinutes())};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let toastT;function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600);}
+
+let db=null, items=[], logs=[], sites=[], loaded=false, readOnly=false;
+let who=store("kouken-who")||"";
+if(who&&!NICK[who])who="";              // 前の版の名前の書き方だったら選び直してもらう
+let logSite="すべて";
+let cat=store("kouken-cat")||"すべて";
+if(!["すべて",...CATS].includes(cat))cat="すべて";
+
+function setBanner(msg){$("banner").textContent=msg||"";$("banner").hidden=!msg;}
+const isLow=it=>Number(it.min)>0&&Number(it.qty)<=Number(it.min);
+
+/* ---------- だれが入力するか ---------- */
+function renderWho(){$("whoName").textContent=who?nick(who):"名前をえらぶ";}
+function pickWho(then){
+  const box=h("div",{class:"names"},STAFF.map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===who),onclick:()=>{who=n;store("kouken-who",n);renderWho();close();then&&then();}},k,h("small",{class:"full",text:n}))));
+  const close=openSheet(h("h2",{text:"あなたはだれですか？"}),h("p",{class:"hint",text:"えらんだ名前で入庫・持ち出しを記録します。この携帯に覚えておきます。"}),box);
+}
+$("whoBtn").addEventListener("click",()=>pickWho());
+
+/* ---------- 下から出るパネル ---------- */
+function openSheet(...kids){
+  const s=$("scrim");s.replaceChildren(h("div",{class:"sheet",role:"dialog","aria-modal":"true"},kids));s.hidden=false;
+  const close=()=>{s.hidden=true;s.replaceChildren();};
+  s.onclick=e=>{if(e.target===s)close();};
+  const f=s.querySelector("button,input");f&&f.focus({preventScroll:true});
+  return close;
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scrim").hidden){$("scrim").hidden=true;$("scrim").replaceChildren();}});
+
+/* ---------- タブ ---------- */
+let view=store("kouken-view")||"vStock";
+function show(v){view=v;store("kouken-view",v);
+  for(const id of ["vStock","vLog","vAdd"])$(id).hidden=id!==v;
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===v?"page":"false"));
+  window.scrollTo(0,0);}
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>show(b.dataset.v)));
+
+/* ---------- 在庫一覧 ---------- */
+function renderCats(){
+  $("cats").replaceChildren(...["すべて",...CATS].map(c=>h("button",{type:"button","aria-pressed":String(c===cat),onclick:()=>{cat=c;store("kouken-cat",c);renderCats();renderList();}},c)));
+}
+$("q").addEventListener("input",()=>renderList());
+
+function renderAlert(){
+  const low=items.filter(isLow);
+  const a=$("alert");a.classList.toggle("has",low.length>0);
+  if(!loaded){$("alertTitle").textContent="読み込み中…";$("lowList").replaceChildren();return;}
+  $("alertTitle").textContent=low.length?("少ないもの "+low.length+"件"):(items.length?"少ないものはありません":"まだ材料がありません");
+  $("lowList").replaceChildren(...low.map(it=>h("button",{type:"button",onclick:()=>openItem(it.id)},it.name+"  "+fmtN(it.qty)+(it.unit||""))));
+}
+function renderList(){
+  renderAlert();
+  const q=$("q").value.trim().toLowerCase();
+  const list=$("list");
+  if(!loaded){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"在庫を読み込んでいます"}),h("span",{text:"はじめて開いたときは、会社の暗証番号を入れてください。"})));return;}
+  if(!items.length){
+    list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"材料はまだ登録されていません"}),
+      h("span",{text:"下の「材料を追加」から、保温筒・ロール・コイルなどを登録してください。"}),
+      readOnly?null:h("button",{class:"btn",type:"button",style:"max-width:260px",onclick:()=>show("vAdd")},"材料を追加する")));
+    return;}
+  const shown=items.filter(it=>(cat==="すべて"||it.cat===cat)&&(!q||(it.name+" "+it.cat).toLowerCase().includes(q)));
+  if(!shown.length){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"見つかりません"}),h("span",{text:"ことばや種類を変えてさがしてください。"})));return;}
+  const groups=CATS.map(c=>[c,shown.filter(it=>(CATS.includes(it.cat)?it.cat:"その他")===c)]).filter(g=>g[1].length);
+  list.replaceChildren(...groups.map(([c,arr])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
+    arr.map(it=>h("button",{type:"button",class:"row"+(isLow(it)?" low":""),onclick:()=>openItem(it.id)},
+      h("span",{class:"nm"},it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
+        h("span",{class:"sub",text:(Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
+      h("span",{class:"qty"},fmtN(it.qty),h("small",{text:it.unit||""})))))));
+}
+
+/* ---------- 1つの材料：入庫・持ち出し ---------- */
+function openItem(id){
+  const it=items.find(x=>x.id===id);if(!it)return;
+  if(!who){pickWho(()=>openItem(id));return;}
+  let kind="out";
+  const num=h("input",{class:"inp",id:"mvNum",type:"number",inputmode:"decimal",min:"0",step:"any",value:"1","aria-label":"数"});
+  const memo=h("input",{class:"inp",id:"mvMemo",maxlength:"80",placeholder:"なくてもOK"});
+  /* 持ち出し先の現場（現場一覧の正式名）。前に選んだ現場を覚えておく */
+  const lastSite=store("kouken-site")||"";
+  const siteSel=h("select",{class:"inp",id:"mvSite"},
+    h("option",{value:""},"えらんでください"),
+    h("option",{value:FACTORY,selected:lastSite===FACTORY},FACTORY),
+    sites.map(s=>h("option",{value:s.name,selected:lastSite===s.name},s.name)),
+    h("option",{value:OTHER,selected:lastSite===OTHER},OTHER));
+  const siteBox=h("label",{class:"fl"},"どの現場へ ",h("em",{text:"持ち出しのときは必ずえらぶ"}),siteSel);
+  siteSel.addEventListener("change",()=>upd());
+  const after=h("p",{class:"after"});const err=h("p",{class:"err",hidden:true});
+  const go=h("button",{class:"btn",type:"button"});
+  const nowQty=()=>Number((items.find(x=>x.id===id)||it).qty)||0;
+  const seg=h("div",{class:"seg",role:"group","aria-label":"何をするか"},
+    [["out","持ち出し"],["in","入庫"],["set","数を直す"]].map(([k,l])=>h("button",{type:"button","data-k":k,"aria-pressed":String(k===kind),onclick:()=>{const was=kind;kind=k;if(k==="set")num.value=fmtN(nowQty());else if(was==="set"||num.value==="")num.value="1";upd();}},l)));
+  function upd(){
+    seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===kind)));
+    const n=Number(num.value);const cur=nowQty();
+    const next=kind==="in"?cur+n:kind==="out"?cur-n:n;
+    after.replaceChildren("このあと ",h("b",{text:isFinite(next)?fmtN(next)+(it.unit||""):"―"}));
+    go.textContent=kind==="in"?"入庫する":kind==="out"?"持ち出す":"この数に直す";
+    err.hidden=true;
+    siteBox.hidden=kind!=="out";
+    go.disabled=readOnly||!(n>=0)||num.value===""||(kind!=="set"&&n===0)||(kind==="out"&&!siteSel.value);
+  }
+  num.addEventListener("input",upd);
+  const step=d=>{const v=Math.max(0,(Number(num.value)||0)+d);num.value=fmtN(v);upd();};
+  go.addEventListener("click",async()=>{
+    const n=Number(num.value);
+    if(kind==="out"&&n>nowQty()){err.textContent="在庫より多く持ち出せません（いま "+fmtN(nowQty())+(it.unit||"")+"）。数がちがうときは「数を直す」で直してください。";err.hidden=false;return;}
+    if(kind==="out"&&siteSel.value===OTHER&&!memo.value.trim()){err.textContent="「その他」のときは、メモに行き先を書いてください。";err.hidden=false;return;}
+    go.disabled=true;go.textContent="記録しています…";
+    const site=kind==="out"?siteSel.value:"";
+    if(site)store("kouken-site",site);
+    try{const r=await moveStock(id,kind,n,memo.value.trim(),site);close();
+      toast((kind==="in"?"入庫しました":kind==="out"?"持ち出しを記録しました":"数を直しました")+"（残り "+fmtN(r)+(it.unit||"")+"）");}
+    catch(e){err.textContent=errMsg(e);err.hidden=false;upd();}
+  });
+
+  /* 名前・数え方・目安の変更、削除 */
+  const eName=h("input",{class:"inp",id:"eName",maxlength:"60",value:it.name});
+  const eCat=h("select",{class:"inp",id:"eCat"},CATS.map(c=>h("option",{value:c,selected:c===it.cat},c)));
+  const eUnit=h("select",{class:"inp",id:"eUnit"},unitOpts(it.unit));
+  const eMin=h("input",{class:"inp",id:"eMin",type:"number",inputmode:"decimal",min:"0",step:"any",value:fmtN(it.min)});
+  const eErr=h("p",{class:"err",hidden:true});
+  const delZone=h("div",{class:"rowbtns"});
+  function delAsk(){delZone.replaceChildren(h("button",{class:"btn ghost",type:"button",onclick:()=>delAsk0()},"削除する"));}
+  function delAsk0(){delZone.replaceChildren(
+    h("button",{class:"btn danger",type:"button",onclick:async e=>{e.target.disabled=true;try{await removeItem(id);close();toast("削除しました");}catch(x){eErr.textContent=errMsg(x);eErr.hidden=false;}}},"本当に削除"),
+    h("button",{class:"btn ghost",type:"button",onclick:delAsk},"やめる"));}
+  delAsk();
+  const edit=h("details",{class:"edit"},h("summary",{text:"名前・種類・少ない目安を変える／削除"}),
+    h("form",{class:"f",style:"padding:12px 0 0",onsubmit:async e=>{e.preventDefault();
+      const nm=eName.value.trim();if(!nm){eErr.textContent="名前を入れてください";eErr.hidden=false;return;}
+      try{await db.doc("items/"+id).update({name:nm,cat:eCat.value,unit:eUnit.value,min:Math.max(0,Number(eMin.value)||0),updatedAt:Date.now()});close();toast("変更しました");}
+      catch(x){eErr.textContent=errMsg(x);eErr.hidden=false;}}},
+      h("label",{class:"fl"},"名前",eName),
+      h("div",{class:"two"},h("label",{class:"fl"},"種類",eCat),h("label",{class:"fl"},"数え方",eUnit)),
+      h("label",{class:"fl"},"少ないと知らせる数",eMin),eErr,
+      h("button",{class:"btn ghost",type:"submit"},"変更を保存"),delZone));
+
+  const close=openSheet(
+    h("h2",{text:it.name}),
+    h("div",{class:"now"},h("span",{text:"いまの在庫"}),h("span",null,h("b",{text:fmtN(it.qty)})," "+(it.unit||""))),
+    seg,
+    h("div",{class:"stepper"},h("button",{type:"button","aria-label":"1へらす",onclick:()=>step(-1)},"−"),num,h("button",{type:"button","aria-label":"1ふやす",onclick:()=>step(1)},"＋")),
+    h("div",{class:"quick"},[5,10,20].map(n=>h("button",{type:"button",onclick:()=>step(n)},"＋"+n))),
+    siteBox,
+    h("label",{class:"fl"},"メモ ",h("em",{text:"何階、だれに渡した、など"}),memo),
+    after,err,go,
+    h("p",{class:"hint",text:"入力する人："+nick(who)+"（"+who+"）"}),
+    readOnly?null:edit);
+  upd();
+}
+function unitOpts(sel){const list=UNITS.includes(sel)||!sel?UNITS:[sel,...UNITS];return list.map(u=>h("option",{value:u,selected:u===sel},u));}
+
+/* ---------- データの書き込み ---------- */
+function errMsg(e){
+  const c=e&&e.code;
+  if(c==="permission-denied")return "暗証番号の確認がすんでいません。ページを開き直して、番号を入れてください。";
+  if(c==="resource-exhausted")return "データがいっぱいです。社長に連絡してください。";
+  if(c==="neg")return "在庫がマイナスになるので記録できません。数を確認してください。";
+  if(e&&e.message==="nodoc")return "この材料は削除されています。";
+  return "記録できませんでした。電波を確認して、もう一度押してください。";
+}
+async function moveStock(id,kind,n,memo,site){
+  const ref=doc(fs,"items",id);let d,cur,next;
+  // 同時に押されても数がずれないよう、トランザクションで書く
+  await runTransaction(fs,async t=>{
+    const snap=await t.get(ref);if(!snap.exists())throw new Error("nodoc");
+    d=snap.data();cur=Number(d.qty)||0;
+    next=kind==="in"?cur+n:kind==="out"?cur-n:n;
+    next=Math.round(next*100)/100;
+    if(next<0)throw Object.assign(new Error("neg"),{code:"neg"});
+    t.update(ref,{qty:next,updatedAt:Date.now(),updatedBy:who});
+  });
+  const delta=kind==="set"?Math.round((next-cur)*100)/100:n;
+  await db.collection("logs").add({at:Date.now(),kind,itemId:id,itemName:d.name,unit:d.unit||"",n:delta,after:next,who,memo:memo||"",site:site||""});
+  return next;
+}
+async function removeItem(id){
+  const it=items.find(x=>x.id===id);
+  await db.doc("items/"+id).delete();
+  await db.collection("logs").add({at:Date.now(),kind:"del",itemId:id,itemName:it?it.name:"",unit:it?it.unit||"":"",n:0,after:0,who,memo:""});
+}
+
+/* ---------- 材料を追加 ---------- */
+$("aCat").replaceChildren(...CATS.map(c=>h("option",{value:c},c)));
+$("aUnit").replaceChildren(...unitOpts("本"));
+$("addForm").addEventListener("submit",async e=>{
+  e.preventDefault();const err=$("aErr");err.hidden=true;
+  if(!db){err.textContent="データにつながっていません。";err.hidden=false;return;}
+  if(!who){pickWho();return;}
+  const name=$("aName").value.trim();if(!name){err.textContent="材料の名前を入れてください。";err.hidden=false;return;}
+  if(items.some(it=>it.name===name)){err.textContent="同じ名前の材料がもうあります。";err.hidden=false;return;}
+  const qty=Math.max(0,Number($("aQty").value)||0),min=Math.max(0,Number($("aMin").value)||0);
+  $("aBtn").disabled=true;
+  try{const now=Date.now();
+    const ref=await db.collection("items").add({name,cat:$("aCat").value,unit:$("aUnit").value,qty,min,createdAt:now,updatedAt:now,updatedBy:who});
+    await db.collection("logs").add({at:now,kind:"new",itemId:ref.id,itemName:name,unit:$("aUnit").value,n:qty,after:qty,who,memo:""});
+    $("aName").value="";$("aQty").value="0";$("aMin").value="0";
+    toast("「"+name+"」を登録しました");
+    cat=$("aCat").value;store("kouken-cat",cat);renderCats();show("vStock");renderList();
+  }catch(x){err.textContent=errMsg(x);err.hidden=false;}
+  $("aBtn").disabled=readOnly;
+});
+
+/* ---------- 履歴 ---------- */
+function renderLogSites(){
+  const used=[...new Set(logs.map(l=>l.site).filter(Boolean))];
+  const names=[...new Set([FACTORY,...sites.map(s=>s.name),...used])];
+  if(logSite!=="すべて"&&!names.includes(logSite))logSite="すべて";
+  $("logSite").replaceChildren(h("option",{value:"すべて",selected:logSite==="すべて"},"すべて"),...names.map(n=>h("option",{value:n,selected:n===logSite},n)));
+}
+$("logSite").addEventListener("change",e=>{logSite=e.target.value;renderLog();});
+function renderLog(){
+  renderLogSites();
+  const ul=$("log");
+  const shown=logSite==="すべて"?logs:logs.filter(l=>l.site===logSite);
+  if(!shown.length){ul.replaceChildren(h("li",{class:"empty",style:"display:grid"},h("strong",{text:logs.length?"この現場の記録はありません":"まだ記録がありません"}),h("span",{text:"入庫・持ち出しをすると、ここに残ります。"})));return;}
+  ul.replaceChildren(...shown.map(l=>{
+    const sign=l.kind==="in"?"＋":l.kind==="out"?"−":"";
+    const num=l.kind==="del"?"":l.kind==="set"?("→ "+fmtN(l.after)+(l.unit||"")):(sign+fmtN(l.n)+(l.unit||""));
+    return h("li",null,h("span",{class:"tag "+l.kind,text:KIND[l.kind]||l.kind}),h("span",{class:"what",text:l.itemName||""}),h("span",{class:"n",text:num}),
+      h("span",{class:"meta"},l.site?h("span",{class:"site",text:"→ "+l.site}):null,fmtT(l.at)+"　"+nick(l.who)+(l.kind==="in"||l.kind==="out"?"　残り "+fmtN(l.after)+(l.unit||""):"")+(l.memo?"　"+l.memo:"")));}));
+}
+
+function applyReadOnly(){}
+
+/* ---------- 暗証番号（最初の1回だけ。データベース側で番号を確かめる） ---------- */
+function askPin(){
+  return new Promise(resolve=>{
+    const inp=h("input",{class:"inp",type:"password",inputmode:"numeric",autocomplete:"off",maxlength:"12","aria-label":"暗証番号",style:"font-size:28px;text-align:center;letter-spacing:.3em"});
+    const err=h("p",{class:"err",hidden:true});
+    const go=h("button",{class:"btn",type:"submit"},"はじめる");
+    const form=h("form",{class:"f",style:"padding:0",onsubmit:async e=>{e.preventDefault();
+      const v=inp.value.trim();if(!v)return;
+      go.disabled=true;go.textContent="確認しています…";err.hidden=true;
+      try{await setDoc(doc(fs,"members",uid),{pin:v,at:Date.now()});$("scrim").onclick=null;$("scrim").hidden=true;$("scrim").replaceChildren();resolve();}
+      catch(x){err.textContent=x&&x.code==="permission-denied"?"番号がちがいます。":"確認できませんでした。電波を確認してください。";err.hidden=false;go.disabled=false;go.textContent="はじめる";inp.select();}
+    }},h("h2",{text:"会社の暗証番号"}),h("p",{class:"hint",text:"最初の1回だけ入れてください。この携帯に覚えておきます。"}),inp,err,go);
+    openSheet(form);
+    $("scrim").onclick=null;               // 番号を入れるまで閉じられない
+  });
+}
+
+/* ---------- 初めて使うとき：現場と材料のひな形を入れる ---------- */
+async function seedIfEmpty(){
+  const [a,b]=await Promise.all([getDocs(query(collection(fs,"sites"),limit(1))),getDocs(query(collection(fs,"items"),limit(1)))]);
+  if(!a.empty||!b.empty)return;
+  const now=Date.now(),batch=writeBatch(fs);
+  SEED_SITES.forEach((s,i)=>batch.set(doc(fs,"sites","s"+String(i+1).padStart(3,"0")),{name:s[0],status:s[1],order:i+1,active:true}));
+  SEED_ITEMS.forEach((it,i)=>batch.set(doc(fs,"items","i"+String(i+1).padStart(3,"0")),{name:it[2],cat:it[0],unit:it[1],qty:0,min:0,createdAt:now,updatedAt:now,updatedBy:who||"西崎剣"}));
+  await batch.commit();
+}
+
+/* ---------- 起動 ---------- */
+let fs=null, uid="";
+renderWho();renderCats();renderList();renderLog();show(view);
+(async()=>{
+  if(!FIREBASE_CONFIG||!FIREBASE_CONFIG.apiKey){setBanner("まだ設定がすんでいません（firebase-config.js に Firebase の設定を入れてください）。");renderList();return;}
+  try{
+    const app=initializeApp(FIREBASE_CONFIG);fs=getFirestore(app);const auth=getAuth(app);
+    await signInAnonymously(auth);uid=auth.currentUser.uid;
+    const m=await getDoc(doc(fs,"members",uid));
+    if(!m.exists())await askPin();
+  }catch(e){setBanner("在庫データにつながりません。電波を確認して、ページを開き直してください。");renderList();return;}
+  // 前の版と同じ呼び方で使えるよう、Firestore を包む
+  db={doc:p=>{const r=doc(fs,p);return{update:d=>updateDoc(r,d),delete:()=>deleteDoc(r)};},
+      collection:n=>({add:d=>addDoc(collection(fs,n),d)})};
+  try{await seedIfEmpty();}catch(e){}
+  onSnapshot(collection(fs,"items"),s=>{
+    items=s.docs.map(d=>Object.assign({id:d.id},d.data())).sort((a,b)=>(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
+    loaded=true;renderList();
+  },e=>{setBanner("在庫を読み込めませんでした。ページを開き直してください。");});
+  onSnapshot(query(collection(fs,"logs"),orderBy("at","desc"),limit(300)),s=>{logs=s.docs.map(d=>d.data());renderLog();},()=>{});
+  // 現場の一覧（現場一覧の施工中・これからの現場）
+  onSnapshot(collection(fs,"sites"),s=>{sites=s.docs.map(d=>d.data()).filter(x=>x&&x.name&&x.active!==false).sort((a,b)=>(a.order||0)-(b.order||0));renderLog();},()=>{});
+  if(!who)setTimeout(()=>{if(!who&&$("scrim").hidden)pickWho();},400);
+})();
+})();
+</script>
+</body>
+</html>
