@@ -81,11 +81,15 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .day.out{opacity:.38}
 .day.today .n{background:var(--accent);color:var(--accent-ink)}
 .day[aria-pressed="true"]{background:var(--accent-soft);border-radius:6px}
-.chip{display:block;font-size:11px;line-height:1.4;padding:1px 3px;border-radius:3px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:clip;font-weight:400;letter-spacing:-.02em}
+.chip{display:flex;font-size:11px;line-height:1.4;border-radius:3px;color:#fff;white-space:nowrap;overflow:hidden;font-weight:400;letter-spacing:-.02em}
+/* 名前（人の色）と現場（現場の色）を、色を分けてつなげる */
+.chip b{flex:none;padding:1px 3px}
+.chip .w{flex:1 1 auto;min-width:0;overflow:hidden;padding:1px 3px}
+.chip b+.w{box-shadow:inset 1px 0 0 rgba(255,255,255,.55)}
 .chip b{font-weight:700}
-.cal .day.open .chip,.cal.week .chip{padding:2px 4px}
-.cal .day.open .chip b,.cal.week .chip b{display:block;font-size:12px;line-height:1.25}
-.cal .day.open .chip .w,.cal.week .chip .w{display:block;font-size:11px;line-height:1.3}
+.cal .day.open .chip,.cal.week .chip,.mem .cell .chip{display:block}
+.cal .day.open .chip b,.cal.week .chip b{display:block;font-size:12px;line-height:1.25;padding:2px 4px 1px}
+.cal .day.open .chip .w,.cal.week .chip .w{display:block;font-size:11px;line-height:1.3;padding:1px 4px 2px;box-shadow:none}
 .more{font-size:10px;color:var(--muted);padding-left:2px;line-height:1.2}
 .chip.off{opacity:.55}
 /* 表示の切りかえ（月・週・一覧・メンバー） */
@@ -94,9 +98,9 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .views button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink);font-weight:700}
 /* 週：マスを高くして、予定を折り返して全部出す */
 .cal.week .day{min-height:220px}
-.cal.week .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.3;padding:2px 3px}
+.cal.week .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.3}
 /* 月：えらんだ日の週は広げて、全員の予定を折り返して全部出す */
-.cal .day.open .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.3;padding:1px 3px}
+.cal .day.open .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.3}
 /* メンバー予定表：縦に人、横に1週間 */
 .mem{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));padding:0 4px 6px}
 .mem .hd{font-size:11px;font-weight:700;text-align:center;padding:4px 0;color:var(--muted);line-height:1.2}
@@ -106,7 +110,8 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .mem .nm{font-size:12px;font-weight:700;border-top:1px solid var(--line);padding:6px 2px;display:flex;align-items:center;overflow-wrap:anywhere;line-height:1.2}
 .mem .cell{border:0;border-top:1px solid var(--line);border-left:1px solid var(--line);background:none;padding:3px 2px;min-height:54px;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left}
 .mem .cell[aria-pressed="true"]{background:var(--accent-soft)}
-.mem .cell .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.25;padding:1px 2px}
+.mem .cell .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.25}
+.mem .cell .chip .w{display:block;padding:1px 2px}
 /* 一覧 */
 .lday{border-top:1px solid var(--line)}
 .lday:first-child{border-top:0}
@@ -219,13 +224,31 @@ const HOLI={"2026-01-01":"元日","2026-01-12":"成人の日","2026-02-11":"建�
   "2027-01-01":"元日","2027-01-11":"成人の日","2027-02-11":"建国記念の日","2027-02-23":"天皇誕生日","2027-03-21":"春分の日","2027-03-22":"振替休日","2027-04-29":"昭和の日",
   "2027-05-03":"憲法記念日","2027-05-04":"みどりの日","2027-05-05":"こどもの日","2027-07-19":"海の日","2027-08-11":"山の日","2027-09-20":"敬老の日",
   "2027-09-23":"秋分の日","2027-10-11":"スポーツの日","2027-11-03":"文化の日","2027-11-23":"勤労感謝の日"};
-/* 現場の色。白い文字が読める濃さ。現場名から決まるので、いつも同じ色になる */
-const COLORS=["#1f6fc5","#c2410c","#15803d","#7c3aed","#be185d","#0e7490","#4d7c0f","#9f1239","#b45309","#4338ca"];
+/* 現場の色：同じ現場は同じ色、ちがう現場はちがう色（2026/10/28 ユーザー）
+   40色（白い文字が読める濃さ）。となりの番号どうしは色合いが離れるように並べる。
+   ・現場一覧にある現場：一覧の順に1色ずつ決まった色
+   ・手書きの現場（単発）：前後3か月の予定に出てくるものだけ、のこりの色を入れた順に使う。
+     3か月使われなくなった現場の色は空くので、次の単発現場がその色を使う（上書き） */
+const PALETTE=[...[40,27].flatMap(l=>[...Array(20)].map((_,i)=>"hsl("+((i*7)%20*18+(l===27?9:0))+" "+(l===27?"70%":"62%")+" "+l+"%)"))];
+const OFFC="#64748b";
+let siteColor={};
+const hashOf=t=>{let x=0;for(const c of t||"")x=(x*31+c.charCodeAt(0))>>>0;return x;};
+function computeSiteColors(recent){
+  const map={}, used=new Set();
+  sites.forEach((x,i)=>{if(i<PALETTE.length&&!map[x.name]){map[x.name]=PALETTE[i];used.add(i);}});
+  // 手書きの現場は、はじめて入れた順に、空いている色を名前から決まる場所から探す
+  const first={};
+  for(const e of recent){const t=e.site;if(!t||t===OFF||t===FACTORY||map[t])continue;const at=Number(e.createdAt)||0;if(first[t]==null||at<first[t])first[t]=at;}
+  for(const t of Object.keys(first).sort((a,b)=>first[a]-first[b]||a.localeCompare(b,"ja"))){
+    let k=hashOf(t)%PALETTE.length;
+    for(let j=0;j<PALETTE.length&&used.has(k);j++)k=(k+1)%PALETTE.length;
+    map[t]=PALETTE[k];used.add(k);
+  }
+  siteColor=map;
+}
 function colorOf(site){
-  if(site===OFF)return "#64748b";
-  if(site===FACTORY)return "#a16207";
-  let x=0;for(const c of site||"")x=(x*31+c.charCodeAt(0))>>>0;
-  return COLORS[x%COLORS.length];
+  if(site===OFF)return OFFC;
+  return siteColor[site]||PALETTE[hashOf(site)%PALETTE.length];
 }
 /* カレンダーのマスに出す短い現場名 */
 /* 長い現場名は、LINE WORKSで書いていた呼び方にする */
@@ -313,12 +336,13 @@ function dayItems(s){
   for(const e of sortEv(onDay(shown(),s))){
     const what=shortSite(e.site)||e.memo||"予定", off=e.site===OFF;
     const ps=(e.people||[]).filter(n=>person==="すべて"||n===person).sort((a,b)=>(ORDER[a]??50)-(ORDER[b]??50));
-    if(ps.length)for(const n of ps)out.push({n,name:nick(n),what,color:pcolor(n),off});
-    else out.push({n:"",name:"",what,color:NOONE,off});
+    const sc=e.site?colorOf(e.site):NOONE;
+    if(ps.length)for(const n of ps)out.push({n,name:nick(n),what,color:pcolor(n),sc,off});
+    else out.push({n:"",name:"",what,color:NOONE,sc,off});
   }
   return out.sort((a,b)=>(a.n?ORDER[a.n]??50:99)-(b.n?ORDER[b.n]??50:99));
 }
-const chip=it=>h("span",{class:"chip"+(it.off?" off":""),style:{background:it.color}},it.name?h("b",{text:it.name}):null,it.name?" ":null,h("span",{class:"w",text:it.what}));
+const chip=it=>h("span",{class:"chip"+(it.off?" off":"")},it.name?h("b",{style:{background:it.color},text:it.name}):null,h("span",{class:"w",style:{background:it.sc},text:it.what}));
 function select(s){const old=range().join();sel=s;ym=s.slice(0,7);openWeek=weekRange()[0];if(range().join()!==old)listen();renderAll();}
 /* 月：広げている週（その週の日曜日）。""なら閉じている。同じ日をもう一度押すと閉じる */
 let openWeek=weekRange()[0], animNext=false;
@@ -364,7 +388,7 @@ function renderMem(){
       const evs=sortEv(pick(onDay(events,s)));
       cells.push(h("button",{type:"button",class:"cell","aria-pressed":String(s===sel),"aria-label":label+" "+md(s)+" "+(evs.map(e=>e.site||e.memo).join("、")||"予定なし"),
         onclick:()=>{select(s);if(editor&&who&&!evs.length)openEdit(null,false,[who]);}},
-        evs.map(e=>h("span",{class:"chip"+(e.site===OFF?" off":""),style:{background:color},text:shortSite(e.site)||e.memo||"予定"}))));
+        evs.map(e=>h("span",{class:"chip"+(e.site===OFF?" off":"")},h("span",{class:"w",style:{background:e.site?colorOf(e.site):NOONE},text:shortSite(e.site)||e.memo||"予定"})))));
     }
   };
   for(const [n,k] of PEOPLE)if(person==="すべて"||person===n)row(k,pcolor(n),l=>l.filter(e=>(e.people||[]).includes(n)),n);
@@ -591,7 +615,12 @@ renderPeople();renderAll();
   listen();
   if(!editor&&!me)setTimeout(()=>{if(!me&&$("scrim").hidden)pickMe();},400);
   // 現場の一覧（在庫と同じ。施工中・これからの現場）
-  onSnapshot(collection(fs,"sites"),s=>{sites=s.docs.map(d=>d.data()).filter(x=>x&&x.name&&x.active!==false).sort((a,b)=>(a.order||0)-(b.order||0));},()=>{});
+  // 現場の色を決めるため、前後3か月の予定を読む（3か月より前だけで使われた現場の色は空く）
+  let recent=[];
+  const recolor=()=>{computeSiteColors(recent);renderAll();};
+  onSnapshot(collection(fs,"sites"),s=>{sites=s.docs.map(d=>d.data()).filter(x=>x&&x.name&&x.active!==false).sort((a,b)=>(a.order||0)-(b.order||0));recolor();},()=>{});
+  onSnapshot(query(collection(fs,"events"),where("date",">=",addDays(todayS(),-92)),where("date","<=",addDays(todayS(),92))),s=>{
+    recent=s.docs.map(d=>d.data()).filter(e=>!e.deleted);recolor();},()=>{});
 })();
 })();
 </script>
