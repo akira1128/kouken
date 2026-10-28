@@ -100,6 +100,7 @@ main{display:grid;gap:16px;padding-top:14px}
 .tag{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
 .tag.in{background:var(--in-soft);color:var(--in)}
 .tag.out{background:var(--out-soft);color:var(--out)}
+.tag.back{background:var(--in-soft);color:var(--in);border:1px dashed var(--in)}
 .tag.set,.tag.new,.tag.del{background:var(--accent-soft);color:var(--accent)}
 .log .what{min-width:0;overflow-wrap:anywhere;font-weight:700;font-size:15px}
 .log .n{font-weight:700;white-space:nowrap}
@@ -122,13 +123,14 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
 .sheet h2{margin:0;font-size:19px;overflow-wrap:anywhere;text-wrap:balance}
 .now{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:12px 14px;border-radius:10px;background:var(--bg)}
 .now b{font-size:30px}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .seg button{border:2px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 4px;font-weight:700;font-size:15px}
 .seg.two-seg{grid-template-columns:1fr 1fr}
 .seg.three-seg{grid-template-columns:1fr 1fr 1fr}.seg.three-seg button{font-size:13px;line-height:1.3}
 .now{flex-wrap:wrap}.now .nowpart{display:block;text-align:right;font-size:14px}.now .nowpart b{font-size:20px}
 .seg button[data-p][aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--surface)}
 .seg button[data-k="out"][aria-pressed="true"]{border-color:var(--out);background:var(--out-soft);color:var(--out)}
+.seg button[data-k="back"][aria-pressed="true"]{border-color:var(--in);background:var(--in-soft);color:var(--in)}
 .seg button[data-k="in"][aria-pressed="true"]{border-color:var(--in);background:var(--in-soft);color:var(--in)}
 .seg button[data-k="set"][aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
 .stepper{display:grid;grid-template-columns:64px 1fr 64px;gap:8px}
@@ -301,7 +303,9 @@ const partField=p=>p==="s"?"qty":(EPARTS.find(x=>x[0]===p)||[])[2]||"qty";
 const partName=p=>p==="s"?"直管":(EPARTS.find(x=>x[0]===p)||[])[1]||"直管";
 const CATS=["ALK（P）保温筒","ALGC（P）保温筒","PF保温筒","ロール","セラカバー","遮音シート","金網","テープ・副資材","ジャケット・エルボ","フランジカバー","コイル","板","その他"];
 const UNITS=["本","個","巻","枚","ケース","箱","m","kg"];
-const KIND={in:"入庫",out:"持ち出し",set:"数を直す",new:"登録",del:"削除"};
+/* 動きの種類。back＝戻し（現場で余って工場に戻す。入庫＝買ったものと分ける 2026/10/28） */
+const KIND={in:"入庫",out:"持ち出し",back:"戻し",set:"数を直す",new:"登録",del:"削除"};
+const SITEKIND=k=>k==="out"||k==="back";
 const tabId="t"+Math.random().toString(36).slice(2,10);
 
 const $=id=>document.getElementById(id);
@@ -443,7 +447,8 @@ function openItem(id){
     h("option",{value:FACTORY,selected:lastSite===FACTORY},FACTORY),
     sites.map(s=>h("option",{value:s.name,selected:lastSite===s.name},s.name)),
     h("option",{value:OTHER,selected:lastSite===OTHER},OTHER));
-  const siteBox=h("label",{class:"fl"},"どの現場へ ",h("em",{text:"持ち出しのときは必ずえらぶ"}),siteSel);
+  const siteLbl=h("span",{text:"どの現場へ "});
+  const siteBox=h("label",{class:"fl"},siteLbl,h("em",{text:"持ち出し・戻しのときは必ずえらぶ"}),siteSel);
   siteSel.addEventListener("change",()=>upd());
   const after=h("p",{class:"after"});const err=h("p",{class:"err",hidden:true});
   const go=h("button",{class:"btn",type:"button"});
@@ -451,29 +456,29 @@ function openItem(id){
   const partSeg=hasE?h("div",{class:"seg three-seg",role:"group","aria-label":"どれを数えるか"},
     [["s","直管（"+(it.unit||"本")+"）"],...EPARTS.map(([k,l])=>[k,l+"（個）"])].map(([k,l])=>h("button",{type:"button","data-p":k,"aria-pressed":String(k===part),onclick:()=>{part=k;store("kouken-part",k);if(kind==="set")num.value=fmtN(nowQty());upd();}},l))):null;
   const seg=h("div",{class:"seg",role:"group","aria-label":"何をするか"},
-    [["out","持ち出し"],["in","入庫"],["set","数を直す"]].map(([k,l])=>h("button",{type:"button","data-k":k,"aria-pressed":String(k===kind),onclick:()=>{const was=kind;kind=k;if(k==="set")num.value=fmtN(nowQty());else if(was==="set"||num.value==="")num.value="1";upd();}},l)));
+    [["out","持ち出し"],["back","戻し"],["in","入庫"],["set","数を直す"]].map(([k,l])=>h("button",{type:"button","data-k":k,"aria-pressed":String(k===kind),onclick:()=>{const was=kind;kind=k;if(k==="set")num.value=fmtN(nowQty());else if(was==="set"||num.value==="")num.value="1";upd();}},l)));
   function upd(){
     seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===kind)));
     if(partSeg)partSeg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.p===part)));
     const n=Number(num.value);const cur=nowQty();
-    const next=kind==="in"?cur+n:kind==="out"?cur-n:n;
+    const next=kind==="in"||kind==="back"?cur+n:kind==="out"?cur-n:n;
     after.replaceChildren((hasE?partName(part)+" ":"")+"このあと ",h("b",{text:isFinite(next)?fmtN(next)+unitOf():"―"}));
-    go.textContent=kind==="in"?"入庫する":kind==="out"?"持ち出す":"この数に直す";
+    go.textContent=kind==="in"?"入庫する":kind==="out"?"持ち出す":kind==="back"?"戻す":"この数に直す";
     err.hidden=true;
-    siteBox.hidden=kind!=="out";
-    go.disabled=readOnly||!(n>=0)||num.value===""||(kind!=="set"&&n===0)||(kind==="out"&&!siteSel.value);
+    siteBox.hidden=!SITEKIND(kind);siteLbl.textContent=kind==="back"?"どの現場から ":"どの現場へ ";
+    go.disabled=readOnly||!(n>=0)||num.value===""||(kind!=="set"&&n===0)||(SITEKIND(kind)&&!siteSel.value);
   }
   num.addEventListener("input",upd);
   const step=d=>{const v=Math.max(0,(Number(num.value)||0)+d);num.value=fmtN(v);upd();};
   go.addEventListener("click",async()=>{
     const n=Number(num.value);
     if(kind==="out"&&n>nowQty()){err.textContent="在庫より多く持ち出せません（いま "+fmtN(nowQty())+unitOf()+"）。数がちがうときは「数を直す」で直してください。";err.hidden=false;return;}
-    if(kind==="out"&&siteSel.value===OTHER&&!memo.value.trim()){err.textContent="「その他」のときは、メモに行き先を書いてください。";err.hidden=false;return;}
+    if(SITEKIND(kind)&&siteSel.value===OTHER&&!memo.value.trim()){err.textContent="「その他」のときは、メモに"+(kind==="back"?"どこから戻したか":"行き先")+"を書いてください。";err.hidden=false;return;}
     go.disabled=true;go.textContent="記録しています…";
-    const site=kind==="out"?siteSel.value:"";
+    const site=SITEKIND(kind)?siteSel.value:"";
     if(site)store("kouken-site",site);
     try{const r=await moveStock(id,kind,n,memo.value.trim(),site,part);close();
-      toast((hasE?partName(part)+"：":"")+(kind==="in"?"入庫しました":kind==="out"?"持ち出しを記録しました":"数を直しました")+"（残り "+fmtN(r)+unitOf()+"）");}
+      toast((hasE?partName(part)+"：":"")+(kind==="in"?"入庫しました":kind==="out"?"持ち出しを記録しました":kind==="back"?"戻しを記録しました":"数を直しました")+"（残り "+fmtN(r)+unitOf()+"）");}
     catch(e){err.textContent=errMsg(e);err.hidden=false;upd();}
   });
 
@@ -540,7 +545,7 @@ async function moveStock(id,kind,n,memo,site,part){
   await runTransaction(fs,async t=>{
     const snap=await t.get(ref);if(!snap.exists())throw new Error("nodoc");
     d=snap.data();cur=Number(d[f])||0;
-    next=kind==="in"?cur+n:kind==="out"?cur-n:n;
+    next=kind==="in"||kind==="back"?cur+n:kind==="out"?cur-n:n;
     next=Math.round(next*100)/100;
     if(next<0)throw Object.assign(new Error("neg"),{code:"neg"});
     t.update(ref,{[f]:next,updatedAt:Date.now(),updatedBy:who});
@@ -595,10 +600,10 @@ function renderLog(){
   const shown=logSite==="すべて"?logs:logs.filter(l=>l.site===logSite);
   if(!shown.length){ul.replaceChildren(h("li",{class:"empty",style:"display:grid"},h("strong",{text:logs.length?"この現場の記録はありません":"まだ記録がありません"}),h("span",{text:"入庫・持ち出しをすると、ここに残ります。"})));return;}
   ul.replaceChildren(...shown.map(l=>{
-    const sign=l.kind==="in"?"＋":l.kind==="out"?"−":"";
+    const sign=l.kind==="in"||l.kind==="back"?"＋":l.kind==="out"?"−":"";
     const num=l.kind==="del"?"":l.kind==="set"?("→ "+fmtN(l.after)+(l.unit||"")):(sign+fmtN(l.n)+(l.unit||""));
     return h("li",null,h("span",{class:"tag "+l.kind,text:KIND[l.kind]||l.kind}),h("span",{class:"what",text:l.itemName||""}),h("span",{class:"n",text:num}),
-      h("span",{class:"meta"},l.site?h("span",{class:"site",text:"→ "+l.site}):null,fmtT(l.at)+"　"+nick(l.who)+(l.kind==="in"||l.kind==="out"?"　残り "+fmtN(l.after)+(l.unit||""):"")+(l.memo?"　"+l.memo:"")));}));
+      h("span",{class:"meta"},l.site?h("span",{class:"site",text:(l.kind==="back"?"← ":"→ ")+l.site}):null,fmtT(l.at)+"　"+nick(l.who)+(l.kind==="in"||l.kind==="out"||l.kind==="back"?"　残り "+fmtN(l.after)+(l.unit||""):"")+(l.memo?"　"+l.memo:"")));}));
 }
 
 function applyReadOnly(){}
