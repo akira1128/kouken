@@ -167,6 +167,9 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .visits.next li{background:var(--surface);border-style:dashed}
 .vsum{font-size:13.5px;margin:0 0 8px}.vsum b{font-size:15px}
 h4.vh{margin:14px 0 6px;font-size:13px;color:var(--muted)}
+.vwho{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.vwho li{display:flex;gap:6px;align-items:baseline;border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:var(--surface);font-size:13.5px}
+.vwho small{color:var(--muted);font-size:11.5px}
 .notes{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .notes li{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--bg);display:grid;gap:4px}
 .notes .tx{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px}
@@ -447,13 +450,15 @@ function fillVisits(box,x){
   const today=ymd(new Date()), all=siteVisits(x);
   const past=all.filter(r=>r.date<=today).sort((a,b)=>b.date.localeCompare(a.date));
   const next=all.filter(r=>r.date>today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,10);
-  const cnt={};let nin=0;past.forEach(r=>r.people.forEach(n=>{cnt[n]=(cnt[n]||0)+1;nin++;}));
+  // 人ごとの日数と最後に行った日（メンバーが変わっても、だれに聞けばよいか分かるように）
+  const cnt={},last={};let nin=0;past.forEach(r=>r.people.forEach(n=>{cnt[n]=(cnt[n]||0)+1;nin++;if(!last[n])last[n]=r.date;}));
   const row=r=>h("li",null,h("b",{text:md(r.date)}),h("span",{text:r.people.map(nick).join("・")||"―"}),
     r.kako?h("span",{class:"tag",text:"工場で加工"}):null,r.notes.length?h("span",{class:"memo",text:r.notes.join("　")}):null);
   box.replaceChildren(h("div",{class:"sec"},
     h("h3",{text:"この現場に行った人（予定表より）"}),
-    past.length?h("p",{class:"vsum"},"のべ ",h("b",{text:nin+"人工"}),"（"+past.length+"日）　"+
-      Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([n,c])=>nick(n)+" "+c).join("・")):null,
+    past.length?h("p",{class:"vsum"},"のべ ",h("b",{text:nin+"人工"}),"（"+past.length+"日）"):null,
+    past.length?h("ul",{class:"vwho"},Object.entries(cnt).sort((a,b)=>b[1]-a[1]||last[b[0]].localeCompare(last[a[0]])).map(([n,c])=>
+      h("li",null,h("b",{text:nick(n)}),h("span",{text:c+"日"}),h("small",{text:"最後 "+md(last[n])})))):null,
     past.length?h("ul",{class:"visits"},past.map(row)):h("p",{class:"empty",text:events.length?"予定表にこの現場の日はまだありません":"読み込んでいます…"}),
     next.length?[h("h4",{class:"vh",text:"これからの予定"}),h("ul",{class:"visits next"},next.map(row))]:null,
     h("p",{class:"hint",style:{marginTop:"10px"},text:"予定表の現場名で探しています。出てこない日があるときは、現場の情報の「予定表での呼び方」に予定表で使っている名前を入れてください。"})));
