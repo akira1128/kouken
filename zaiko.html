@@ -402,7 +402,7 @@ function aliases(it){
   return a;
 }
 function matchQ(it,q){
-  const text=nz(it.name+" "+it.cat+" "+(it.sub||"")+" "+(it.no?"no."+it.no:"")+" "+sizeText(it)+" "+aliases(it));
+  const text=nz(it.name+" "+(SUB2[it.cat]?sub2Of(it):it.cat)+" "+(it.sub||"")+" "+(it.no?"no."+it.no:"")+" "+sizeText(it)+" "+aliases(it));
   // 「/」「×」「x」「*」「-」も区切り。数字に付いた A・t・K・m は外す（「40A/20t」→「40 20」）（2026/10/28）
   // 漢字・かなと、アルファベット・数字の境目でも区切る（「黒ALGC」→「黒 algc」）
   const words=nz(q).replace(/([a-z0-9.])(?=[^\x00-\x7f])|([^\x00-\x7f])(?=[a-z0-9])/g,"$1$2 ").replace(/([a-z])(?=[0-9])/g,"$1 ").replace(/[\/×xX*＊\-－]/g," ").split(/\s+/).filter(Boolean).map(w=>/^[0-9.]+[atkm]$/.test(w)?w.slice(0,-1):w);
@@ -427,7 +427,8 @@ function renderList(){
     return;}
   // ジャケット・エルボを開いているときは、さがす欄に文字を入れても、選んでいる「ジャケット」か「エルボ」の中だけで探す（色は全部）（2026/10/28）
   const inSub2=!!SUB2[cat];
-  const shown=items.filter(it=>(q&&!inSub2||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q&&!inSub2||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===sub2)&&(!q||matchQ(it,q)));
+  const qs2=/エルボ/.test(q)&&!/ジャケット/.test(q)?"エルボ":/ジャケット/.test(q)&&!/エルボ/.test(q)?"ジャケット":sub2;  // 言葉に「エルボ」があればエルボの中を探す
+  const shown=items.filter(it=>(q&&!inSub2||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q&&!inSub2||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===(q?qs2:sub2))&&(!q||matchQ(it,q)));
   if(!shown.length){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"見つかりません"}),h("span",{text:"ことばや種類を変えてさがしてください。"})));return;}
   const groups=[];
   for(const c of CATS){
