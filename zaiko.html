@@ -159,7 +159,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
   padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .cartbar .btn{max-width:608px;margin:0 auto;display:block}
 .incart{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accent);color:var(--accent-ink);margin-left:6px;vertical-align:2px}
-.handbox{margin-top:12px;padding:12px 14px;display:grid;gap:8px}
+.ordernote{margin:8px 2px 0}
+.handbox{padding:12px 14px;display:grid;gap:8px}
 .handbox h3{margin:0;font-size:14px}
 .handrow{display:flex;gap:8px}
 .handrow .btn{width:auto;flex:1;padding:10px 12px;font-size:15px}
@@ -455,6 +456,7 @@ function matchQ(it,q){
   return true;
 }
 function renderList(){
+  if(ORDER&&$("handbox"))$("handbox").hidden=cat!=="その他";
   renderAlert();
   const q=$("q").value.trim().toLowerCase();
   const list=$("list");
@@ -853,7 +855,9 @@ if(ORDER){document.documentElement.classList.add("ordermode");
     xN=h("input",{class:"inp",type:"number",inputmode:"decimal",min:"0",step:"any",placeholder:"数",style:"width:84px;flex:none"}),
     xU=h("select",{class:"inp",style:"width:84px;flex:none","aria-label":"数え方"},UNITS.map(u=>h("option",{value:u},u))),
     xErr=h("p",{class:"err",hidden:true});
-  $("orderSite").insertAdjacentElement("afterend",h("section",{class:"panel handbox"},
+  // 一覧にない材料の欄は、種類の「その他」をえらんだときだけ一覧の上に出す（2026/10/28 ユーザー）
+  $("orderSite").insertAdjacentElement("afterend",h("p",{class:"hint ordernote",text:"一覧にない材料は、種類の「その他」をえらんで書いてください。"}));
+  $("list").insertAdjacentElement("beforebegin",h("section",{class:"panel handbox",id:"handbox",hidden:cat!=="その他"},
     h("h3",{text:"一覧にない材料を書く"}),xName,h("div",{class:"handrow"},xN,xU,
       h("button",{class:"btn",type:"button",onclick:()=>{const nm=xName.value.trim(),n=Number(xN.value);
         if(!nm||!(n>0)){xErr.textContent="名前と数を入れてください。";xErr.hidden=false;return;}
