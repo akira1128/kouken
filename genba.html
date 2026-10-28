@@ -284,7 +284,9 @@ function renderSites(){
   const box=$("vSites");
   if(!sites.length){box.replaceChildren(h("div",{class:"panel empty",text:fs?"現場がまだありません":"読み込んでいます…"}));return;}
   const groups=[["施工中","",x=>x.status==="施工中","now"],["これから","",x=>x.status==="これから","next"],["予定","まだ決まっていない",x=>x.status==="予定","plan"],["そのほか","",x=>!(x.status in STATUS_ORDER),"other"]];
-  box.replaceChildren(...groups.filter(([,,f])=>sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f);
+  // 外注が施工している現場は、まとまりのいちばん下に出す（2026/10/28 ユーザー）
+  const outs=x=>!!(x.info&&x.info.outsource);
+  box.replaceChildren(...groups.filter(([,,f])=>sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>outs(a)-outs(b));
     return h("section",{class:"panel grp-"+k,style:{marginBottom:"14px"}},h("h3",{class:"grouph"},t+"　"+arr.length+"件",sub?h("small",{text:"（"+sub+"）"}):null),arr.map(x=>{
       const inf=x.info||{}, nOrd=orders.filter(o=>o.siteId===x.id).length, nNote=(x.notes||[]).length;
       return h("button",{type:"button",class:"sitecard",onclick:()=>openSite(x.id)},
