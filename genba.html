@@ -81,14 +81,15 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .sitecard .sub{grid-column:1/2;font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
 .sitecard .go{grid-row:1/3;grid-column:2;color:var(--muted);font-size:22px}
 .st{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;margin-right:6px;vertical-align:2px}
-.st.now{background:var(--in-soft);color:var(--in)}
-.st.next{background:var(--accent-soft);color:var(--accent)}
+/* 状態の札：色をはっきり分ける（施工中＝緑、これから＝青、予定＝オレンジの点線）2026/10/28 ユーザー */
+.st.now{background:var(--in);color:#fff}
+.st.next{background:var(--accent);color:var(--accent-ink)}
 /* マンションのマーク：ベランダの帯と階段の棟がある建物の絵（西崎さんの画像 IMG_2510.PNG と同じ形）＋部屋数 */
 .mk{display:inline-flex;align-items:center;gap:2px;color:var(--accent);font-size:12px;font-weight:700;margin-right:6px;vertical-align:-4px;white-space:nowrap}
 .mk svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.1;stroke-linejoin:miter;stroke-linecap:butt}
 .dhead h2 .mk{font-size:14px}.dhead h2 .mk svg{width:24px;height:24px}
 .units{width:72px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:14px}
-.st.plan{background:var(--out-soft);color:var(--out);border:1px dashed var(--out)}
+.st.plan{background:var(--surface);color:var(--out);border:1.5px dashed var(--out);padding:0 7px}
 .stseg{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted)}
 .stseg button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700}
 .stseg button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
@@ -96,7 +97,16 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* 外注の会社（例：竹内工業が施工中）。予定表の竹内工業と同じ色 */
 .outs{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:#fde7ec;color:#be123c;margin-right:6px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .outs{background:#3b1520;color:#f48aa2}}
-.grouph{margin:0;padding:10px 14px 4px;font-size:12px;letter-spacing:.12em;color:var(--muted)}
+.grouph{margin:0;padding:10px 14px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);border-radius:10px 10px 0 0}
+.grouph small{font-size:12px;font-weight:500;opacity:.8}
+.grouph::before{content:"";width:12px;height:12px;border-radius:50%;background:currentColor;flex:none}
+/* 状態ごとのまとまり：見出しの色と、左の太い線 */
+.grp-now{border-left:5px solid var(--in)} .grp-now .grouph{color:var(--in);background:var(--in-soft)}
+.grp-next{border-left:5px solid var(--accent)} .grp-next .grouph{color:var(--accent);background:var(--accent-soft)}
+.grp-plan{border-left:5px dashed var(--out)} .grp-plan .grouph{color:var(--out);background:var(--out-soft)}
+.grp-plan .grouph::before{background:none;border:2px dashed currentColor;width:9px;height:9px}
+.grp-other{border-left:5px solid var(--line)} .grp-other .grouph{color:var(--muted);background:var(--bg)}
+.grp-plan .sitecard b{color:var(--muted)}
 /* 現場の詳しい画面 */
 .dhead{padding:14px;display:grid;gap:10px}
 .dhead h2{margin:0;font-size:19px;overflow-wrap:anywhere}
@@ -273,9 +283,9 @@ const siteName=id=>{const s=sites.find(x=>x.id===id);return s?s.name:"";};
 function renderSites(){
   const box=$("vSites");
   if(!sites.length){box.replaceChildren(h("div",{class:"panel empty",text:fs?"現場がまだありません":"読み込んでいます…"}));return;}
-  const groups=[["施工中",x=>x.status==="施工中"],["これから",x=>x.status==="これから"],["予定（まだ決まっていない）",x=>x.status==="予定"],["そのほか",x=>!(x.status in STATUS_ORDER)]];
-  box.replaceChildren(...groups.map(([t,f])=>{const arr=sites.filter(f);if(!arr.length)return null;
-    return h("section",{class:"panel"},h("h3",{class:"grouph",text:t+"（"+arr.length+"）"}),arr.map(x=>{
+  const groups=[["施工中","",x=>x.status==="施工中","now"],["これから","",x=>x.status==="これから","next"],["予定","まだ決まっていない",x=>x.status==="予定","plan"],["そのほか","",x=>!(x.status in STATUS_ORDER),"other"]];
+  box.replaceChildren(...groups.filter(([,,f])=>sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f);
+    return h("section",{class:"panel grp-"+k,style:{marginBottom:"14px"}},h("h3",{class:"grouph"},t+"　"+arr.length+"件",sub?h("small",{text:"（"+sub+"）"}):null),arr.map(x=>{
       const inf=x.info||{}, nOrd=orders.filter(o=>o.siteId===x.id).length, nNote=(x.notes||[]).length;
       return h("button",{type:"button",class:"sitecard",onclick:()=>openSite(x.id)},
         h("b",null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),shortSite(x.name)),
