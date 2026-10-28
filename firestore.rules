@@ -14,6 +14,19 @@ service cloud.firestore {
         && request.resource.data.pin == get(/databases/$(database)/documents/secret/pin).data.pin;
       allow update, delete: if false;
     }
+    // 予定を入れられる携帯（editors に登録された人＝西崎・原田）
+    function editor() {
+      return request.auth != null && exists(/databases/$(database)/documents/editors/$(request.auth.uid));
+    }
+    // 編集用の番号（secret/pin の editpin）が合っていたら、その携帯を編集する人として登録できる
+    match /editors/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.pin == get(/databases/$(database)/documents/secret/pin).data.editpin;
+      allow update, delete: if false;
+    }
+    // 予定表：社員は見るだけ。入れる・直す・消すのは編集する人だけ
+    match /events/{id} { allow read: if member(); allow write: if editor(); }
     match /items/{id} { allow read, write: if member(); }
     match /sites/{id} { allow read, write: if member(); }
     // 履歴は足すだけ（直したり消したりはできない）
