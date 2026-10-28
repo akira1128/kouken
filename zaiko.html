@@ -248,7 +248,7 @@ details.edit form{padding:12px 0 0}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,getDocs,setDoc,onSnapshot,query,orderBy,limit,runTransaction,writeBatch,deleteField} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,getDocs,setDoc,onSnapshot,query,orderBy,limit,runTransaction,writeBatch,deleteField} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {FIREBASE_CONFIG} from "./firebase-config.js";
 import {SEED_SITES,SEED_ITEMS} from "./seed.js";
 (function(){
@@ -614,6 +614,8 @@ function askPin(){
 /* 保温筒の規格：[厚み, 並び順, サイズ]（ALKと同じ。ALGC・PF直管もこれを使う） */
 const SPECS=[["20t",0,["15A","20A","25A","32A","40A","50A","65A","80A"]],["25t",0,["100A","125A","150A"]],["30t",1,["15A","20A","25A","32A","40A","50A"]],
   ["40t",2,["32A","40A","50A","65A","80A","100A","125A","150A","200A","250A","300A"]],["50t",3,["200A","250A","300A"]]];
+/* 材料を足したり、名前・種類を移す処理を足したときは、この数を1つ上げる（上げないと動かない） */
+const MIGRATE_VER=1;
 /* あとから足す材料（なければ作る。数は0）。order が大きいほど一覧の下に出る */
 const EXTRA_ITEMS=[
   ...["15A","20A","25A","32A","40A","50A"].map(a=>({id:"alk30-"+a,name:"ALKP保温筒 "+a+"×30t",cat:"ALK（P）保温筒",unit:"本",order:1})), // 2026/10/28 使う頻度が少ないので20tの下に
@@ -714,7 +716,8 @@ renderWho();renderCats();renderList();renderLog();show(view);
 (async()=>{
   if(!FIREBASE_CONFIG||!FIREBASE_CONFIG.apiKey){setBanner("まだ設定がすんでいません（firebase-config.js に Firebase の設定を入れてください）。");renderList();return;}
   try{
-    const app=initializeApp(FIREBASE_CONFIG);fs=getFirestore(app);const auth=getAuth(app);
+    const app=initializeApp(FIREBASE_CONFIG);// 一度読んだデータは携帯に覚えさせて、読み込み回数（無料は1日5万回）を減らす
+    try{fs=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});}catch(e){fs=getFirestore(app);}const auth=getAuth(app);
     await signInAnonymously(auth);uid=auth.currentUser.uid;
     const m=await getDoc(doc(fs,"members",uid));
     if(!m.exists())await askPin();
@@ -723,10 +726,13 @@ renderWho();renderCats();renderList();renderLog();show(view);
   db={doc:p=>{const r=doc(fs,p);return{update:d=>updateDoc(r,d),delete:()=>deleteDoc(r)};},
       collection:n=>({add:d=>addDoc(collection(fs,n),d)})};
   try{await seedIfEmpty();}catch(e){}
-  try{await migrateCats();}catch(e){}
-  try{await ensureItems();}catch(e){}
+  // 材料を作る・名前や種類を移す処理は、版（MIGRATE_VER）が上がったときに1回だけ。毎回やると全部の材料を読むので
+  try{
+    const m=await getDoc(doc(fs,"items","_meta"));const done=m.exists()?Number(m.data().ver)||0:0;
+    if(done<MIGRATE_VER){await migrateCats();await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
+  }catch(e){}
   onSnapshot(collection(fs,"items"),s=>{
-    items=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(x=>!x.deleted).sort((a,b)=>rank(a)-rank(b)||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
+    items=s.docs.filter(d=>!d.id.startsWith("_")).map(d=>Object.assign({id:d.id},d.data())).filter(x=>!x.deleted).sort((a,b)=>rank(a)-rank(b)||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
     loaded=true;renderList();
   },e=>{setBanner("在庫を読み込めませんでした。ページを開き直してください。");});
   onSnapshot(query(collection(fs,"logs"),orderBy("at","desc"),limit(300)),s=>{logs=s.docs.map(d=>d.data());renderLog();},()=>{});
