@@ -220,7 +220,7 @@ const STAFF=[["西崎剣","西崎"],["原田弓子","原田"],["福島正純","�
 const NICK=Object.fromEntries(STAFF);
 const nick=n=>NICK[n]||n||"";
 const FACTORY="工場（加工）", OTHER="その他（メモに書く）";
-const CATS=["ALK（P）保温筒","ALGC保温筒","ロール","セラカバー","遮音シート","ジャケット・エルボ","コイル","テープ・副資材","その他"];
+const CATS=["ALK（P）保温筒","ALGC保温筒","ロール","セラカバー","遮音シート","金網","ジャケット・エルボ","コイル","テープ・副資材","その他"];
 const UNITS=["本","個","巻","枚","ケース","箱","m","kg"];
 const KIND={in:"入庫",out:"持ち出し",set:"数を直す",new:"登録",del:"削除"};
 const tabId="t"+Math.random().toString(36).slice(2,10);
@@ -490,12 +490,13 @@ async function seedIfEmpty(){
 
 /* 種類を分けたとき、前の種類で登録した材料を新しい種類に移す（2026/10/28）
    保温筒 → ALGC保温筒（名前にALGC）／ALK（P）保温筒（それ以外）、ロールのセラカバー → セラカバー、
-   テープ・副資材のサンダム・遮音 → 遮音シート */
+   テープ・副資材のサンダム・遮音 → 遮音シート、テープ・副資材の亀甲・金網 → 金網 */
 function newCat(x){
   const n=x.name||"";
   if(x.cat==="保温筒")return /ALGC/i.test(n)?"ALGC保温筒":"ALK（P）保温筒";
   if(x.cat==="ロール"&&/セラカバー/.test(n))return "セラカバー";
   if(x.cat==="テープ・副資材"&&/サンダム|遮音/.test(n))return "遮音シート";
+  if(x.cat==="テープ・副資材"&&/亀甲|金網/.test(n))return "金網";
   return null;
 }
 async function migrateCats(){
