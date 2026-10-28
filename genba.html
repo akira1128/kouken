@@ -89,6 +89,9 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .stseg button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700}
 .stseg button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
 .st.other{background:var(--bg);color:var(--muted)}
+/* 外注の会社（例：竹内工業が施工中）。予定表の竹内工業と同じ色 */
+.outs{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:#fde7ec;color:#be123c;margin-right:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .outs{background:#3b1520;color:#f48aa2}}
 .grouph{margin:0;padding:10px 14px 4px;font-size:12px;letter-spacing:.12em;color:var(--muted)}
 /* 現場の詳しい画面 */
 .dhead{padding:14px;display:grid;gap:10px}
@@ -269,7 +272,8 @@ function renderSites(){
       return h("button",{type:"button",class:"sitecard",onclick:()=>openSite(x.id)},
         h("b",null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),shortSite(x.name)),
         h("span",{class:"go",text:"›"}),
-        h("span",{class:"sub",text:[inf.outsource?inf.outsource+"が"+(x.status==="施工中"?"施工中":"施工"):"",inf.address||"住所はまだ",nNote?"メモ "+nNote+"件":"",nOrd?"注文 "+nOrd+"回":""].filter(Boolean).join("　")}));
+        h("span",{class:"sub"},inf.outsource?h("span",{class:"outs",text:inf.outsource+"が"+(x.status==="施工中"?"施工中":"施工")}):null,
+          [inf.address||"住所はまだ",nNote?"メモ "+nNote+"件":"",nOrd?"注文 "+nOrd+"回":""].filter(Boolean).join("　")));
     }));}));
 }
 
