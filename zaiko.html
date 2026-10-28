@@ -153,6 +153,20 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
 .after{font-size:14px;color:var(--muted);margin:0}
 .after b{color:var(--ink)}
 .err{color:var(--low);font-weight:700;font-size:14px;margin:0}
+/* 現場に材料を頼むとき（zaiko.html?order=現場）：下のタブのかわりに「頼むもの」の帯 */
+.ordermode nav.tabs{display:none}
+.cartbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.cartbar .btn{max-width:608px;margin:0 auto;display:block}
+.incart{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accent);color:var(--accent-ink);margin-left:6px;vertical-align:2px}
+.ordersite{margin-top:12px;padding:10px 12px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-size:14px;font-weight:700}
+.cartlist{display:grid;gap:8px}
+.cartline{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.cartline b{overflow-wrap:anywhere}
+.cartline .q{display:flex;align-items:center;gap:6px}
+.cartline .q button{width:36px;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:20px;font-weight:700}
+.cartline .q span{min-width:42px;text-align:center;font-weight:700}
+.cartline .rm{grid-column:1/3;justify-self:start;border:0;background:none;color:var(--muted);font-size:12px;text-decoration:underline;padding:0}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:20;background:var(--ink);color:var(--bg);
   padding:10px 18px;border-radius:999px;font-weight:700;font-size:15px;max-width:calc(100% - 32px);text-align:center}
 .names{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -258,6 +272,7 @@ details.edit form{padding:12px 0 0}
 </nav>
 
 <div class="scrim" id="scrim" hidden></div>
+<div class="cartbar" id="cartbar" hidden><button class="btn" type="button" id="cartBtn">頼むものを見る（0点）</button></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script type="module">
@@ -334,6 +349,13 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let toastT;function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600);}
 
 let db=null, items=[], logs=[], sites=[], loaded=false, readOnly=false;
+/* 現場に材料を頼むとき（現場一覧の「この現場に材料を頼む」から zaiko.html?order=現場のID で開く）。
+   材料のえらび方は在庫と同じ。頼む数を入れて「頼むもの」に入れ、最後にまとめて送る（2026/10/28 ユーザー） */
+const ORDER=new URLSearchParams(location.search).get("order")||"";
+let orderSite="";
+const cartKey="kouken-cart-"+ORDER;
+let cart=(()=>{try{return JSON.parse(sessionStorage.getItem(cartKey)||"{}")||{};}catch(e){return {};}})();   // { 材料のID: 数 }。「一覧にない材料」は x+番号
+const saveCart=()=>{try{sessionStorage.setItem(cartKey,JSON.stringify(cart));}catch(e){}renderCartBar();renderList();};
 let who=store("kouken-who")||"";
 if(who&&!NICK[who])who="";              // 前の版の名前の書き方だったら選び直してもらう
 let logSite="すべて";
@@ -379,7 +401,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scrim").hidden)
 
 /* ---------- タブ ---------- */
 let view=store("kouken-view")||"vStock";
-function show(v){view=v;store("kouken-view",v);
+function show(v){if(ORDER)v="vStock";else{view=v;store("kouken-view",v);}
   for(const id of ["vStock","vLog","vAdd"])$(id).hidden=id!==v;
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===v?"page":"false"));
   window.scrollTo(0,0);}
@@ -453,13 +475,72 @@ function renderList(){
   }
   list.replaceChildren(...groups.map(([c,arr])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
     arr.map(it=>h("button",{type:"button",class:"row"+(isLow(it)?" low":"")+(Number(it.qty)>0?" has":" zero"),onclick:()=>openItem(it.id)},
-      h("span",{class:"nm"},it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
+      h("span",{class:"nm"},it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,ORDER&&cart[it.id]?h("span",{class:"incart",text:"頼む "+fmtN(cart[it.id].n)+(it.unit||"")}):null,
         h("span",{class:"sub",text:((HASLEN(it.cat)||it.no)&&sizeText(it)?(sizeText(it)+" ・ "):"")+(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
       h("span",{class:"qty"+(lowS(it)?" lowtxt":"")},fmtN(it.qty),h("small",{text:it.unit||""}),ELBOW(it.cat)?EPARTS.map(([k,l,f])=>h("span",{class:"eq",text:l.replace("溶接","").replace("エルボ","")+" "+fmtN(it[f]||0)+"個"})):null))))));
 }
 
+/* ---------- 現場に頼む：1つの材料の数 ---------- */
+function openOrderItem(id){
+  const it=items.find(x=>x.id===id);if(!it)return;
+  if(!who){pickWho(()=>openOrderItem(id));return;}
+  const num=h("input",{class:"inp",type:"number",inputmode:"decimal",min:"0",step:"any",value:cart[id]?fmtN(cart[id].n):"1","aria-label":"頼む数"});
+  const step=d=>{num.value=fmtN(Math.max(0,(Number(num.value)||0)+d));};
+  let close;
+  close=openSheet(h("h2",{text:it.name}),
+    h("div",{class:"now"},h("span",{text:"工場の在庫"}),h("span",null,h("b",{text:fmtN(it.qty)}),h("small",{text:" "+(it.unit||"")}))),
+    h("label",{class:"fl"},"頼む数",h("div",{class:"stepper"},h("button",{type:"button","aria-label":"1へらす",onclick:()=>step(-1)},"−"),num,h("button",{type:"button","aria-label":"1ふやす",onclick:()=>step(1)},"＋"))),
+    h("div",{class:"quick"},[5,10,20].map(n=>h("button",{type:"button",onclick:()=>step(n)},"＋"+n))),
+    h("button",{class:"btn",type:"button",onclick:()=>{const n=Number(num.value);
+      if(n>0)cart[id]={n,name:it.name,unit:it.unit||"",cat:it.cat||""};else delete cart[id];
+      saveCart();close();toast(n>0?"「"+it.name+"」を"+fmtN(n)+(it.unit||"")+" 入れました":"頼むものから外しました");}},cart[id]?"この数にする":"頼むものに入れる"),
+    cart[id]?h("button",{class:"btn ghost",type:"button",onclick:()=>{delete cart[id];saveCart();close();toast("頼むものから外しました");}},"頼むものから外す"):null);
+}
+function renderCartBar(){
+  if(!ORDER)return;
+  const n=Object.keys(cart).length;
+  $("cartbar").hidden=false;
+  $("cartBtn").textContent=n?"頼むものを見る・送る（"+n+"点）":"材料を押して、頼む数を入れてください";
+  $("cartBtn").disabled=!n;
+}
+/* 頼むものの確認と送る。一覧にない材料もここで足せる */
+function openCart(){
+  if(!who){pickWho(openCart);return;}
+  const memo=h("textarea",{class:"inp",placeholder:"例：○日までに3階へ。長さは1m"});
+  const err=h("p",{class:"err",hidden:true});
+  const list=h("div",{class:"cartlist"});
+  const draw=()=>list.replaceChildren(...Object.entries(cart).map(([id,l])=>h("div",{class:"cartline"},
+    h("b",{text:l.name}),
+    h("span",{class:"q"},h("button",{type:"button","aria-label":"1へらす",onclick:()=>{l.n=Math.max(0,l.n-1);if(!l.n)delete cart[id];saveCart();draw();}},"−"),h("span",{text:fmtN(l.n)+l.unit}),
+      h("button",{type:"button","aria-label":"1ふやす",onclick:()=>{l.n+=1;saveCart();draw();}},"＋")),
+    h("button",{type:"button",class:"rm",onclick:()=>{delete cart[id];saveCart();draw();}},"外す"))));
+  draw();
+  const xName=h("input",{class:"inp",placeholder:"一覧にない材料の名前"}), xN=h("input",{class:"inp",type:"number",inputmode:"decimal",min:"0",step:"any",placeholder:"数",style:{width:"90px"}}),
+    xU=h("select",{class:"inp",style:{width:"90px"}},UNITS.map(u=>h("option",{value:u},u)));
+  const send=h("button",{class:"btn",type:"button"},"西崎さんに送る");
+  let close;
+  send.addEventListener("click",async()=>{
+    const lines=Object.entries(cart).map(([id,l])=>({itemId:id.startsWith("x")?"":id,name:l.name,unit:l.unit,cat:l.cat||"",qty:l.n}));
+    if(!lines.length){err.textContent="頼むものがありません。";err.hidden=false;return;}
+    send.disabled=true;send.textContent="送っています…";
+    const d=new Date(),p2=n=>String(n).padStart(2,"0");
+    try{
+      await addDoc(collection(fs,"orders"),{at:Date.now(),date:d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()),siteId:ORDER,siteName:orderSite,who,lines,memo:memo.value.trim(),fromStock:false});
+      cart={};try{sessionStorage.removeItem(cartKey);}catch(e){}
+      location.href="genba.html?site="+encodeURIComponent(ORDER)+"&sent=1";
+    }catch(e){err.textContent=e&&e.code==="permission-denied"?"送る権限がありません。ページを開き直してください。":"送れませんでした。電波を確認してください。";err.hidden=false;send.disabled=false;send.textContent="西崎さんに送る";}
+  });
+  close=openSheet(h("h2",{text:"頼むもの"}),h("p",{class:"hint",text:"現場："+(orderSite||"―")+"　頼む人："+nick(who)}),list,
+    h("details",{class:"edit"},h("summary",{text:"一覧にない材料を足す"}),h("div",{style:{display:"grid",gap:"8px",paddingTop:"8px"}},xName,h("div",{style:{display:"flex",gap:"8px"}},xN,xU,
+      h("button",{class:"btn ghost",type:"button",style:{width:"auto"},onclick:()=>{const nm=xName.value.trim(),n=Number(xN.value);if(!nm||!(n>0))return;
+        cart["x"+Date.now()]={n,name:nm,unit:xU.value,cat:""};xName.value="";xN.value="";saveCart();draw();}},"足す")))),
+    h("label",{class:"fl"},h("span",null,"メモ ",h("em",{text:"なくてもよい"})),memo),err,send);
+}
+$("cartBtn").addEventListener("click",openCart);
+
 /* ---------- 1つの材料：入庫・持ち出し ---------- */
 function openItem(id){
+  if(ORDER){openOrderItem(id);return;}
   const it=items.find(x=>x.id===id);if(!it)return;
   if(!who){pickWho(()=>openItem(id));return;}
   let kind="out";
@@ -757,6 +838,10 @@ async function migrateCats(){
 
 /* ---------- 起動 ---------- */
 let fs=null, uid="";
+if(ORDER){document.documentElement.classList.add("ordermode");
+  document.querySelector(".brand").firstChild.textContent="材料を頼む";
+  const back=document.querySelector("a.brandrow.home");back.href="genba.html?site="+encodeURIComponent(ORDER);back.setAttribute("aria-label","現場にもどる");
+  $("banner").insertAdjacentElement("afterend",h("p",{class:"ordersite",id:"orderSite",text:"現場を読み込んでいます…"}));renderCartBar();}
 renderWho();renderCats();renderList();renderLog();show(view);
 (async()=>{
   if(!FIREBASE_CONFIG||!FIREBASE_CONFIG.apiKey){setBanner("まだ設定がすんでいません（firebase-config.js に Firebase の設定を入れてください）。");renderList();return;}
@@ -783,6 +868,8 @@ renderWho();renderCats();renderList();renderLog();show(view);
   onSnapshot(query(collection(fs,"logs"),orderBy("at","desc"),limit(300)),s=>{logs=s.docs.map(d=>d.data());renderLog();},()=>{});
   // 現場の一覧（現場一覧の施工中・これからの現場）
   onSnapshot(collection(fs,"sites"),s=>{sites=s.docs.map(d=>d.data()).filter(x=>x&&x.name&&x.active!==false).sort((a,b)=>(a.order||0)-(b.order||0));renderLog();},()=>{});
+  if(ORDER)try{const sd=await getDoc(doc(fs,"sites",ORDER));orderSite=sd.exists()?sd.data().name||"":"";
+    $("orderSite").textContent=orderSite?"頼む現場："+orderSite:"現場が見つかりません。現場一覧から開き直してください。";}catch(e){}
   if(!who)setTimeout(()=>{if(!who&&$("scrim").hidden)pickWho();},400);
 })();
 })();

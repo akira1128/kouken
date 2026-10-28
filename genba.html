@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>現場一覧｜株式会社コウケン</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="コウケン">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* 現場一覧：今通っている現場の情報（住所・元請・入場ルール・作業のコツ）、材料を頼む、注文の記録と集計。色と文字は在庫・予定表と同じ */
+:root{
+  color-scheme:light;
+  --bg:#eaf1f8; --surface:#ffffff; --line:#cbdaea; --ink:#0d1a27; --muted:#465b70;
+  --accent:#0b5cab; --accent-ink:#ffffff; --accent-soft:#dceafa;
+  --low:#b0322d; --low-soft:#fbdfdd; --in:#0d7a52; --in-soft:#d8f0e6; --out:#93650d; --out-soft:#fbeecd;
+  --shadow:0 1px 2px rgba(10,40,70,.07);
+  --f-body:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#08111b; --surface:#0f1c2a; --line:#25394f; --ink:#e6eff8; --muted:#a1b5ca;
+  --accent:#4c9ae8; --accent-ink:#04121f; --accent-soft:#12314f;
+  --low:#e8756e; --low-soft:#3b1a18; --in:#3fbe8b; --in-soft:#0e3527; --out:#d6a341; --out-soft:#382a0d;
+  --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#08111b; --surface:#0f1c2a; --line:#25394f; --ink:#e6eff8; --muted:#a1b5ca;
+  --accent:#4c9ae8; --accent-ink:#04121f; --accent-soft:#12314f;
+  --low:#e8756e; --low-soft:#3b1a18; --in:#3fbe8b; --in-soft:#0e3527; --out:#d6a341; --out-soft:#382a0d;
+  --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{touch-action:manipulation}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  margin:0;padding-block:0 calc(84px + env(safe-area-inset-bottom,0px));font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+header.topbar{position:sticky;top:0;z-index:5;background:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow);padding-top:env(safe-area-inset-top,0px)}
+.topbar-in{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px))}
+.brandrow{display:flex;align-items:center;gap:10px;min-width:0}
+a.brandrow{color:inherit;text-decoration:none}
+.brandrow .back{display:grid;place-items:center;flex:none;width:40px;height:44px;margin:-4px -2px -4px -8px;border-radius:10px;
+  background:rgba(255,255,255,.16);font-size:32px;line-height:1;font-weight:400;padding-bottom:4px}
+a.brandrow:active .back{background:rgba(255,255,255,.3)}
+.mark{display:block;width:40px;height:36px;border-radius:9px;background:#fff;padding:3px 4px;flex:none}
+.mark img{display:block;width:100%;height:100%;object-fit:contain}
+.brand{font-weight:700;font-size:16px;letter-spacing:.04em;line-height:1.25}
+.brand small{display:block;font-size:11px;font-weight:500;opacity:.78;letter-spacing:.14em}
+.who{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);color:inherit;border:1px solid rgba(255,255,255,.24);border-radius:999px;padding:5px 12px;font-size:13px;white-space:nowrap}
+.who b{opacity:.78;font-weight:400;font-size:11px}
+.banner{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:var(--out-soft);font-size:14px}
+main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.empty{padding:22px 14px;text-align:center;color:var(--muted);font-size:14px}
+.btn{border:0;border-radius:10px;padding:13px 16px;font-weight:700;font-size:16px;background:var(--accent);color:var(--accent-ink);width:100%}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);font-weight:500;font-size:15px;padding:10px 14px}
+.btn.small{width:auto;padding:7px 12px;font-size:14px}
+.btn.danger{background:var(--low);color:#fff}
+.btn:disabled{opacity:.45}
+.rowbtns{display:flex;gap:8px;flex-wrap:wrap}
+.rowbtns .btn{flex:1}
+/* お知らせ（新しい注文） */
+.notice{padding:12px 14px;display:grid;gap:8px;border-color:var(--low);background:var(--low-soft)}
+.notice h3{margin:0;font-size:15px;color:var(--low)}
+.notice .btn{justify-self:start;width:auto}
+/* 現場の一覧 */
+.sitecard{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:13px 14px}
+.sitecard:first-of-type{border-top:0}
+.sitecard b{font-size:16px;overflow-wrap:anywhere}
+.sitecard .sub{grid-column:1/2;font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.sitecard .go{grid-row:1/3;grid-column:2;color:var(--muted);font-size:22px}
+.st{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;margin-right:6px;vertical-align:2px}
+.st.now{background:var(--in-soft);color:var(--in)}
+.st.next{background:var(--accent-soft);color:var(--accent)}
+.st.other{background:var(--bg);color:var(--muted)}
+.grouph{margin:0;padding:10px 14px 4px;font-size:12px;letter-spacing:.12em;color:var(--muted)}
+/* 現場の詳しい画面 */
+.dhead{padding:14px;display:grid;gap:10px}
+.dhead h2{margin:0;font-size:19px;overflow-wrap:anywhere}
+.backlink{justify-self:start;display:inline-flex;align-items:center;gap:2px;border:0;background:var(--bg);border-radius:10px;padding:6px 14px 6px 8px;min-height:40px;font-size:15px;font-weight:700;color:var(--accent)}
+.backlink b{font-size:26px;line-height:1;font-weight:400;margin-top:-3px}
+.sec{padding:12px 14px;display:grid;gap:10px}
+.sec h3{margin:0;font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.info{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;margin:0;font-size:14.5px}
+.info dt{color:var(--muted);font-size:13px;white-space:nowrap;padding-top:1px}
+.info dd{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.info dd.none{color:var(--muted)}
+.notes{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.notes li{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--bg);display:grid;gap:4px}
+.notes .tx{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px}
+.notes .meta{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.notes .del{border:0;background:none;color:var(--muted);font-size:12px;text-decoration:underline;padding:2px}
+/* 注文 */
+.order{border-top:1px solid var(--line);padding:11px 14px;display:grid;gap:5px}
+.order:first-child{border-top:0}
+.order .top{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted)}
+.order .top b{color:var(--ink);font-size:14.5px;overflow-wrap:anywhere}
+.order ul{margin:0;padding-left:1.2em;font-size:14.5px}
+.order .mm{font-size:13px;color:var(--muted);white-space:pre-wrap}
+.tag{font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--in-soft);color:var(--in);white-space:nowrap}
+.dayh{margin:0;padding:10px 14px 2px;font-size:13px;font-weight:700;color:var(--muted);border-top:1px solid var(--line)}
+.dayh:first-child{border-top:0}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px}
+.inp{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px}
+textarea.inp{min-height:70px;resize:vertical}
+table.sum{width:100%;border-collapse:collapse;font-size:14.5px}
+table.sum th,table.sum td{padding:8px 14px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+table.sum td.n{text-align:right;white-space:nowrap;font-weight:700}
+table.sum th{font-size:12px;color:var(--muted);font-weight:700;background:var(--bg)}
+/* 下のタブ */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);
+  padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);
+  display:grid;grid-template-columns:repeat(3,1fr)}
+nav.tabs button{border:0;background:none;padding:10px 4px 12px;font-size:14px;color:var(--muted);display:grid;justify-items:center;gap:3px}
+nav.tabs button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2}
+nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
+/* 下から出るパネル */
+.scrim{position:fixed;inset:0;z-index:10;background:rgba(10,18,26,.5);display:flex;align-items:flex-end;justify-content:center}
+.sheetback{position:sticky;top:-18px;z-index:2;justify-self:start;display:inline-flex;align-items:center;gap:2px;margin:-8px 0 -6px -6px;
+  border:0;background:var(--bg);border-radius:10px;padding:6px 14px 6px 8px;min-height:40px;font-size:15px;font-weight:700;color:var(--accent);box-shadow:var(--shadow)}
+.sheetback b{font-size:26px;line-height:1;font-weight:400;margin-top:-3px}
+.sheet{background:var(--surface);width:100%;max-width:640px;max-height:92%;overflow-y:auto;border-radius:16px 16px 0 0;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:grid;gap:12px}
+.sheet h2{margin:0;font-size:19px;overflow-wrap:anywhere}
+form.f{display:grid;gap:12px}
+label.fl{display:grid;gap:5px;font-size:14px;font-weight:700}
+label.fl em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
+.err{color:var(--low);font-weight:700;font-size:14px;margin:0}
+.names{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.names button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:12px 6px;font-size:15px;font-weight:700}
+.names button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:20;background:var(--ink);color:var(--bg);
+  padding:10px 18px;border-radius:999px;font-weight:700;font-size:15px;max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+</style>
+</head>
+<body>
+
+<header class="topbar"><div class="topbar-in">
+  <a class="brandrow home" href="./" aria-label="メニューにもどる"><span class="back" aria-hidden="true">‹</span><span class="mark"><img src="logo.png" alt=""></span><div class="brand">現場一覧<small>株式会社コウケン</small></div></a>
+  <button class="who" id="whoBtn" type="button" aria-label="使う人を変える"><b>使う人</b><span id="whoName">名前をえらぶ</span></button>
+</div></header>
+<div class="wrap">
+  <p class="banner" id="banner" hidden></p>
+  <main>
+    <section class="panel notice" id="notice" aria-live="polite" hidden></section>
+    <div id="vSites"></div>
+    <div id="vSite" hidden></div>
+    <div id="vOrders" hidden></div>
+    <div id="vSum" hidden></div>
+  </main>
+</div>
+<nav class="tabs" aria-label="画面の切りかえ">
+  <button type="button" data-v="vSites" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6"/></svg>現場</button>
+  <button type="button" data-v="vOrders"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>注文の記録</button>
+  <button type="button" data-v="vSum"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>集計</button>
+</nav>
+<div class="scrim" id="scrim" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,getDoc,setDoc,onSnapshot,query,orderBy,limit,arrayUnion,arrayRemove,runTransaction} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {FIREBASE_CONFIG} from "./firebase-config.js";
+(function(){
+/* 社員：[正式名, 呼び名]。在庫・予定表と同じ。「使う人」は在庫で選んだ名前（kouken-who）と同じものを使う */
+const STAFF=[["西崎剣","西崎"],["原田弓子","原田"],["福島正純","福島"],["田中嗣音","嗣穏"],["NGUYEN VAN HIEU","ヒエウ"],["DANG BINH DUONG","ズオン"],["NGUYEN NGOC LONG","ロン"]];
+const NICK=Object.fromEntries(STAFF);
+const nick=n=>NICK[n]||n||"";
+/* 現場の情報の欄：[キー, 見出し, 入れ方の例] */
+const FIELDS=[["address","住所","例：東京都八王子市明神町4-1"],["parking","駐車場・搬入","例：現場前に2台。搬入は北側ゲートから"],
+  ["gc","元請","例：株式会社エステック"],["contact","担当者","例：佐藤さん（設備）"],["tel","電話","例：090-1234-5678"],
+  ["rules","入場ルール","例：朝礼8:00、新規入場は前日までに書類"],["caution","注意事項","例：17時以降は音の出る作業ダメ"]];
+const STATUS_ORDER={"施工中":0,"これから":1};
+const shortSite=s=>(s||"").replace(/[（(]仮称[）)]\s*/g,"").replace(/\s*新築工事$/,"").trim();
+
+const $=id=>document.getElementById(id);
+function h(tag,attrs,...kids){const e=document.createElement(tag);
+  if(attrs)for(const k in attrs){const v=attrs[k];if(v==null||v===false)continue;
+    if(k==="class")e.className=v;else if(k==="text")e.textContent=v;else if(k==="style"&&typeof v==="object")Object.assign(e.style,v);else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v===true?"":v);}
+  for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(String(c)));}
+  return e;}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null}}
+let toastT;function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600);}
+function setBanner(msg){$("banner").textContent=msg||"";$("banner").hidden=!msg;}
+const p2=n=>String(n).padStart(2,"0");
+const ymd=d=>d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
+const WD="日月火水木金土";
+const md=s=>{const [y,m,d]=s.split("-").map(Number);return m+"/"+d+"（"+WD[new Date(y,m-1,d).getDay()]+"）";};
+const fmtN=n=>{n=Number(n)||0;return Number.isInteger(n)?String(n):String(Math.round(n*100)/100)};
+const hm=t=>{const d=new Date(t);return p2(d.getHours())+":"+p2(d.getMinutes());};
+
+let fs=null, uid="", editor="", sites=[], orders=[], view="vSites", siteId=new URLSearchParams(location.search).get("site")||"";
+let who=store("kouken-who")||"";
+if(who&&!NICK[who])who="";
+
+/* ---------- 下から出るパネル ---------- */
+function openSheet(...kids){
+  const s=$("scrim");s.replaceChildren(h("div",{class:"sheet",role:"dialog","aria-modal":"true"},kids));s.hidden=false;
+  const close=()=>{s.hidden=true;s.replaceChildren();};
+  s.onclick=e=>{if(e.target===s)close();};
+  s.firstChild.prepend(h("button",{type:"button",class:"sheetback","aria-label":"もどる",onclick:close},h("b",{text:"‹"}),"戻る"));
+  return close;
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scrim").hidden&&$("scrim").onclick){$("scrim").hidden=true;$("scrim").replaceChildren();}});
+
+/* ---------- 使う人 ---------- */
+function renderWho(){$("whoName").textContent=editor?nick(editor):who?nick(who):"名前をえらぶ";}
+function pickWho(then){
+  const close=openSheet(h("h2",{text:"あなたはだれですか？"}),h("p",{class:"hint",text:"書いたメモや頼んだ材料に、この名前が残ります。この携帯に覚えておきます。"}),
+    h("div",{class:"names"},STAFF.map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===who),onclick:()=>{who=n;store("kouken-who",n);renderWho();close();then&&then();}},k))));
+}
+$("whoBtn").addEventListener("click",()=>{if(!editor)pickWho();});
+const me=()=>editor||who;
+const needWho=then=>{if(me())then();else pickWho(then);};
+
+/* ---------- 画面の切りかえ ---------- */
+function show(v){
+  view=v;
+  for(const id of ["vSites","vSite","vOrders","vSum"])$(id).hidden=id!==v;
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===(v==="vSite"?"vSites":v)?"page":"false"));
+  render();window.scrollTo(0,0);
+}
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.v==="vSites")siteId="";show(b.dataset.v);}));
+function openSite(id){siteId=id;history.replaceState(null,"","?site="+encodeURIComponent(id));show("vSite");}
+function render(){
+  if(view==="vSites")renderSites();else if(view==="vSite")renderSite();else if(view==="vOrders")renderOrders();else renderSum();
+  renderNotice();
+}
+const siteName=id=>{const s=sites.find(x=>x.id===id);return s?s.name:"";};
+
+/* ---------- 現場の一覧（施工中・これから・そのほか） ---------- */
+function renderSites(){
+  const box=$("vSites");
+  if(!sites.length){box.replaceChildren(h("div",{class:"panel empty",text:fs?"現場がまだありません":"読み込んでいます…"}));return;}
+  const groups=[["施工中",x=>x.status==="施工中"],["これから",x=>x.status==="これから"],["そのほか",x=>!(x.status in STATUS_ORDER)]];
+  box.replaceChildren(...groups.map(([t,f])=>{const arr=sites.filter(f);if(!arr.length)return null;
+    return h("section",{class:"panel"},h("h3",{class:"grouph",text:t+"（"+arr.length+"）"}),arr.map(x=>{
+      const inf=x.info||{}, nOrd=orders.filter(o=>o.siteId===x.id).length, nNote=(x.notes||[]).length;
+      return h("button",{type:"button",class:"sitecard",onclick:()=>openSite(x.id)},
+        h("b",null,h("span",{class:"st "+(x.status==="施工中"?"now":x.status==="これから"?"next":"other"),text:x.status||"―"}),shortSite(x.name)),
+        h("span",{class:"go",text:"›"}),
+        h("span",{class:"sub",text:[inf.address||"住所はまだ",nNote?"メモ "+nNote+"件":"",nOrd?"注文 "+nOrd+"回":""].filter(Boolean).join("　")}));
+    }));}));
+}
+
+/* ---------- 現場の詳しい画面 ---------- */
+function renderSite(){
+  const box=$("vSite"), x=sites.find(s=>s.id===siteId);
+  if(!x){box.replaceChildren(h("div",{class:"panel empty",text:fs?"この現場は見つかりません":"読み込んでいます…"}));return;}
+  const inf=x.info||{};
+  const val=(k,v)=>{
+    if(!v)return h("dd",{class:"none",text:"―"});
+    if(k==="address")return h("dd",null,v,"　",h("a",{href:"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(v),target:"_blank",rel:"noopener"},"地図を開く"));
+    if(k==="tel")return h("dd",null,...String(v).split(/[、,\s]+/).filter(Boolean).flatMap((t,i)=>[i?"　":"",h("a",{href:"tel:"+t.replace(/[^\d+]/g,"")},t)]));
+    return h("dd",{text:v});
+  };
+  const notes=[...(x.notes||[])].sort((a,b)=>(b.at||0)-(a.at||0));
+  const noteIn=h("textarea",{class:"inp",placeholder:"例：3階の東側はダクトが低いので脚立は小さい方。保温は25t。"});
+  const siteOrders=orders.filter(o=>o.siteId===x.id);
+  box.replaceChildren(
+    h("section",{class:"panel dhead"},
+      h("button",{type:"button",class:"backlink",onclick:()=>{siteId="";history.replaceState(null,"",location.pathname);show("vSites");}},h("b",{text:"‹"}),"現場一覧"),
+      h("h2",null,h("span",{class:"st "+(x.status==="施工中"?"now":x.status==="これから"?"next":"other"),text:x.status||"―"}),x.name),
+      h("a",{class:"btn",href:"zaiko.html?order="+encodeURIComponent(x.id),style:{textAlign:"center",textDecoration:"none"}},"この現場に材料を頼む")),
+    h("section",{class:"panel sec"},
+      h("h3",null,"現場の情報",h("button",{type:"button",class:"btn ghost small",onclick:()=>needWho(()=>editInfo(x))},"書きかえる")),
+      h("dl",{class:"info"},FIELDS.flatMap(([k,l])=>[h("dt",{text:l}),val(k,inf[k])])),
+      x.infoAt?h("p",{class:"hint",text:"最後に書きかえた人："+nick(x.infoBy)+"（"+md(ymd(new Date(x.infoAt)))+"）"}):null),
+    h("section",{class:"panel sec"},
+      h("h3",{text:"作業のコツ・部屋ごとのメモ"}),
+      notes.length?h("ul",{class:"notes"},notes.map(n=>h("li",null,h("span",{class:"tx",text:n.text}),
+        h("span",{class:"meta"},nick(n.who)+"　"+md(ymd(new Date(n.at)))+" "+hm(n.at),
+          (editor||n.who===me())?h("button",{type:"button",class:"del",onclick:async b=>{const t=b.currentTarget;
+            if(t.dataset.ok!=="1"){t.dataset.ok="1";t.textContent="本当に消す";return;}
+            try{await updateDoc(doc(fs,"sites",x.id),{notes:arrayRemove(n)});toast("メモを消しました");}catch(e){toast("消せませんでした");}}},"消す"):null)))):
+        h("p",{class:"hint",text:"まだメモはありません。気づいたことを書いておくと、次に行く人が助かります。"}),
+      noteIn,
+      h("button",{type:"button",class:"btn",onclick:()=>needWho(async()=>{const t=noteIn.value.trim();if(!t)return;
+        try{await updateDoc(doc(fs,"sites",x.id),{notes:arrayUnion({text:t,who:me(),at:Date.now()})});noteIn.value="";toast("メモを書きました");}
+        catch(e){toast(e&&e.code==="permission-denied"?"書く権限がありません":"書けませんでした。電波を確認してください");}})},"メモを書く")),
+    h("section",{class:"panel"},h("div",{class:"sec"},h("h3",{text:"この現場の注文（新しい順）"})),
+      siteOrders.length?siteOrders.slice(0,20).map(orderRow):h("p",{class:"empty",text:"まだ注文はありません"})));
+}
+function editInfo(x){
+  const inf=x.info||{};
+  const ins=Object.fromEntries(FIELDS.map(([k,,ph])=>[k,(k==="rules"||k==="caution"||k==="parking")?h("textarea",{class:"inp",placeholder:ph},inf[k]||""):h("input",{class:"inp",placeholder:ph,value:inf[k]||""})]));
+  const err=h("p",{class:"err",hidden:true});
+  const save=h("button",{class:"btn",type:"submit"},"保存する");
+  let close;
+  const form=h("form",{class:"f",onsubmit:async e=>{e.preventDefault();save.disabled=true;
+    const info=Object.fromEntries(FIELDS.map(([k])=>[k,ins[k].value.trim()]));
+    try{await updateDoc(doc(fs,"sites",x.id),{info,infoAt:Date.now(),infoBy:me()});close();toast("現場の情報を保存しました");}
+    catch(y){err.textContent=y&&y.code==="permission-denied"?"書く権限がありません。":"保存できませんでした。電波を確認してください。";err.hidden=false;save.disabled=false;}
+  }},h("h2",{text:shortSite(x.name)+"の情報"}),FIELDS.map(([k,l])=>h("label",{class:"fl"},l,ins[k])),err,save);
+  close=openSheet(form);
+}
+
+/* ---------- 注文の1件 ---------- */
+function orderRow(o){
+  const lines=o.lines||[];
+  return h("div",{class:"order"},
+    h("div",{class:"top"},h("b",{text:view==="vSite"?md(o.date):shortSite(o.siteName||siteName(o.siteId))}),h("span",{text:hm(o.at)+"　"+nick(o.who)})),
+    h("ul",null,lines.map(l=>h("li",{text:l.name+"　"+fmtN(l.qty)+(l.unit||"")}))),
+    o.memo?h("div",{class:"mm",text:"メモ："+o.memo}):null,
+    o.fromStock?h("span",{class:"tag",text:"工場の在庫から出した（"+nick(o.stockBy)+"）"}):
+      editor?h("div",null,h("button",{type:"button",class:"btn ghost small",onclick:b=>fromStock(o,b.currentTarget)},"工場の在庫から出した")):null);
+}
+/* 頼まれた材料を工場の在庫から出したとき：在庫の数を減らし、在庫の履歴に「持ち出し」で残す（西崎・原田だけ） */
+async function fromStock(o,btn){
+  if(btn.dataset.ok!=="1"){btn.dataset.ok="1";btn.textContent="在庫を減らして記録する";btn.className="btn danger small";return;}
+  btn.disabled=true;
+  const site=o.siteName||siteName(o.siteId), done=[], ng=[];
+  for(const l of o.lines||[]){
+    if(!l.itemId){ng.push(l.name+"（一覧にない材料）");continue;}
+    try{
+      let after=0;
+      await runTransaction(fs,async t=>{const ref=doc(fs,"items",l.itemId);const s=await t.get(ref);if(!s.exists())throw new Error("nodoc");
+        const cur=Number(s.data().qty)||0;after=Math.round((cur-l.qty)*100)/100;if(after<0)throw new Error("neg");
+        t.update(ref,{qty:after,updatedAt:Date.now(),updatedBy:me()});});
+      await addDoc(collection(fs,"logs"),{at:Date.now(),kind:"out",itemId:l.itemId,itemName:l.name,unit:l.unit||"",n:l.qty,after,who:me(),memo:"現場の注文から（"+md(o.date)+" "+nick(o.who)+"）",site,part:"s"});
+      done.push(l.name);
+    }catch(e){ng.push(l.name+(e.message==="neg"?"（在庫が足りない）":""));}
+  }
+  if(done.length)try{await updateDoc(doc(fs,"orders",o.id),{fromStock:true,stockAt:Date.now(),stockBy:me(),stockNg:ng});}catch(e){}
+  toast(done.length?"在庫から出しました"+(ng.length?"（できなかったもの "+ng.length+"件）":""):"在庫から出せませんでした："+ng.join("、"));
+  if(!done.length)btn.disabled=false;
+}
+
+/* ---------- 注文の記録（日付ごと） ---------- */
+let ordSite=store("kouken-ord-site")||"";
+function siteFilter(val,on){
+  const used=[...new Set(orders.map(o=>o.siteId))];
+  return h("select",{class:"inp","aria-label":"現場でしぼる",onchange:e=>on(e.target.value)},h("option",{value:""},"すべての現場"),
+    sites.filter(s=>used.includes(s.id)).map(s=>h("option",{value:s.id,selected:s.id===val},shortSite(s.name))));
+}
+function renderOrders(){
+  const box=$("vOrders");
+  const list=orders.filter(o=>!ordSite||o.siteId===ordSite);
+  const days=[...new Set(list.map(o=>o.date))];
+  box.replaceChildren(h("section",{class:"panel"},
+    h("div",{class:"tools",style:{gridTemplateColumns:"1fr"}},siteFilter(ordSite,v=>{ordSite=v;store("kouken-ord-site",v);renderOrders();})),
+    list.length?days.flatMap(d=>[h("h4",{class:"dayh",text:md(d)+"　"+list.filter(o=>o.date===d).length+"件"}),...list.filter(o=>o.date===d).map(orderRow)]):
+      h("p",{class:"empty",text:"まだ注文はありません。現場の画面の「この現場に材料を頼む」から頼めます。"})));
+}
+
+/* ---------- 集計（材料ごとの合計） ---------- */
+let sumSite="", sumMonth="this";
+function renderSum(){
+  const box=$("vSum"), now=new Date();
+  const ym=d=>d.slice(0,7), thisM=ymd(now).slice(0,7), lastM=ymd(new Date(now.getFullYear(),now.getMonth()-1,1)).slice(0,7);
+  const list=orders.filter(o=>(!sumSite||o.siteId===sumSite)&&(sumMonth==="all"||ym(o.date)===(sumMonth==="this"?thisM:lastM)));
+  const tot={};
+  for(const o of list)for(const l of o.lines||[]){const k=l.name+"|"+(l.unit||"");tot[k]=(tot[k]||0)+(Number(l.qty)||0);}
+  const rows=Object.entries(tot).sort((a,b)=>a[0].localeCompare(b[0],"ja",{numeric:true}));
+  const mSel=h("select",{class:"inp","aria-label":"期間",onchange:e=>{sumMonth=e.target.value;renderSum();}},
+    [["this","今月"],["last","先月"],["all","ぜんぶ"]].map(([v,t])=>h("option",{value:v,selected:v===sumMonth},t)));
+  box.replaceChildren(h("section",{class:"panel"},
+    h("div",{class:"tools"},siteFilter(sumSite,v=>{sumSite=v;renderSum();}),mSel),
+    h("p",{class:"hint",style:{padding:"0 14px 8px"},text:"注文 "+list.length+"回　材料 "+rows.length+"種類"}),
+    rows.length?h("table",{class:"sum"},h("thead",null,h("tr",null,h("th",{text:"材料"}),h("th",{text:"合計",style:{textAlign:"right"}}))),
+      h("tbody",null,rows.map(([k,n])=>{const [name,unit]=k.split("|");return h("tr",null,h("td",{text:name}),h("td",{class:"n",text:fmtN(n)+unit}));}))):
+      h("p",{class:"empty",text:"この期間の注文はありません"})));
+}
+
+/* ---------- お知らせ：新しい注文（西崎・原田の携帯だけ） ---------- */
+function renderNotice(){
+  const box=$("notice");
+  if(!editor){box.hidden=true;return;}
+  let seen=Number(store("kouken-ord-seen"))||0;
+  if(!seen){seen=Date.now();store("kouken-ord-seen",String(seen));}
+  const nw=orders.filter(o=>o.at>seen&&o.who!==editor);
+  if(!nw.length){box.hidden=true;return;}
+  box.hidden=false;
+  box.replaceChildren(h("h3",{text:"新しい材料の注文が"+nw.length+"件あります"}),
+    ...nw.slice(0,5).map(o=>h("div",{class:"hint",text:md(o.date)+"　"+shortSite(o.siteName||siteName(o.siteId))+"　"+nick(o.who)+"（"+(o.lines||[]).length+"点）"})),
+    h("div",{class:"rowbtns"},h("button",{type:"button",class:"btn ghost small",onclick:()=>show("vOrders")},"注文の記録を見る"),
+      h("button",{type:"button",class:"btn ghost small",onclick:()=>{store("kouken-ord-seen",String(Date.now()));renderNotice();}},"確認した")));
+}
+
+/* ---------- 会社の暗証番号（在庫・予定表と同じ。もう入れた携帯は聞かない） ---------- */
+function askPin(){
+  return new Promise(resolve=>{
+    const inp=h("input",{class:"inp",type:"password",inputmode:"numeric",autocomplete:"off",maxlength:"12","aria-label":"暗証番号",style:{fontSize:"28px",textAlign:"center",letterSpacing:".3em"}});
+    const err=h("p",{class:"err",hidden:true});
+    const go=h("button",{class:"btn",type:"submit"},"はじめる");
+    const form=h("form",{class:"f",onsubmit:async e=>{e.preventDefault();
+      const v=inp.value.trim();if(!v)return;
+      go.disabled=true;err.hidden=true;
+      try{await setDoc(doc(fs,"members",uid),{pin:v,at:Date.now()});$("scrim").hidden=true;$("scrim").replaceChildren();resolve();}
+      catch(x){err.textContent=x&&x.code==="permission-denied"?"番号がちがいます。":"確認できませんでした。電波を確認してください。";err.hidden=false;go.disabled=false;inp.select();}
+    }},h("h2",{text:"会社の暗証番号"}),h("p",{class:"hint",text:"最初の1回だけ入れてください。この携帯に覚えておきます。"}),inp,err,go);
+    openSheet(form);
+    $("scrim").onclick=null;
+    $("scrim").querySelector(".sheetback")?.remove();
+  });
+}
+
+/* ---------- 起動 ---------- */
+renderWho();show(siteId?"vSite":"vSites");
+if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みました");
+(async()=>{
+  if(!FIREBASE_CONFIG||!FIREBASE_CONFIG.apiKey){setBanner("まだ設定がすんでいません（firebase-config.js）。");return;}
+  try{
+    const app=initializeApp(FIREBASE_CONFIG);
+    try{fs=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});}catch(e){fs=getFirestore(app);}
+    const auth=getAuth(app);
+    await signInAnonymously(auth);uid=auth.currentUser.uid;
+    const m=await getDoc(doc(fs,"members",uid));
+    if(!m.exists())await askPin();
+  }catch(e){fs=null;setBanner("つながりません。電波を確認して、ページを開き直してください。");return;}
+  try{const ed=await getDoc(doc(fs,"editors",uid));if(ed.exists())editor=ed.data().name||"";}catch(e){}
+  renderWho();
+  // 現場（在庫・予定表と同じ一覧。施工中→これから→そのほか）
+  onSnapshot(collection(fs,"sites"),s=>{
+    sites=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(x=>x&&x.name&&x.active!==false)
+      .sort((a,b)=>((STATUS_ORDER[a.status]??9)-(STATUS_ORDER[b.status]??9))||(a.order||0)-(b.order||0));
+    render();
+  },()=>setBanner("現場を読み込めませんでした。ページを開き直してください。"));
+  // 注文（新しい順に500件まで）
+  onSnapshot(query(collection(fs,"orders"),orderBy("at","desc"),limit(500)),s=>{
+    orders=s.docs.map(d=>Object.assign({id:d.id},d.data()));render();
+  },()=>{});
+  if(!editor&&!who)setTimeout(()=>{if(!who&&$("scrim").hidden)pickWho();},400);
+})();
+})();
+</script>
+</body>
+</html>
