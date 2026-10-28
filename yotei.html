@@ -202,6 +202,8 @@ import {FIREBASE_CONFIG} from "./firebase-config.js";
 /* 社員：[正式名, 呼び名]。在庫（zaiko.html）と同じ。予定には正式名を残す（あとで人工の集計に使う） */
 const STAFF=[["西崎剣","西崎"],["原田弓子","原田"],["福島正純","福島"],["田中嗣音","嗣穏"],["NGUYEN VAN HIEU","ヒエウ"],["DANG BINH DUONG","ズオン"],["NGUYEN NGOC LONG","ロン"]];
 const NICK=Object.fromEntries(STAFF);
+/* 予定表に出す人。原田さんは予定に入れない（2026/10/28 ユーザー）。予定を入れる人としては残る */
+const PEOPLE=STAFF.filter(([n])=>n!=="原田弓子");
 const nick=n=>NICK[n]||n||"";
 /* 予定を入れられる人 */
 const EDITORS=["西崎剣","原田弓子"];
@@ -255,7 +257,7 @@ let fs=null, uid="", editor="", events=[], sites=[], unsub=null;
 let sel=todayS();
 let ym=sel.slice(0,7);                    // 表示している月 "2026-11"
 let person=store("kouken-yotei-person")||"すべて";
-if(person!=="すべて"&&!NICK[person])person="すべて";
+if(person!=="すべて"&&!PEOPLE.some(([n])=>n===person))person="すべて";
 let me=store("kouken-who")||"";          // この携帯を使う人（在庫で選んだ名前と同じ）
 if(me&&!NICK[me])me="";
 let view=store("kouken-yotei-view")||"month";
@@ -264,7 +266,7 @@ const weekly=()=>view==="week"||view==="member";
 
 /* ---------- 人でしぼる ---------- */
 function renderPeople(){
-  $("people").replaceChildren(...[["すべて","すべて"],...STAFF].map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===person),
+  $("people").replaceChildren(...[["すべて","すべて"],...PEOPLE].map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===person),
     style:n!=="すべて"&&n!==person?{borderColor:pcolor(n),color:pcolor(n)}:n===person&&n!=="すべて"?{background:pcolor(n),borderColor:pcolor(n)}:null,
     onclick:()=>{person=n;store("kouken-yotei-person",n);renderPeople();renderAll();}},k)));
 }
@@ -344,7 +346,7 @@ function renderMem(){
         evs.map(e=>h("span",{class:"chip"+(e.site===OFF?" off":""),style:{background:color},text:shortSite(e.site)||e.memo||"予定"}))));
     }
   };
-  for(const [n,k] of STAFF)if(person==="すべて"||person===n)row(k,pcolor(n),l=>l.filter(e=>(e.people||[]).includes(n)),n);
+  for(const [n,k] of PEOPLE)if(person==="すべて"||person===n)row(k,pcolor(n),l=>l.filter(e=>(e.people||[]).includes(n)),n);
   if(person==="すべて")row("ほか",NOONE,l=>l.filter(e=>!(e.people||[]).length),"");
   $("mem").replaceChildren(...cells);
 }
@@ -413,7 +415,7 @@ function openEdit(ev,copy,preset){
   const picked=new Set(e.people||[]);
   const dIn=h("input",{class:"inp",type:"date",value:copy?addDays(e.date,1):e.date,required:true});
   const eIn=h("input",{class:"inp",type:"date",value:copy?"":(e.end&&e.end!==e.date?e.end:"")});
-  const names=h("div",{class:"names",role:"group","aria-label":"だれが"},STAFF.map(([n,k])=>h("button",{type:"button","aria-pressed":String(picked.has(n)),
+  const names=h("div",{class:"names",role:"group","aria-label":"だれが"},PEOPLE.map(([n,k])=>h("button",{type:"button","aria-pressed":String(picked.has(n)),
     onclick:ev2=>{picked.has(n)?picked.delete(n):picked.add(n);ev2.currentTarget.setAttribute("aria-pressed",String(picked.has(n)));}},k)));
   const known=[...sites.map(s=>s.name),FACTORY,OFF];
   const isOther=!!e.site&&!known.includes(e.site);
@@ -434,7 +436,7 @@ function openEdit(ev,copy,preset){
     if(!date)return fail("日にちを入れてください。");
     if(end&&end<date)return fail("終わりの日が、はじめの日より前になっています。");
     if(!site&&!mIn.value.trim())return fail("現場をえらぶか、メモを書いてください。");
-    const data={date,end,people:STAFF.map(s=>s[0]).filter(n=>picked.has(n)),prevPeople:isNew?[]:(e.people||[]),site,memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
+    const data={date,end,people:PEOPLE.map(s=>s[0]).filter(n=>picked.has(n)),prevPeople:isNew?[]:(e.people||[]),site,memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
     save.disabled=true;err.hidden=true;
     try{
       if(isNew)await addDoc(collection(fs,"events"),{...data,createdAt:Date.now(),createdBy:editor});
@@ -488,7 +490,7 @@ function applyEditor(){
 /* ---------- あなたはだれ（お知らせを出す相手。予定を入れる人は登録した名前） ---------- */
 function pickMe(){
   const close=openSheet(h("h2",{text:"あなたはだれですか？"}),h("p",{class:"hint",text:"あなたの予定が入ったり変わったりしたとき、ここでお知らせします。この携帯に覚えておきます。"}),
-    h("div",{class:"names"},STAFF.map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===me),onclick:()=>{me=n;store("kouken-who",n);close();applyEditor();}},k))));
+    h("div",{class:"names"},PEOPLE.map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===me),onclick:()=>{me=n;store("kouken-who",n);close();applyEditor();}},k))));
 }
 $("who").addEventListener("click",()=>{if(!editor)pickMe();});
 
