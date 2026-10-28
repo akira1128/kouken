@@ -74,6 +74,31 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .day[aria-pressed="true"]{background:var(--accent-soft);border-radius:6px}
 .chip{display:block;font-size:10px;line-height:1.45;padding:0 3px;border-radius:3px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:clip;font-weight:500}
 .more{font-size:10px;color:var(--muted);padding-left:2px;line-height:1.2}
+.chip.off{opacity:.55}
+/* 表示の切りかえ（月・週・一覧・メンバー） */
+.views{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:0 8px 8px}
+.views button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 0;font-size:14px}
+.views button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink);font-weight:700}
+/* 週：マスを高くして、予定を折り返して全部出す */
+.cal.week .day{min-height:220px}
+.cal.week .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.3;padding:2px 3px}
+/* メンバー予定表：縦に人、横に1週間 */
+.mem{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));padding:0 4px 6px}
+.mem .hd{font-size:11px;font-weight:700;text-align:center;padding:4px 0;color:var(--muted);line-height:1.2}
+.mem .hd b{display:block;font-size:13px;color:var(--ink)}
+.mem .hd.sun b,.mem .hd.hol b{color:var(--low)} .mem .hd.sat b{color:var(--sat)}
+.mem .hd.today b{color:var(--accent-ink);background:var(--accent);border-radius:50%;width:22px;height:22px;line-height:22px;margin:0 auto}
+.mem .nm{font-size:12px;font-weight:700;border-top:1px solid var(--line);padding:6px 2px;display:flex;align-items:center;overflow-wrap:anywhere;line-height:1.2}
+.mem .cell{border:0;border-top:1px solid var(--line);border-left:1px solid var(--line);background:none;padding:3px 2px;min-height:54px;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left}
+.mem .cell[aria-pressed="true"]{background:var(--accent-soft)}
+.mem .cell .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.25;padding:1px 2px}
+/* 一覧 */
+.lday{border-top:1px solid var(--line)}
+.lday:first-child{border-top:0}
+.lday h4{margin:0;padding:10px 14px 0;font-size:14px}
+.lday h4.sun,.lday h4.hol{color:var(--low)} .lday h4.sat{color:var(--sat)}
+.lday .ev{border-top:0;padding-top:6px}
+.lday .ev+.ev,.lday li+li .ev{border-top:1px dashed var(--line)}
 /* えらんだ日の予定 */
 .dhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:12px 14px 6px}
 .dhead h3{margin:0;font-size:17px}
@@ -83,8 +108,8 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .ev .bar{grid-row:1/5;border-radius:3px}
 .ev .st{font-weight:700;overflow-wrap:anywhere}
 .ev .pp{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.ev .pp span{font-size:13px;padding:1px 9px;border-radius:999px;background:var(--bg);border:1px solid var(--line)}
-.ev .pp span.me{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700}
+.ev .pp span{font-size:13px;padding:1px 9px;border-radius:999px;color:#fff;font-weight:500}
+.ev .pp span.me{outline:2px solid var(--ink);outline-offset:1px;font-weight:700}
 .ev .mm{font-size:13px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere;white-space:pre-wrap}
 .ev .span{font-size:12px;color:var(--muted)}
 .empty{padding:20px 14px 24px;text-align:center;color:var(--muted);font-size:14px}
@@ -137,12 +162,17 @@ textarea.inp{min-height:68px;resize:vertical}
         <button type="button" id="next" aria-label="次の月">›</button>
         <button type="button" class="tday" id="tday">今日</button>
       </div>
+      <div class="views" id="views" role="group" aria-label="表示のしかた"></div>
       <div class="chips" id="people" role="toolbar" aria-label="人でしぼる" style="padding:0 8px 8px"></div>
       <div class="cal" id="cal"></div>
+      <div class="mem" id="mem" hidden></div>
     </section>
-    <section class="panel" aria-live="polite">
+    <section class="panel" id="dayPanel" aria-live="polite">
       <div class="dhead"><h3 id="dTitle"></h3><span class="hint" id="dCount"></span></div>
       <ul class="evs" id="evs"></ul>
+    </section>
+    <section class="panel" id="listPanel" hidden>
+      <ul class="evs" id="list"></ul>
     </section>
     <p class="foot"><button type="button" id="editLogin" hidden>編集する人はこちら</button></p>
   </main>
@@ -180,7 +210,15 @@ function colorOf(site){
   return COLORS[x%COLORS.length];
 }
 /* カレンダーのマスに出す短い現場名 */
-const shortSite=s=>(s||"").replace(/[（(]仮称[）)]\s*/g,"").replace(/\s*新築工事$/,"").replace(/^株式会社|株式会社$/g,"").trim();
+/* 長い現場名は、LINE WORKSで書いていた呼び方にする */
+const SHORT={"中防不燃・粗大ごみ処理施設整備工事":"中防不燃","八王子市明神町計画":"明神町","八王子市大和田町計画":"大和田町","三鷹市下連雀マンション計画":"三鷹","墨田区両国3丁目計画":"両国","新宿区大久保2丁目計画":"大久保"};
+const shortSite=s=>{const t=(s||"").replace(/[（(]仮称[）)]\s*/g,"").replace(/\s*新築工事$/,"").replace(/^株式会社|株式会社$/g,"").replace(/[（(][^（）()]*[）)]$/,"").trim();return SHORT[t]||t;};
+/* 人の色。LINE WORKSと同じく、カレンダーは人ごとに色を分ける。人のいない予定は灰色 */
+const PCOLOR={"西崎剣":"#0b5cab","原田弓子":"#be185d","福島正純":"#c2410c","田中嗣音":"#0e7490","NGUYEN VAN HIEU":"#15803d","DANG BINH DUONG":"#7c3aed","NGUYEN NGOC LONG":"#a16207"};
+const NOONE="#64748b";
+const pcolor=n=>PCOLOR[n]||NOONE;
+const ORDER=Object.fromEntries(STAFF.map((s,i)=>[s[0],i]));
+const VIEWS=[["month","月"],["week","週"],["list","一覧"],["member","メンバー"]];
 
 const $=id=>document.getElementById(id);
 function h(tag,attrs,...kids){const e=document.createElement(tag);
@@ -206,16 +244,40 @@ let sel=todayS();
 let ym=sel.slice(0,7);                    // 表示している月 "2026-11"
 let person=store("kouken-yotei-person")||"すべて";
 if(person!=="すべて"&&!NICK[person])person="すべて";
+let view=store("kouken-yotei-view")||"month";
+if(!VIEWS.some(v=>v[0]===view))view="month";
+const weekly=()=>view==="week"||view==="member";
 
 /* ---------- 人でしぼる ---------- */
 function renderPeople(){
   $("people").replaceChildren(...[["すべて","すべて"],...STAFF].map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===person),
-    onclick:()=>{person=n;store("kouken-yotei-person",n);renderPeople();renderCal();renderDay();}},k)));
+    style:n!=="すべて"&&n!==person?{borderColor:pcolor(n),color:pcolor(n)}:n===person&&n!=="すべて"?{background:pcolor(n),borderColor:pcolor(n)}:null,
+    onclick:()=>{person=n;store("kouken-yotei-person",n);renderPeople();renderAll();}},k)));
 }
 const shown=()=>person==="すべて"?events:events.filter(e=>(e.people||[]).includes(person));
 const onDay=(list,s)=>list.filter(e=>e.date<=s&&(e.end||e.date)>=s);
+/* 予定の並び：社員の順、そのあと人のいない予定 */
+const firstP=e=>Math.min(99,...(e.people||[]).map(n=>ORDER[n]??50));
+const sortEv=list=>list.slice().sort((x,y)=>firstP(x)-firstP(y)||(x.site||"").localeCompare(y.site||"","ja"));
 
-/* ---------- 月のカレンダー ---------- */
+/* ---------- 表示の切りかえ ---------- */
+function renderViews(){
+  $("views").replaceChildren(...VIEWS.map(([v,k])=>h("button",{type:"button","aria-pressed":String(v===view),
+    onclick:()=>{const old=range().join();view=v;store("kouken-yotei-view",v);if(range().join()!==old)listen();renderAll();}},k)));
+}
+function renderAll(){
+  renderViews();
+  const [y,m]=ym.split("-").map(Number);
+  if(weekly()){const [a,b]=weekRange();$("mTitle").textContent=md(a).replace(/（.）/,"")+"〜"+md(b).replace(/（.）/,"");}
+  else $("mTitle").textContent=y+"年"+m+"月";
+  $("prev").setAttribute("aria-label",weekly()?"前の週":"前の月");$("next").setAttribute("aria-label",weekly()?"次の週":"次の月");
+  $("cal").hidden=!(view==="month"||view==="week");$("mem").hidden=view!=="member";
+  $("dayPanel").hidden=view==="list";$("listPanel").hidden=view!=="list";
+  if(view==="member")renderMem();else if(view==="list")renderList();else renderCal();
+  if(view!=="list")renderDay();
+}
+
+/* ---------- 月・週のカレンダー ---------- */
 function gridRange(){
   const first=parse(ym+"-01");
   const start=new Date(first);start.setDate(1-first.getDay());
@@ -223,54 +285,103 @@ function gridRange(){
   const end=new Date(last);end.setDate(last.getDate()+(6-last.getDay()));
   return [ymd(start),ymd(end)];
 }
+function weekRange(){const d=parse(sel);d.setDate(d.getDate()-d.getDay());const a=ymd(d);return [a,addDays(a,6)];}
+const range=()=>weekly()?weekRange():gridRange();
+/* マスに出す1つ1つ：人がいれば「呼び名 現場」を人の色で1人ずつ、いなければ現場だけを灰色で */
+function dayItems(s){
+  const out=[];
+  for(const e of sortEv(onDay(shown(),s))){
+    const what=shortSite(e.site)||e.memo||"予定", off=e.site===OFF;
+    const ps=(e.people||[]).filter(n=>person==="すべて"||n===person).sort((a,b)=>(ORDER[a]??50)-(ORDER[b]??50));
+    if(ps.length)for(const n of ps)out.push({n,text:nick(n)+" "+what,color:pcolor(n),off});
+    else out.push({n:"",text:what,color:NOONE,off});
+  }
+  return out.sort((a,b)=>(a.n?ORDER[a.n]??50:99)-(b.n?ORDER[b.n]??50:99));
+}
+const chip=it=>h("span",{class:"chip"+(it.off?" off":""),style:{background:it.color},text:it.text});
+function select(s){const old=range().join();sel=s;ym=s.slice(0,7);if(range().join()!==old)listen();renderAll();}
 function renderCal(){
-  const [y,m]=ym.split("-").map(Number);
-  $("mTitle").textContent=y+"年"+m+"月";
-  const [a,b]=gridRange(), t=todayS(), list=shown();
+  const [a,b]=range(), t=todayS(), wk=view==="week";
+  $("cal").classList.toggle("week",wk);
   const cells=[...WD].map((w,i)=>h("div",{class:"wd"+(i===0?" sun":i===6?" sat":""),text:w}));
   for(let s=a;s<=b;s=addDays(s,1)){
-    const d=parse(s), dow=d.getDay(), evs=onDay(list,s);
-    const cls="day"+(dow===0?" sun":dow===6?" sat":"")+(HOLI[s]?" hol":"")+(s.slice(0,7)!==ym?" out":"")+(s===t?" today":"");
-    const max=3;
-    cells.push(h("button",{type:"button",class:cls,"aria-pressed":String(s===sel),"aria-label":md(s)+(HOLI[s]?" "+HOLI[s]:"")+" 予定"+evs.length+"件",
-      onclick:()=>{sel=s;if(s.slice(0,7)!==ym){ym=s.slice(0,7);listen();}renderCal();renderDay();}},
+    const d=parse(s), dow=d.getDay(), its=dayItems(s);
+    const cls="day"+(dow===0?" sun":dow===6?" sat":"")+(HOLI[s]?" hol":"")+(!wk&&s.slice(0,7)!==ym?" out":"")+(s===t?" today":"");
+    const max=wk?99:4;
+    cells.push(h("button",{type:"button",class:cls,"aria-pressed":String(s===sel),"aria-label":md(s)+(HOLI[s]?" "+HOLI[s]:"")+" 予定"+its.length+"件",onclick:()=>select(s)},
       h("span",{class:"n",text:d.getDate()}),
-      evs.slice(0,max).map(e=>h("span",{class:"chip",style:{background:colorOf(e.site)},text:shortSite(e.site)||e.memo||"予定"})),
-      evs.length>max?h("span",{class:"more",text:"+"+(evs.length-max)}):null));
+      its.slice(0,max).map(chip),
+      its.length>max?h("span",{class:"more",text:"+"+(its.length-max)}):null));
   }
   $("cal").replaceChildren(...cells);
 }
 
+/* ---------- メンバー予定表（縦に人、横に1週間） ---------- */
+function renderMem(){
+  const [a]=weekRange(), t=todayS(), days=[...Array(7)].map((_,i)=>addDays(a,i));
+  const cells=[h("div",{class:"hd"}),...days.map(s=>{const d=parse(s),w=d.getDay();
+    return h("div",{class:"hd"+(w===0?" sun":w===6?" sat":"")+(HOLI[s]?" hol":"")+(s===t?" today":"")},h("b",{text:d.getDate()}),WD[w]);})];
+  const row=(label,color,pick,who)=>{
+    cells.push(h("div",{class:"nm",style:{color},text:label}));
+    for(const s of days){
+      const evs=sortEv(pick(onDay(events,s)));
+      cells.push(h("button",{type:"button",class:"cell","aria-pressed":String(s===sel),"aria-label":label+" "+md(s)+" "+(evs.map(e=>e.site||e.memo).join("、")||"予定なし"),
+        onclick:()=>{select(s);if(editor&&who&&!evs.length)openEdit(null,false,[who]);}},
+        evs.map(e=>h("span",{class:"chip"+(e.site===OFF?" off":""),style:{background:color},text:shortSite(e.site)||e.memo||"予定"}))));
+    }
+  };
+  for(const [n,k] of STAFF)if(person==="すべて"||person===n)row(k,pcolor(n),l=>l.filter(e=>(e.people||[]).includes(n)),n);
+  if(person==="すべて")row("ほか",NOONE,l=>l.filter(e=>!(e.people||[]).length),"");
+  $("mem").replaceChildren(...cells);
+}
+
+/* ---------- 予定の1行（えらんだ日・一覧で使う） ---------- */
+function evRow(e){
+  const body=[h("span",{class:"bar",style:{background:colorOf(e.site)}}),
+    h("span",{class:"st",text:e.site||"（現場なし）"}),
+    e.end&&e.end!==e.date?h("span",{class:"span",text:md(e.date)+" 〜 "+md(e.end)}):null,
+    (e.people||[]).length?h("span",{class:"pp"},(e.people||[]).map(n=>h("span",{class:n===person?"me":null,style:{background:pcolor(n)},text:nick(n)}))):null,
+    e.memo?h("span",{class:"mm",text:e.memo}):null];
+  return h("li",null,editor?h("button",{type:"button",class:"ev","aria-label":"この予定を直す",onclick:()=>openEdit(e)},body):h("div",{class:"ev"},body));
+}
 /* ---------- えらんだ日の予定 ---------- */
 function renderDay(){
   $("dTitle").replaceChildren(md(sel),HOLI[sel]?h("span",{class:"hn",text:HOLI[sel]}):"");
-  const evs=onDay(shown(),sel).sort((x,y)=>(x.site||"").localeCompare(y.site||"","ja"));
+  const evs=sortEv(onDay(shown(),sel));
   $("dCount").textContent=evs.length?evs.length+"件":"";
   if(!evs.length){$("evs").replaceChildren(h("li",{class:"empty",text:person==="すべて"?"予定はありません":nick(person)+"さんの予定はありません"}));return;}
-  $("evs").replaceChildren(...evs.map(e=>{
-    const body=[h("span",{class:"bar",style:{background:colorOf(e.site)}}),
-      h("span",{class:"st",text:e.site||"（現場なし）"}),
-      e.end&&e.end!==e.date?h("span",{class:"span",text:md(e.date)+" 〜 "+md(e.end)}):null,
-      (e.people||[]).length?h("span",{class:"pp"},(e.people||[]).map(n=>h("span",{class:n===person?"me":null,text:nick(n)}))):null,
-      e.memo?h("span",{class:"mm",text:e.memo}):null];
-    return h("li",null,editor?h("button",{type:"button",class:"ev","aria-label":"この予定を直す",onclick:()=>openEdit(e)},body):h("div",{class:"ev"},body));
-  }));
+  $("evs").replaceChildren(...evs.map(evRow));
+}
+/* ---------- 一覧（その月の予定がある日だけ、日付ごとに並べる） ---------- */
+function renderList(){
+  const [y,m]=ym.split("-").map(Number), last=ymd(new Date(y,m,0)), t=todayS();
+  const blocks=[];
+  for(let s=ym+"-01";s<=last;s=addDays(s,1)){
+    const evs=sortEv(onDay(shown(),s));if(!evs.length)continue;
+    const w=parse(s).getDay();
+    blocks.push(h("li",{class:"lday",id:"d"+s},h("h4",{class:(w===0?"sun":w===6?"sat":"")+(HOLI[s]?" hol":"")},md(s)+(HOLI[s]?"　"+HOLI[s]:"")+(s===t?"　今日":"")),
+      h("ul",{class:"evs"},evs.map(evRow))));
+  }
+  $("list").replaceChildren(...(blocks.length?blocks:[h("li",{class:"empty",text:person==="すべて"?"この月の予定はありません":nick(person)+"さんのこの月の予定はありません"})]));
 }
 
-/* ---------- 月の切りかえ ---------- */
-function moveMonth(n){
-  const d=parse(ym+"-01");d.setMonth(d.getMonth()+n);ym=ymd(d).slice(0,7);
-  const t=todayS();sel=t.slice(0,7)===ym?t:ym+"-01";
-  listen();renderCal();renderDay();
+/* ---------- 月・週の切りかえ ---------- */
+function move(n){
+  if(weekly()){sel=addDays(sel,7*n);ym=sel.slice(0,7);}
+  else{const d=parse(ym+"-01");d.setMonth(d.getMonth()+n);ym=ymd(d).slice(0,7);const t=todayS();sel=t.slice(0,7)===ym?t:ym+"-01";}
+  listen();renderAll();
 }
-$("prev").addEventListener("click",()=>moveMonth(-1));
-$("next").addEventListener("click",()=>moveMonth(1));
-$("tday").addEventListener("click",()=>{sel=todayS();ym=sel.slice(0,7);listen();renderCal();renderDay();});
-// 横にすべらせても月を切りかえる
-let sx=null,sy=0;
-$("cal").addEventListener("touchstart",e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
-$("cal").addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;sx=null;
-  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5)moveMonth(dx<0?1:-1);},{passive:true});
+$("prev").addEventListener("click",()=>move(-1));
+$("next").addEventListener("click",()=>move(1));
+$("tday").addEventListener("click",()=>{sel=todayS();ym=sel.slice(0,7);listen();renderAll();
+  if(view==="list"){const el=document.getElementById("d"+sel);el&&el.scrollIntoView({block:"start"});}});
+// 横にすべらせても月（週）を切りかえる
+for(const id of ["cal","mem"]){
+  let sx=null,sy=0;
+  $(id).addEventListener("touchstart",e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+  $(id).addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;sx=null;
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5)move(dx<0?1:-1);},{passive:true});
+}
 
 /* ---------- 下から出るパネル ---------- */
 function openSheet(...kids){
@@ -282,9 +393,9 @@ function openSheet(...kids){
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scrim").hidden&&$("scrim").onclick){$("scrim").hidden=true;$("scrim").replaceChildren();}});
 
 /* ---------- 予定を入れる・直す（西崎・原田だけ） ---------- */
-function openEdit(ev,copy){
+function openEdit(ev,copy,preset){
   const isNew=!ev||copy;
-  const e=ev||{date:sel,end:"",people:[],site:"",memo:""};
+  const e=ev||{date:sel,end:"",people:preset||(person!=="すべて"?[person]:[]),site:"",memo:""};
   const picked=new Set(e.people||[]);
   const dIn=h("input",{class:"inp",type:"date",value:copy?addDays(e.date,1):e.date,required:true});
   const eIn=h("input",{class:"inp",type:"date",value:copy?"":(e.end&&e.end!==e.date?e.end:"")});
@@ -314,7 +425,7 @@ function openEdit(ev,copy){
     try{
       if(isNew)await addDoc(collection(fs,"events"),{...data,createdAt:Date.now(),createdBy:editor});
       else await updateDoc(doc(fs,"events",e.id),data);
-      close();sel=date;if(date.slice(0,7)!==ym){ym=date.slice(0,7);listen();}renderCal();renderDay();
+      close();select(date);
       toast(isNew?"予定を入れました":"予定を直しました");
     }catch(y){fail(y&&y.code==="permission-denied"?"入れる権限がありません。":"保存できませんでした。電波を確認してください。");save.disabled=false;}
   }},
@@ -358,7 +469,7 @@ $("editLogin").addEventListener("click",askEditPin);
 function applyEditor(){
   $("who").replaceChildren(editor?h("b",{text:"入力"}):h("b",{text:"見るだけ"}),editor?nick(editor):"");
   $("addbar").hidden=!editor;$("editLogin").hidden=!!editor||!fs;
-  renderDay();
+  renderAll();
 }
 
 /* ---------- 会社の暗証番号（在庫と同じ。もう入れた携帯は聞かない） ---------- */
@@ -382,15 +493,15 @@ function askPin(){
 function listen(){
   if(!fs)return;
   if(unsub)unsub();
-  const [a,b]=gridRange();
+  const [a,b]=range();
   unsub=onSnapshot(query(collection(fs,"events"),where("date",">=",addDays(a,-62)),where("date","<=",b),orderBy("date")),s=>{
     events=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(e=>(e.end||e.date)>=a);
-    setBanner("");renderCal();renderDay();
+    setBanner("");renderAll();
   },()=>setBanner("予定を読み込めませんでした。ページを開き直してください。"));
 }
 
 /* ---------- 起動 ---------- */
-renderPeople();renderCal();renderDay();
+renderPeople();renderAll();
 (async()=>{
   if(!FIREBASE_CONFIG||!FIREBASE_CONFIG.apiKey){setBanner("まだ設定がすんでいません（firebase-config.js）。");return;}
   try{
