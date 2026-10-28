@@ -297,7 +297,7 @@ const ROLL_LEN={"ALKロール 24K×25t":22,"ALKロール 24K×50t":16,"ALKロー
 const EPARTS=[["ws","溶接ショートエルボ","wsqty"],["wl","溶接ロングエルボ","wlqty"]];
 const partField=p=>p==="s"?"qty":(EPARTS.find(x=>x[0]===p)||[])[2]||"qty";
 const partName=p=>p==="s"?"直管":(EPARTS.find(x=>x[0]===p)||[])[1]||"直管";
-const CATS=["ALK（P）保温筒","ALGC保温筒","PF保温筒","ロール","セラカバー","遮音シート","金網","テープ・副資材","ジャケット・エルボ","フランジカバー","コイル","板","その他"];
+const CATS=["ALK（P）保温筒","ALGC（P）保温筒","PF保温筒","ロール","セラカバー","遮音シート","金網","テープ・副資材","ジャケット・エルボ","フランジカバー","コイル","板","その他"];
 const UNITS=["本","個","巻","枚","ケース","箱","m","kg"];
 const KIND={in:"入庫",out:"持ち出し",set:"数を直す",new:"登録",del:"削除"};
 const tabId="t"+Math.random().toString(36).slice(2,10);
@@ -603,7 +603,7 @@ const EXTRA_ITEMS=[
   ...["32A","40A","50A","65A","80A","100A","125A","150A","200A","250A","300A"].map(a=>({id:"alk40-"+a,name:"ALKP保温筒 "+a+"×40t",cat:"ALK（P）保温筒",unit:"本",order:2})),
   ...["200A","250A","300A"].map(a=>({id:"alk50-"+a,name:"ALKP保温筒 "+a+"×50t",cat:"ALK（P）保温筒",unit:"本",order:3})),
   // ALGC保温筒もALKと同じ規格（2026/10/28）
-  ...SPECS.flatMap(([t,o,list])=>list.map(a=>({id:"algc"+t.replace("t","")+"-"+a,name:(o>0?"ALGCP保温筒 ":"ALGC保温筒 ")+a+"×"+t,cat:"ALGC保温筒",unit:"本",order:o}))),
+  ...SPECS.flatMap(([t,o,list])=>list.map(a=>({id:"algc"+t.replace("t","")+"-"+a,name:(o>0?"ALGCP保温筒 ":"ALGC保温筒 ")+a+"×"+t,cat:"ALGC（P）保温筒",unit:"本",order:o}))),
   // PF保温筒の直管もALKと同じ規格（2026/10/28）
   ...SPECS.flatMap(([t,o,list])=>list.map(a=>({id:"pf"+t.replace("t","")+"-"+a,name:"PF保温筒 "+a+"×"+t,cat:"PF保温筒",sub:"直管",unit:"本",order:o}))),
   {id:"sheet-cz12",name:"CZ-12",cat:"遮音シート",unit:"巻",order:0},
@@ -669,7 +669,8 @@ async function seedIfEmpty(){
    テープ・副資材のサンダム・遮音 → 遮音シート、テープ・副資材の亀甲・金網 → 金網 */
 function newCat(x){
   const n=x.name||"";
-  if(x.cat==="保温筒")return /ALGC/i.test(n)?"ALGC保温筒":"ALK（P）保温筒";
+  if(x.cat==="ALGC保温筒")return "ALGC（P）保温筒"; // 種類の名前を「ALGC（P）保温筒」に（2026/10/28）
+  if(x.cat==="保温筒")return /ALGC/i.test(n)?"ALGC（P）保温筒":"ALK（P）保温筒";
   if(x.cat==="ロール"&&/セラカバー/.test(n))return "セラカバー";
   if(x.cat==="テープ・副資材"&&/サンダム|遮音/.test(n))return "遮音シート";
   if(x.cat==="テープ・副資材"&&/亀甲|金網/.test(n))return "金網";
