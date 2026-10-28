@@ -34,6 +34,8 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 .nolow .lowonly{display:none!important}
+/* 続けてタップしても拡大しない（＋−を何回も押すため）。2本指で広げる拡大はそのまま使える */
+html{touch-action:manipulation}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
   margin:0;padding-block:0 calc(84px + env(safe-area-inset-bottom,0px));font-variant-numeric:tabular-nums}
 button,input,select{font:inherit;color:inherit}
@@ -135,7 +137,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
 .seg button[data-k="in"][aria-pressed="true"]{border-color:var(--in);background:var(--in-soft);color:var(--in)}
 .seg button[data-k="set"][aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
 .stepper{display:grid;grid-template-columns:64px 1fr 64px;gap:8px}
-.stepper button{border:1px solid var(--line);background:var(--bg);border-radius:10px;font-size:28px;font-weight:700}
+.stepper button{border:1px solid var(--line);background:var(--bg);border-radius:10px;font-size:28px;font-weight:700;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.stepper button:active{background:var(--accent-soft)}
 .stepper input{text-align:center;font-size:30px;font-weight:700;padding:8px}
 .quick{display:flex;gap:6px;flex-wrap:wrap}
 .quick button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 14px;font-size:15px}
