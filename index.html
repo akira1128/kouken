@@ -67,6 +67,8 @@ main{display:grid;gap:16px;padding-top:14px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .chips button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px}
 .chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chips.subs button{font-size:13px;padding:4px 11px}
+.chips.subs button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
 .group h3{margin:0;padding:10px 14px 6px;font-size:12px;letter-spacing:.12em;color:var(--muted)}
 .row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:12px 14px;min-height:60px}
 .group .row:first-of-type{border-top:0}
@@ -155,6 +157,7 @@ details.edit form{padding:12px 0 0}
     <div class="tools">
       <input class="search" id="q" type="search" placeholder="さがす（例：25A、ガルバ、テープ）" aria-label="材料をさがす">
       <div class="chips" id="cats" role="toolbar" aria-label="種類でしぼる"></div>
+      <div class="chips subs" id="subs" role="toolbar" aria-label="色・材質でしぼる" hidden></div>
     </div>
     <div id="list" class="tools"></div>
   </main>
@@ -183,6 +186,9 @@ details.edit form{padding:12px 0 0}
             <select class="inp" id="aUnit"></select>
           </label>
         </div>
+        <label class="fl" id="aSubBox" hidden>色・材質
+          <select class="inp" id="aSub"></select>
+        </label>
         <div class="two">
           <label class="fl">今ある数
             <input class="inp" id="aQty" type="number" inputmode="decimal" min="0" step="any" value="0">
@@ -220,6 +226,9 @@ const STAFF=[["西崎剣","西崎"],["原田弓子","原田"],["福島正純","�
 const NICK=Object.fromEntries(STAFF);
 const nick=n=>NICK[n]||n||"";
 const FACTORY="工場（加工）", OTHER="その他（メモに書く）";
+/* 種類の中をさらに分ける（色・材質）。ジャケット・エルボだけ */
+const SUBS={"ジャケット・エルボ":["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"]};
+const NOSUB="色・材質なし";
 const CATS=["ALK（P）保温筒","ALGC保温筒","ロール","セラカバー","遮音シート","金網","ジャケット・エルボ","コイル","テープ・副資材","その他"];
 const UNITS=["本","個","巻","枚","ケース","箱","m","kg"];
 const KIND={in:"入庫",out:"持ち出し",set:"数を直す",new:"登録",del:"削除"};
@@ -243,6 +252,8 @@ if(who&&!NICK[who])who="";              // 前の版の名前の書き方だっ�
 let logSite="すべて";
 let cat=store("kouken-cat")||"すべて";
 if(!["すべて",...CATS].includes(cat))cat="すべて";
+let sub=store("kouken-sub")||"すべて";
+if(!SUBS[cat]||!["すべて",...SUBS[cat],NOSUB].includes(sub))sub="すべて";
 
 function setBanner(msg){$("banner").textContent=msg||"";$("banner").hidden=!msg;}
 const isLow=it=>Number(it.min)>0&&Number(it.qty)<=Number(it.min);
@@ -275,7 +286,9 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("clic
 
 /* ---------- 在庫一覧 ---------- */
 function renderCats(){
-  $("cats").replaceChildren(...["すべて",...CATS].map(c=>h("button",{type:"button","aria-pressed":String(c===cat),onclick:()=>{cat=c;store("kouken-cat",c);renderCats();renderList();}},c)));
+  $("cats").replaceChildren(...["すべて",...CATS].map(c=>h("button",{type:"button","aria-pressed":String(c===cat),onclick:()=>{cat=c;store("kouken-cat",c);sub="すべて";store("kouken-sub",sub);renderCats();renderList();}},c)));
+  const list=SUBS[cat];$("subs").hidden=!list;
+  $("subs").replaceChildren(...(list?["すべて",...list]:[]).map(c=>h("button",{type:"button","aria-pressed":String(c===sub),onclick:()=>{sub=c;store("kouken-sub",c);renderCats();renderList();}},c)));
 }
 $("q").addEventListener("input",()=>renderList());
 
@@ -296,9 +309,14 @@ function renderList(){
       h("span",{text:"下の「材料を追加」から、保温筒・ロール・コイルなどを登録してください。"}),
       readOnly?null:h("button",{class:"btn",type:"button",style:"max-width:260px",onclick:()=>show("vAdd")},"材料を追加する")));
     return;}
-  const shown=items.filter(it=>(cat==="すべて"||it.cat===cat)&&(!q||(it.name+" "+it.cat).toLowerCase().includes(q)));
+  const shown=items.filter(it=>(cat==="すべて"||it.cat===cat)&&(!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(!q||(it.name+" "+it.cat+" "+(it.sub||"")).toLowerCase().includes(q)));
   if(!shown.length){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"見つかりません"}),h("span",{text:"ことばや種類を変えてさがしてください。"})));return;}
-  const groups=CATS.map(c=>[c,shown.filter(it=>(CATS.includes(it.cat)?it.cat:"その他")===c)]).filter(g=>g[1].length);
+  const groups=[];
+  for(const c of CATS){
+    const arr=shown.filter(it=>(CATS.includes(it.cat)?it.cat:"その他")===c);
+    if(SUBS[c]){for(const sc of [...SUBS[c],NOSUB]){const a2=arr.filter(it=>(SUBS[c].includes(it.sub)?it.sub:NOSUB)===sc);if(a2.length)groups.push([c+"／"+sc,a2]);}}
+    else if(arr.length)groups.push([c,arr]);
+  }
   list.replaceChildren(...groups.map(([c,arr])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
     arr.map(it=>h("button",{type:"button",class:"row"+(isLow(it)?" low":""),onclick:()=>openItem(it.id)},
       h("span",{class:"nm"},it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
@@ -354,6 +372,9 @@ function openItem(id){
   /* 名前・数え方・目安の変更、削除 */
   const eName=h("input",{class:"inp",id:"eName",maxlength:"60",value:it.name});
   const eCat=h("select",{class:"inp",id:"eCat"},CATS.map(c=>h("option",{value:c,selected:c===it.cat},c)));
+  const eSub=h("select",{class:"inp",id:"eSub"});const eSubBox=h("label",{class:"fl"},"色・材質",eSub);
+  const syncSub=()=>{const l=SUBS[eCat.value];eSubBox.hidden=!l;eSub.replaceChildren(...(l||[]).map(c=>h("option",{value:c,selected:c===it.sub},c)));};
+  eCat.addEventListener("change",syncSub);syncSub();
   const eUnit=h("select",{class:"inp",id:"eUnit"},unitOpts(it.unit));
   const eMin=h("input",{class:"inp",id:"eMin",type:"number",inputmode:"decimal",min:"0",step:"any",value:fmtN(it.min)});
   const eErr=h("p",{class:"err",hidden:true});
@@ -363,13 +384,13 @@ function openItem(id){
     h("button",{class:"btn danger",type:"button",onclick:async e=>{e.target.disabled=true;try{await removeItem(id);close();toast("削除しました");}catch(x){eErr.textContent=errMsg(x);eErr.hidden=false;}}},"本当に削除"),
     h("button",{class:"btn ghost",type:"button",onclick:delAsk},"やめる"));}
   delAsk();
-  const edit=h("details",{class:"edit"},h("summary",{text:"名前・種類・少ない目安を変える／削除"}),
+  const edit=h("details",{class:"edit"},h("summary",{text:"名前・種類・色・少ない目安を変える／削除"}),
     h("form",{class:"f",style:"padding:12px 0 0",onsubmit:async e=>{e.preventDefault();
       const nm=eName.value.trim();if(!nm){eErr.textContent="名前を入れてください";eErr.hidden=false;return;}
-      try{await db.doc("items/"+id).update({name:nm,cat:eCat.value,unit:eUnit.value,min:Math.max(0,Number(eMin.value)||0),updatedAt:Date.now()});close();toast("変更しました");}
+      try{await db.doc("items/"+id).update({name:nm,cat:eCat.value,sub:SUBS[eCat.value]?eSub.value:"",unit:eUnit.value,min:Math.max(0,Number(eMin.value)||0),updatedAt:Date.now()});close();toast("変更しました");}
       catch(x){eErr.textContent=errMsg(x);eErr.hidden=false;}}},
       h("label",{class:"fl"},"名前",eName),
-      h("div",{class:"two"},h("label",{class:"fl"},"種類",eCat),h("label",{class:"fl"},"数え方",eUnit)),
+      h("div",{class:"two"},h("label",{class:"fl"},"種類",eCat),h("label",{class:"fl"},"数え方",eUnit)),eSubBox,
       h("label",{class:"fl"},"少ないと知らせる数",eMin),eErr,
       h("button",{class:"btn ghost",type:"submit"},"変更を保存"),delZone));
 
@@ -420,6 +441,8 @@ async function removeItem(id){
 
 /* ---------- 材料を追加 ---------- */
 $("aCat").replaceChildren(...CATS.map(c=>h("option",{value:c},c)));
+function syncAddSub(){const l=SUBS[$("aCat").value];$("aSubBox").hidden=!l;$("aSub").replaceChildren(...(l||[]).map(c=>h("option",{value:c},c)));}
+$("aCat").addEventListener("change",syncAddSub);syncAddSub();
 $("aUnit").replaceChildren(...unitOpts("本"));
 $("addForm").addEventListener("submit",async e=>{
   e.preventDefault();const err=$("aErr");err.hidden=true;
@@ -430,11 +453,11 @@ $("addForm").addEventListener("submit",async e=>{
   const qty=Math.max(0,Number($("aQty").value)||0),min=Math.max(0,Number($("aMin").value)||0);
   $("aBtn").disabled=true;
   try{const now=Date.now();
-    const ref=await db.collection("items").add({name,cat:$("aCat").value,unit:$("aUnit").value,qty,min,createdAt:now,updatedAt:now,updatedBy:who});
+    const ref=await db.collection("items").add({name,cat:$("aCat").value,sub:SUBS[$("aCat").value]?$("aSub").value:"",unit:$("aUnit").value,qty,min,createdAt:now,updatedAt:now,updatedBy:who});
     await db.collection("logs").add({at:now,kind:"new",itemId:ref.id,itemName:name,unit:$("aUnit").value,n:qty,after:qty,who,memo:""});
     $("aName").value="";$("aQty").value="0";$("aMin").value="0";
     toast("「"+name+"」を登録しました");
-    cat=$("aCat").value;store("kouken-cat",cat);renderCats();show("vStock");renderList();
+    cat=$("aCat").value;store("kouken-cat",cat);sub=SUBS[cat]?$("aSub").value:"すべて";store("kouken-sub",sub);renderCats();show("vStock");renderList();
   }catch(x){err.textContent=errMsg(x);err.hidden=false;}
   $("aBtn").disabled=readOnly;
 });
