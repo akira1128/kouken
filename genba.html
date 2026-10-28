@@ -144,6 +144,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* 顔写真は SVG とは別の img（体と同じリズムで上下）。transform だけで動かすので携帯でもなめらか */
 .runner .rface{position:absolute;left:9px;top:-13px;width:28px;height:28px;pointer-events:none;
   animation:rbob .32s ease-in-out infinite alternate;will-change:transform;-webkit-user-drag:none}
+.runner svg.over{position:absolute;left:0;top:0;pointer-events:none}
 @media (prefers-reduced-motion:reduce){.runner svg,.runner .la,.runner .lb,.runner .aa,.runner .ab,.runner .rface{animation:none}.runner{transition:none}}
 .mstep{display:flex;gap:6px;align-items:center;justify-content:flex-end;font-size:12px;color:var(--muted)}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
@@ -356,15 +357,17 @@ function renderSites(){
 /* ---------- 進行状況のメーター（floors＝最上階、floor＝いまの階）。階を変えるのは編集する人だけ ---------- */
 const meterW={};
 // 走る人の絵：右へ走る。足と腕は CSS でふる
+const RUN_ARMS='<path class="ab arm" d="M17 12.5L13.5 16L10.5 15"/><path class="aa arm" d="M17 12.5L20.5 16L23.5 13.5"/>';
 const runnerSVG=face=>'<svg viewBox="0 0 30 32"><g class="lim">'+
-  '<path class="lb leg" d="M14.5 19L11 24.5L6.5 26.5"/><path class="ab arm" d="M17 12.5L13.5 16L10.5 15"/>'+
+  '<path class="lb leg" d="M14.5 19L11 24.5L6.5 26.5"/>'+(face?'':'<path class="ab arm" d="M17 12.5L13.5 16L10.5 15"/>')+
   '<path class="body" d="M17.2 11.5L14.8 18.5"/>'+
-  '<path class="la leg" d="M14.5 19L18.5 24.5L17 30.3"/><path class="aa arm" d="M17 12.5L20.5 16L23.5 13.5"/></g>'+
+  '<path class="la leg" d="M14.5 19L18.5 24.5L17 30.3"/>'+(face?'':'<path class="aa arm" d="M17 12.5L20.5 16L23.5 13.5"/>')+'</g>'+
   (face?'':
      '<circle cx="18.3" cy="6.6" r="3.5" fill="#f2c9a0"/>'+
      '<path d="M14.4 6.3A3.9 3.9 0 0 1 22.2 6.3Z" fill="#f5b301" stroke="#b07f00" stroke-width=".6"/><path d="M21.8 6.3h2.2" stroke="#b07f00" stroke-width="1.3" stroke-linecap="round"/>')+'</svg>'+
   // サプライズの顔：背景を透明にした顔写真。SVG の中で描くとカクつくので、別の img にして動かす
-  (face?'<img class="rface" src="'+face+'" alt="">':'');
+  // 腕は顔写真に隠れないよう、写真の上に重ねた別の SVG に描く（2026/10/29 ユーザー）
+  (face?'<img class="rface" src="'+face+'" alt=""><svg class="over" viewBox="0 0 30 32"><g class="lim">'+RUN_ARMS+'</g></svg>':'');
 /* サプライズ：現場の画面を開くたびにくじを引く。西崎さん 10%・ヒエウ 10%・ズオン 10% でその人の顔が走る（写真が何枚かあればランダム）
    顔写真は faces/{名前} の imgs（背景を透明にした PNG。暗証番号を入れた携帯だけ読める）。
    最初に全員分を読んでおき、くじはその場で引く（後から描き直すと走りがやり直しになってカクつくため） */
