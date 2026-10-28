@@ -438,7 +438,7 @@ function renderSite(){
       h("button",{type:"button",class:"btn",onclick:()=>needWho(async()=>{const t=noteIn.value.trim();if(!t)return;
         try{await updateDoc(doc(fs,"sites",x.id),{notes:arrayUnion({text:t,who:me(),at:Date.now()})});noteIn.value="";toast("メモを書きました");}
         catch(e){toast(e&&e.code==="permission-denied"?"書く権限がありません":"書けませんでした。電波を確認してください");}})},"メモを書く")),
-    h("section",{class:"panel"},h("div",{class:"sec"},h("h3",{text:"この現場の注文（新しい順）"})),
+    h("section",{class:"panel"},h("div",{class:"sec"},h("h3",{text:"この現場の注文履歴（新しい順）"})),
       siteOrders.length?siteOrders.slice(0,20).map(orderRow):h("p",{class:"empty",text:"まだ注文はありません"})));
 }
 function editInfo(x){
