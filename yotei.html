@@ -102,7 +102,9 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* 月：えらんだ日の週は広げて、全員の予定を折り返して全部出す */
 .cal .day.open .chip{white-space:normal;overflow-wrap:break-word;line-height:1.3}
 /* メンバー予定表：縦に人、横に1週間 */
-.mem{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));padding:0 4px 6px}
+.mem{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));padding:0 4px 6px;touch-action:pan-y;will-change:transform}
+/* 指で横に動かしている間、はみ出した所を見せない */
+.memclip{overflow:hidden}
 .mem .hd{font-size:11px;font-weight:700;text-align:center;padding:4px 0;color:var(--muted);line-height:1.2}
 .mem .hd b{display:block;font-size:13px;color:var(--ink)}
 .mem .hd.sun b,.mem .hd.hol b{color:var(--low)} .mem .hd.sat b{color:var(--sat)}
@@ -185,7 +187,7 @@ textarea.inp{min-height:68px;resize:vertical}
       <div class="views" id="views" role="group" aria-label="表示のしかた"></div>
       <div class="chips" id="people" role="toolbar" aria-label="人でしぼる" style="padding:0 8px 8px"></div>
       <div class="cal" id="cal"></div>
-      <div class="mem" id="mem" hidden></div>
+      <div class="memclip"><div class="mem" id="mem" hidden></div></div>
     </section>
     <section class="panel" id="dayPanel" aria-live="polite">
       <div class="dhead"><h3 id="dTitle"></h3><span class="hint" id="dCount"></span></div>
@@ -449,8 +451,37 @@ $("prev").addEventListener("click",()=>move(-1));
 $("next").addEventListener("click",()=>move(1));
 $("tday").addEventListener("click",()=>{sel=todayS();ym=sel.slice(0,7);openWeek=weekRange()[0];listen();renderAll();
   if(view==="list"){const el=document.getElementById("d"+sel);el&&el.scrollIntoView({block:"start"});}});
+// メンバー表示：指について横に動き、はなすと次（前）の週へすべって切りかわる
+{
+  const el=$("mem"), EZ="cubic-bezier(.22,.8,.24,1)";
+  let sx=null,sy=0,dx=0,axis="",t0=0,busy=false;
+  const setX=x=>{el.style.transform=x?"translateX("+x+"px)":"";};
+  el.addEventListener("touchstart",e=>{if(busy)return;sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0;axis="";t0=Date.now();},{passive:true});
+  el.addEventListener("touchmove",e=>{
+    if(sx==null)return;
+    const x=e.touches[0].clientX-sx,y=e.touches[0].clientY-sy;
+    if(!axis&&(Math.abs(x)>8||Math.abs(y)>8))axis=Math.abs(x)>Math.abs(y)?"x":"y";
+    if(axis!=="x")return;
+    dx=x;setX(dx);
+  },{passive:true});
+  const end=async()=>{
+    if(sx==null)return;sx=null;
+    if(axis!=="x"){setX(0);return;}
+    const w=el.getBoundingClientRect().width, fast=Math.abs(dx)/Math.max(1,Date.now()-t0)>.5;
+    if(Math.abs(dx)<w*.25&&!(fast&&Math.abs(dx)>30)){   // 少しだけなら元にもどる
+      el.animate([{transform:"translateX("+dx+"px)"},{transform:"none"}],{duration:200,easing:EZ});setX(0);return;}
+    busy=true;
+    const dir=dx<0?1:-1;
+    if(!reduceMotion())await el.animate([{transform:"translateX("+dx+"px)",opacity:1},{transform:"translateX("+(-dir*w)+"px)",opacity:.2}],{duration:170,easing:"ease-in"}).finished.catch(()=>{});
+    setX(0);move(dir);
+    if(!reduceMotion())await el.animate([{transform:"translateX("+(dir*w*.5)+"px)",opacity:.2},{transform:"none",opacity:1}],{duration:260,easing:EZ}).finished.catch(()=>{});
+    busy=false;
+  };
+  el.addEventListener("touchend",end,{passive:true});
+  el.addEventListener("touchcancel",end,{passive:true});
+}
 // 横にすべらせても月（週）を切りかえる
-for(const id of ["cal","mem"]){
+for(const id of ["cal"]){
   let sx=null,sy=0;
   $(id).addEventListener("touchstart",e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
   $(id).addEventListener("touchend",e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;sx=null;
