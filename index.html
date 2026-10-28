@@ -33,6 +33,7 @@
   --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+.nolow .lowonly{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
   margin:0;padding-block:0 calc(84px + env(safe-area-inset-bottom,0px));font-variant-numeric:tabular-nums}
 button,input,select{font:inherit;color:inherit}
@@ -154,7 +155,7 @@ details.edit form{padding:12px 0 0}
   <p class="banner" id="banner" hidden></p>
 
   <main id="vStock">
-    <section class="panel alert" id="alert" aria-live="polite">
+    <section class="panel alert lowonly" id="alert" aria-live="polite">
       <h2><span class="dot"></span><span id="alertTitle">読み込み中…</span></h2>
       <div class="lowlist" id="lowList"></div>
     </section>
@@ -197,7 +198,7 @@ details.edit form{padding:12px 0 0}
           <label class="fl">エルボの今ある数（個）
             <input class="inp" id="aEQty" type="number" inputmode="decimal" min="0" step="any" value="0">
           </label>
-          <label class="fl">エルボの少ないと知らせる数
+          <label class="fl lowonly">エルボの少ないと知らせる数
             <input class="inp" id="aEMin" type="number" inputmode="decimal" min="0" step="any" value="0">
           </label>
         </div>
@@ -205,7 +206,7 @@ details.edit form{padding:12px 0 0}
           <label class="fl">今ある数
             <input class="inp" id="aQty" type="number" inputmode="decimal" min="0" step="any" value="0">
           </label>
-          <label class="fl">少ないと知らせる数 <em>この数以下で赤くなる</em>
+          <label class="fl lowonly">少ないと知らせる数 <em>この数以下で赤くなる</em>
             <input class="inp" id="aMin" type="number" inputmode="decimal" min="0" step="any" value="0">
           </label>
         </div>
@@ -272,8 +273,11 @@ let sub=store("kouken-sub")||"すべて";
 if(!SUBS[cat]||!["すべて",...SUBS[cat],NOSUB].includes(sub))sub="すべて";
 
 function setBanner(msg){$("banner").textContent=msg||"";$("banner").hidden=!msg;}
-const lowS=it=>Number(it.min)>0&&Number(it.qty)<=Number(it.min);
-const lowE=it=>ELBOW(it.cat)&&Number(it.emin)>0&&(Number(it.eqty)||0)<=Number(it.emin);
+/* 「少ないもの」の表示（上の知らせ・赤字・少ない目安の欄）。false で消す、true で戻す（2026/10/28 ユーザー：いったん消す） */
+const SHOW_LOW=false;
+if(!SHOW_LOW)document.documentElement.classList.add("nolow");
+const lowS=it=>SHOW_LOW&&Number(it.min)>0&&Number(it.qty)<=Number(it.min);
+const lowE=it=>SHOW_LOW&&ELBOW(it.cat)&&Number(it.emin)>0&&(Number(it.eqty)||0)<=Number(it.emin);
 const isLow=it=>lowS(it)||lowE(it);
 
 /* ---------- だれが入力するか ---------- */
@@ -338,7 +342,7 @@ function renderList(){
   list.replaceChildren(...groups.map(([c,arr])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
     arr.map(it=>h("button",{type:"button",class:"row"+(isLow(it)?" low":""),onclick:()=>openItem(it.id)},
       h("span",{class:"nm"},it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
-        h("span",{class:"sub",text:(Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(ELBOW(it.cat)&&Number(it.emin)>0?("エルボ目安 "+fmtN(it.emin)+"個 ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
+        h("span",{class:"sub",text:(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(SHOW_LOW&&ELBOW(it.cat)&&Number(it.emin)>0?("エルボ目安 "+fmtN(it.emin)+"個 ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
       h("span",{class:"qty"+(lowS(it)?" lowtxt":"")},fmtN(it.qty),h("small",{text:it.unit||""}),ELBOW(it.cat)?h("span",{class:"eq"+(lowE(it)?" lowtxt":""),text:"エルボ "+fmtN(it.eqty||0)+"個"}):null))))));
 }
 
@@ -397,7 +401,7 @@ function openItem(id){
   const eCat=h("select",{class:"inp",id:"eCat"},CATS.map(c=>h("option",{value:c,selected:c===it.cat},c)));
   const eSub=h("select",{class:"inp",id:"eSub"});const eSubLbl=h("span");const eSubBox=h("label",{class:"fl"},eSubLbl,eSub);
   const eEMin=h("input",{class:"inp",id:"eEMin",type:"number",inputmode:"decimal",min:"0",step:"any",value:fmtN(it.emin||0)});
-  const eEBox=h("label",{class:"fl"},"エルボの少ないと知らせる数（個）",eEMin);
+  const eEBox=h("label",{class:"fl lowonly"},"エルボの少ないと知らせる数（個）",eEMin);
   const syncSub=()=>{const l=SUBS[eCat.value];eSubBox.hidden=!l;eSubLbl.textContent=SUBLABEL(eCat.value);eSub.replaceChildren(...(l||[]).map(c=>h("option",{value:c,selected:c===it.sub},c)));eEBox.hidden=!ELBOW(eCat.value);};
   eCat.addEventListener("change",syncSub);syncSub();
   const eUnit=h("select",{class:"inp",id:"eUnit"},unitOpts(it.unit));
@@ -409,14 +413,14 @@ function openItem(id){
     h("button",{class:"btn danger",type:"button",onclick:async e=>{e.target.disabled=true;try{await removeItem(id);close();toast("削除しました");}catch(x){eErr.textContent=errMsg(x);eErr.hidden=false;}}},"本当に削除"),
     h("button",{class:"btn ghost",type:"button",onclick:delAsk},"やめる"));}
   delAsk();
-  const edit=h("details",{class:"edit"},h("summary",{text:"名前・種類・色・少ない目安を変える／削除"}),
+  const edit=h("details",{class:"edit"},h("summary",{text:SHOW_LOW?"名前・種類・色・少ない目安を変える／削除":"名前・種類・色を変える／削除"}),
     h("form",{class:"f",style:"padding:12px 0 0",onsubmit:async e=>{e.preventDefault();
       const nm=eName.value.trim();if(!nm){eErr.textContent="名前を入れてください";eErr.hidden=false;return;}
       try{await db.doc("items/"+id).update({name:nm,cat:eCat.value,sub:SUBS[eCat.value]?eSub.value:"",unit:eUnit.value,min:Math.max(0,Number(eMin.value)||0),...(ELBOW(eCat.value)?{emin:Math.max(0,Number(eEMin.value)||0),eqty:Number(it.eqty)||0}:{}),updatedAt:Date.now()});close();toast("変更しました");}
       catch(x){eErr.textContent=errMsg(x);eErr.hidden=false;}}},
       h("label",{class:"fl"},"名前",eName),
       h("div",{class:"two"},h("label",{class:"fl"},"種類",eCat),h("label",{class:"fl"},"数え方",eUnit)),eSubBox,
-      h("label",{class:"fl"},"少ないと知らせる数",eMin),eEBox,eErr,
+      h("label",{class:"fl lowonly"},"少ないと知らせる数",eMin),eEBox,eErr,
       h("button",{class:"btn ghost",type:"submit"},"変更を保存"),delZone));
 
   const close=openSheet(
