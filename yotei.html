@@ -632,7 +632,7 @@ function openEdit(ev,copy,preset){
   const sp=sitePicker(e.site,e.kako);
   const mIn=h("textarea",{class:"inp",placeholder:"例：8時現地集合、車は2台"},e.memo||"");
   const err=h("p",{class:"err",hidden:true});
-  const save=h("button",{class:"btn",type:"submit"},isNew?"入れる":"直す");
+  const save=h("button",{class:"btn",type:"submit"},isNew?"入れる":"更新");
   let close;
   const form=h("form",{class:"f",onsubmit:async x=>{x.preventDefault();
     const site=sp.site();
@@ -657,7 +657,7 @@ function openEdit(ev,copy,preset){
       }
       const remd=await sp.remember(end||date);
       close();select(date);
-      toast((isNew?"予定を入れました":"予定を直しました")+(remd?"（現場名を覚えました）":""));
+      toast((isNew?"予定を入れました":"予定を更新しました")+(remd?"（現場名を覚えました）":""));
     }catch(y){fail(y&&y.code==="permission-denied"?"入れる権限がありません。":"保存できませんでした。電波を確認してください。");save.disabled=false;}
   }},
     h("h2",{text:isNew?(copy?"予定をコピー":"予定を入れる"):"予定を直す"}),
