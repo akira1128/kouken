@@ -303,7 +303,7 @@ function renderSite(){
     h("section",{class:"panel dhead"},
       h("button",{type:"button",class:"backlink",onclick:()=>{siteId="";history.replaceState(null,"",location.pathname);show("vSites");}},h("b",{text:"‹"}),"現場一覧"),
       h("h2",null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),x.name),
-      h("a",{class:"btn",href:"zaiko.html?order="+encodeURIComponent(x.id),style:{textAlign:"center",textDecoration:"none"}},"この現場に材料を頼む")),
+      h("a",{class:"btn",href:"zaiko.html?order="+encodeURIComponent(x.id),style:{textAlign:"center",textDecoration:"none"}},"この現場の材料を頼む")),
     h("section",{class:"panel sec"},
       h("h3",null,"現場の情報",h("button",{type:"button",class:"btn ghost small",onclick:()=>needWho(()=>editInfo(x))},"書きかえる")),
       h("dl",{class:"info"},FIELDS.flatMap(([k,l])=>[h("dt",{text:l}),val(k,inf[k])])),
@@ -382,7 +382,7 @@ function renderOrders(){
   box.replaceChildren(h("section",{class:"panel"},
     h("div",{class:"tools",style:{gridTemplateColumns:"1fr"}},siteFilter(ordSite,v=>{ordSite=v;store("kouken-ord-site",v);renderOrders();})),
     list.length?days.flatMap(d=>[h("h4",{class:"dayh",text:md(d)+"　"+list.filter(o=>o.date===d).length+"件"}),...list.filter(o=>o.date===d).map(orderRow)]):
-      h("p",{class:"empty",text:"まだ注文はありません。現場の画面の「この現場に材料を頼む」から頼めます。"})));
+      h("p",{class:"empty",text:"まだ注文はありません。現場の画面の「この現場の材料を頼む」から頼めます。"})));
 }
 
 /* ---------- 集計（材料ごとの合計） ---------- */

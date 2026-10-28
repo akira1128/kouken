@@ -358,7 +358,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let toastT;function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600);}
 
 let db=null, items=[], logs=[], sites=[], loaded=false, readOnly=false;
-/* 現場に材料を頼むとき（現場一覧の「この現場に材料を頼む」から zaiko.html?order=現場のID で開く）。
+/* 現場に材料を頼むとき（現場一覧の「この現場の材料を頼む」から zaiko.html?order=現場のID で開く）。
    材料のえらび方は在庫と同じ。頼む数を入れて「頼むもの」に入れ、最後にまとめて送る（2026/10/28 ユーザー） */
 const ORDER=new URLSearchParams(location.search).get("order")||"";
 let orderSite="";
