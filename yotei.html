@@ -81,10 +81,14 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .day.out{opacity:.38}
 .day.today .n{background:var(--accent);color:var(--accent-ink)}
 .day[aria-pressed="true"]{background:var(--accent-soft);border-radius:6px}
-.chip{display:block;font-size:11px;line-height:1.4;padding:1px 3px;border-radius:3px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:clip;font-weight:400;letter-spacing:-.02em}
-.chip b{font-weight:700}
-.cal .day.open .chip,.cal.week .chip{padding:2px 4px}
-.cal .day.open .chip b,.cal.week .chip b{display:block;font-size:12px;line-height:1.25}
+/* 予定の札：うすい人の色の地に黒い文字、左の線と名前が人の色（2026/10/28 ユーザーがA案をえらんだ）。--pc に人の色を入れる */
+.chip{display:block;font-size:11px;line-height:1.4;padding:1px 3px 1px 4px;border-radius:0;border-left:3px solid var(--pc);background:color-mix(in srgb,var(--pc) 14%,var(--surface));
+  color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:clip;font-weight:500;letter-spacing:-.02em}
+.chip b{font-weight:700;color:var(--pc)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .chip{background:color-mix(in srgb,var(--pc) 30%,var(--surface))}
+  :root:not([data-theme="light"]) .chip b{color:color-mix(in srgb,var(--pc) 55%,#fff)}}
+.cal .day.open .chip,.cal.week .chip{padding:2px 2px 2px 3px}
+.cal .day.open .chip b,.cal.week .chip b{display:block;font-size:12px;line-height:1.25;white-space:nowrap;letter-spacing:-.04em}
 .cal .day.open .chip .w,.cal.week .chip .w{display:block;font-size:11px;line-height:1.3}
 .more{font-size:10px;color:var(--muted);padding-left:2px;line-height:1.2}
 .chip.off{opacity:.55}
@@ -94,9 +98,9 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .views button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink);font-weight:700}
 /* 週：マスを高くして、予定を折り返して全部出す */
 .cal.week .day{min-height:220px}
-.cal.week .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.3;padding:2px 3px}
+.cal.week .chip{white-space:normal;overflow-wrap:break-word;line-height:1.3}
 /* 月：えらんだ日の週は広げて、全員の予定を折り返して全部出す */
-.cal .day.open .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.3;padding:1px 3px}
+.cal .day.open .chip{white-space:normal;overflow-wrap:break-word;line-height:1.3}
 /* メンバー予定表：縦に人、横に1週間 */
 .mem{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));padding:0 4px 6px}
 .mem .hd{font-size:11px;font-weight:700;text-align:center;padding:4px 0;color:var(--muted);line-height:1.2}
@@ -106,7 +110,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .mem .nm{font-size:12px;font-weight:700;border-top:1px solid var(--line);padding:6px 2px;display:flex;align-items:center;overflow-wrap:anywhere;line-height:1.2}
 .mem .cell{border:0;border-top:1px solid var(--line);border-left:1px solid var(--line);background:none;padding:3px 2px;min-height:54px;min-width:0;display:flex;flex-direction:column;gap:2px;text-align:left}
 .mem .cell[aria-pressed="true"]{background:var(--accent-soft)}
-.mem .cell .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.25;padding:1px 2px}
+.mem .cell .chip{white-space:normal;overflow-wrap:break-word;line-height:1.25;padding:1px 2px 1px 3px;border-left-width:2px}
 /* 一覧 */
 .lday{border-top:1px solid var(--line)}
 .lday:first-child{border-top:0}
@@ -318,7 +322,7 @@ function dayItems(s){
   }
   return out.sort((a,b)=>(a.n?ORDER[a.n]??50:99)-(b.n?ORDER[b.n]??50:99));
 }
-const chip=it=>h("span",{class:"chip"+(it.off?" off":""),style:{background:it.color}},it.name?h("b",{text:it.name}):null,it.name?" ":null,h("span",{class:"w",text:it.what}));
+const chip=it=>h("span",{class:"chip"+(it.off?" off":""),style:"--pc:"+it.color},it.name?h("b",{text:it.name}):null,it.name?" ":null,h("span",{class:"w",text:it.what}));
 function select(s){const old=range().join();sel=s;ym=s.slice(0,7);openWeek=weekRange()[0];if(range().join()!==old)listen();renderAll();}
 /* 月：広げている週（その週の日曜日）。""なら閉じている。同じ日をもう一度押すと閉じる */
 let openWeek=weekRange()[0], animNext=false;
@@ -364,7 +368,7 @@ function renderMem(){
       const evs=sortEv(pick(onDay(events,s)));
       cells.push(h("button",{type:"button",class:"cell","aria-pressed":String(s===sel),"aria-label":label+" "+md(s)+" "+(evs.map(e=>e.site||e.memo).join("、")||"予定なし"),
         onclick:()=>{select(s);if(editor&&who&&!evs.length)openEdit(null,false,[who]);}},
-        evs.map(e=>h("span",{class:"chip"+(e.site===OFF?" off":""),style:{background:color},text:shortSite(e.site)||e.memo||"予定"}))));
+        evs.map(e=>h("span",{class:"chip"+(e.site===OFF?" off":""),style:"--pc:"+color,text:shortSite(e.site)||e.memo||"予定"}))));
     }
   };
   for(const [n,k] of PEOPLE)if(person==="すべて"||person===n)row(k,pcolor(n),l=>l.filter(e=>(e.people||[]).includes(n)),n);
