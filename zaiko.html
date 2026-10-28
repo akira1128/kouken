@@ -409,6 +409,7 @@ function openSheet(...kids){
 }
 // さがす欄で確定・エンターを押したらキーボードを引っ込める（文字はそのまま）
 $("q").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();setTimeout(()=>$("q").blur(),0);}});
+$("q").addEventListener("compositionend",()=>setTimeout(()=>$("q").blur(),0));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scrim").hidden){$("scrim").hidden=true;$("scrim").replaceChildren();}});
 
 /* ---------- タブ ---------- */
