@@ -79,6 +79,11 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .st{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;margin-right:6px;vertical-align:2px}
 .st.now{background:var(--in-soft);color:var(--in)}
 .st.next{background:var(--accent-soft);color:var(--accent)}
+/* マンションのマーク：ベランダの帯と階段の棟がある建物の絵（西崎さんの画像 IMG_2510.PNG と同じ形）＋部屋数 */
+.mk{display:inline-flex;align-items:center;gap:2px;color:var(--accent);font-size:12px;font-weight:700;margin-right:6px;vertical-align:-4px;white-space:nowrap}
+.mk svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.1;stroke-linejoin:miter;stroke-linecap:butt}
+.dhead h2 .mk{font-size:14px}.dhead h2 .mk svg{width:24px;height:24px}
+.units{width:72px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:14px}
 .st.plan{background:var(--out-soft);color:var(--out);border:1px dashed var(--out)}
 .stseg{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted)}
 .stseg button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700}
@@ -186,6 +191,15 @@ const FIELDS=[["address","住所","例：東京都八王子市明神町4-1"],["p
 /* 現場の状態。「予定」はまだ決まっていない現場（どれにするかは西崎さんが決める 2026/10/28） */
 const STATUSES=["施工中","これから","予定","終わった"];
 const STATUS_ORDER={"施工中":0,"これから":1,"予定":2};
+const MK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.6h18"/><path d="M15.9 20.6V3.4h3.7v17.2"/><path d="M4.7 5.8v14.8"/>'+
+  '<path d="M4.2 4.6h11.7v1.3H4.2zM4.2 8.1h11.7v1.3H4.2zM4.2 11.6h11.7v1.3H4.2zM4.2 15.1h11.7v1.3H4.2z"/>'+
+  '<g fill="currentColor" stroke="none"><rect x="6.9" y="6.5" width="1.5" height="1"/><rect x="9.9" y="6.5" width="1.5" height="1"/><rect x="12.9" y="6.5" width="1.5" height="1"/>'+
+  '<rect x="6.9" y="10" width="1.5" height="1"/><rect x="9.9" y="10" width="1.5" height="1"/><rect x="12.9" y="10" width="1.5" height="1"/>'+
+  '<rect x="6.9" y="13.5" width="1.5" height="1"/><rect x="9.9" y="13.5" width="1.5" height="1"/><rect x="12.9" y="13.5" width="1.5" height="1"/>'+
+  '<rect x="17.3" y="5.9" width="0.9" height="1.5"/><rect x="17.3" y="9.5" width="0.9" height="1.5"/><rect x="17.3" y="13" width="0.9" height="1.5"/></g>'+
+  '<path d="M9.8 20.6v-3.3h4.5v3.3M12.05 17.3v3.3"/></svg>';
+const mark=x=>{if(!x.mansion)return null;const e=h("span",{class:"mk",title:"マンション","aria-label":"マンション"+(x.units?" "+x.units+"戸":"")});
+  e.innerHTML=MK;if(x.units)e.append(x.units+"戸");return e;};
 const stClass=st=>st==="施工中"?"now":st==="これから"?"next":st==="予定"?"plan":"other";
 const shortSite=s=>(s||"").replace(/[（(]仮称[）)]\s*/g,"").replace(/\s*新築工事$/,"").trim();
 
@@ -253,7 +267,7 @@ function renderSites(){
     return h("section",{class:"panel"},h("h3",{class:"grouph",text:t+"（"+arr.length+"）"}),arr.map(x=>{
       const inf=x.info||{}, nOrd=orders.filter(o=>o.siteId===x.id).length, nNote=(x.notes||[]).length;
       return h("button",{type:"button",class:"sitecard",onclick:()=>openSite(x.id)},
-        h("b",null,h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),shortSite(x.name)),
+        h("b",null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),shortSite(x.name)),
         h("span",{class:"go",text:"›"}),
         h("span",{class:"sub",text:[inf.address||"住所はまだ",nNote?"メモ "+nNote+"件":"",nOrd?"注文 "+nOrd+"回":""].filter(Boolean).join("　")}));
     }));}));
@@ -276,9 +290,13 @@ function renderSite(){
   box.replaceChildren(
     h("section",{class:"panel dhead"},
       h("button",{type:"button",class:"backlink",onclick:()=>{siteId="";history.replaceState(null,"",location.pathname);show("vSites");}},h("b",{text:"‹"}),"現場一覧"),
-      h("h2",null,h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),x.name),
+      h("h2",null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),x.name),
       editor?h("div",{class:"stseg",role:"group","aria-label":"現場の状態"},"状態：",STATUSES.map(st=>h("button",{type:"button","aria-pressed":String(x.status===st),
         onclick:async()=>{if(x.status===st)return;try{await updateDoc(doc(fs,"sites",x.id),{status:st,statusAt:Date.now(),statusBy:me()});toast("「"+st+"」にしました");}catch(e){toast("変えられませんでした");}}},st))):null,
+      editor?h("div",{class:"stseg",role:"group","aria-label":"マンションかどうか"},"マンション：",[[true,"マンション"],[false,"ちがう"]].map(([v,t])=>h("button",{type:"button","aria-pressed":String(!!x.mansion===v),
+        onclick:async()=>{if(!!x.mansion===v)return;try{await updateDoc(doc(fs,"sites",x.id),{mansion:v});toast(v?"マンションのマークを付けました":"マンションのマークを外しました");}catch(e){toast("変えられませんでした");}}},t)),
+        x.mansion?h("label",{style:{display:"inline-flex",alignItems:"center",gap:"4px"}},h("input",{class:"units",type:"number",inputmode:"numeric",min:"0",value:x.units||"","aria-label":"部屋数",
+          onchange:async e=>{const n=Math.max(0,Math.round(Number(e.target.value)||0));try{await updateDoc(doc(fs,"sites",x.id),{units:n||null});toast(n?"部屋数を"+n+"戸にしました":"部屋数を消しました");}catch(y){toast("変えられませんでした");}}}),"戸"):null):null,
       h("a",{class:"btn",href:"zaiko.html?order="+encodeURIComponent(x.id),style:{textAlign:"center",textDecoration:"none"}},"この現場に材料を頼む")),
     h("section",{class:"panel sec"},
       h("h3",null,"現場の情報",h("button",{type:"button",class:"btn ghost small",onclick:()=>needWho(()=>editInfo(x))},"書きかえる")),
