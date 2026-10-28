@@ -377,6 +377,21 @@ function renderAlert(){
   $("alertTitle").textContent=low.length?("少ないもの "+low.length+"件"):(items.length?"少ないものはありません":"まだ材料がありません");
   $("lowList").replaceChildren(...low.map(it=>h("button",{type:"button",onclick:()=>openItem(it.id)},it.name+"  "+(lowS(it)||!lowE(it)?fmtN(it.qty)+(it.unit||""):"")+(lowE(it)?(lowS(it)?"・":"")+"エルボ":""))));
 }
+/* さがす：スペース（全角も）で区切った言葉が全部入っている材料を出す。
+   数字はかたまりで比べ（25 は 25A に当たり 125A には当たらない）、数字は書いた順に並んでいるものだけ（「25 20」→ 25A×20t）（2026/10/28） */
+const nz=t=>String(t||"").normalize("NFKC").toLowerCase();
+function matchQ(it,q){
+  const text=nz(it.name+" "+it.cat+" "+(it.sub||"")+" "+(it.no?"no."+it.no:""));
+  const words=nz(q).split(/\s+/).filter(Boolean);
+  let pos=0;
+  for(const w of words){
+    if(/^[0-9.]+$/.test(w)){
+      const re=new RegExp("(?<![0-9])(?<![0-9]\\.)"+w.replace(/\./g,"\\.")+"(?![0-9])","g");re.lastIndex=pos;
+      const m=re.exec(text);if(!m)return false;pos=m.index+m[0].length;
+    }else if(!text.includes(w))return false;
+  }
+  return true;
+}
 function renderList(){
   renderAlert();
   const q=$("q").value.trim().toLowerCase();
@@ -387,7 +402,7 @@ function renderList(){
       h("span",{text:"下の「材料を追加」から、保温筒・ロール・コイルなどを登録してください。"}),
       readOnly?null:h("button",{class:"btn",type:"button",style:"max-width:260px",onclick:()=>show("vAdd")},"材料を追加する")));
     return;}
-  const shown=items.filter(it=>(q||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(!q||(it.name+" "+it.cat+" "+(it.sub||"")).toLowerCase().includes(q)));
+  const shown=items.filter(it=>(q||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(!q||matchQ(it,q)));
   if(!shown.length){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"見つかりません"}),h("span",{text:"ことばや種類を変えてさがしてください。"})));return;}
   const groups=[];
   for(const c of CATS){
