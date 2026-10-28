@@ -351,7 +351,7 @@ function meter(x){
   if(!tw.length){
     // マンションで最上階がまだ：空のメーター。編集する人はここで最上階を入れられる
     if(!x.mansion)return null;
-    const inp=h("input",{class:"units",style:{fontSize:"16px"},type:"number",inputmode:"numeric",min:"1",max:"80",placeholder:"例：12"});
+    const inp=h("input",{class:"units",style:{fontSize:"16px"},type:"number",inputmode:"numeric",min:"1",max:"80",placeholder:"12"});
     return h("div",{class:"meter"},h("div",{class:"mh"},"進み具合",h("span",{class:"fl",text:"最上階はまだ入っていません"})),
       h("div",{class:"mtrack"}),
       editor?h("div",{class:"mstep"},"最上階",inp,"階",h("button",{type:"button",style:{fontSize:"13px"},onclick:async()=>{
