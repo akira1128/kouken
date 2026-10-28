@@ -220,7 +220,7 @@ const STAFF=[["西崎剣","西崎"],["原田弓子","原田"],["福島正純","�
 const NICK=Object.fromEntries(STAFF);
 const nick=n=>NICK[n]||n||"";
 const FACTORY="工場（加工）", OTHER="その他（メモに書く）";
-const CATS=["保温筒","ロール","ジャケット・エルボ","コイル","テープ・副資材","その他"];
+const CATS=["保温筒","ロール","セラカバー","ジャケット・エルボ","コイル","テープ・副資材","その他"];
 const UNITS=["本","個","巻","枚","ケース","箱","m","kg"];
 const KIND={in:"入庫",out:"持ち出し",set:"数を直す",new:"登録",del:"削除"};
 const tabId="t"+Math.random().toString(36).slice(2,10);
@@ -488,6 +488,12 @@ async function seedIfEmpty(){
   await batch.commit();
 }
 
+/* 種類「セラカバー」を作る前に「ロール」で登録したセラカバーを移す（2026/10/28） */
+async function moveCeraCover(){
+  const q=await getDocs(collection(fs,"items"));
+  for(const d of q.docs){const x=d.data();if(x.cat==="ロール"&&/セラカバー/.test(x.name||""))await updateDoc(d.ref,{cat:"セラカバー"});}
+}
+
 /* ---------- 起動 ---------- */
 let fs=null, uid="";
 renderWho();renderCats();renderList();renderLog();show(view);
@@ -503,6 +509,7 @@ renderWho();renderCats();renderList();renderLog();show(view);
   db={doc:p=>{const r=doc(fs,p);return{update:d=>updateDoc(r,d),delete:()=>deleteDoc(r)};},
       collection:n=>({add:d=>addDoc(collection(fs,n),d)})};
   try{await seedIfEmpty();}catch(e){}
+  try{await moveCeraCover();}catch(e){}
   onSnapshot(collection(fs,"items"),s=>{
     items=s.docs.map(d=>Object.assign({id:d.id},d.data())).sort((a,b)=>(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
     loaded=true;renderList();
