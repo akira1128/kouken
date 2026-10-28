@@ -141,8 +141,11 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .ev .bar{grid-row:1/5;border-radius:3px}
 .ev .st{font-weight:700;overflow-wrap:anywhere}
 .ev .pp{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.ev .pp span{font-size:13px;padding:1px 9px;border-radius:999px;color:#fff;font-weight:500}
-.ev .pp span.me{outline:2px solid var(--ink);outline-offset:1px;font-weight:700}
+/* 名前の札：カレンダーの札と同じ見た目（うすい人の色の地、左の線と名前が人の色）2026/10/28 ユーザー */
+.pname{display:inline-block;font-size:13px;font-weight:700;padding:1px 8px 1px 6px;border-left:3px solid var(--pc);background:color-mix(in srgb,var(--pc) 14%,var(--surface));color:var(--pc)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pname{background:color-mix(in srgb,var(--pc) 30%,var(--surface));color:color-mix(in srgb,var(--pc) 55%,#fff)}}
+.ev .pp span{font-size:13px}
+.ev .pp span.me{outline:2px solid var(--ink);outline-offset:1px}
 .ev .mm{font-size:13px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere;white-space:pre-wrap}
 .ev .span{font-size:12px;color:var(--muted)}
 .empty{padding:20px 14px 24px;text-align:center;color:var(--muted);font-size:14px}
@@ -196,6 +199,7 @@ textarea.inp{min-height:68px;resize:vertical}
 .menuev .bar{align-self:stretch;border-radius:3px}
 .menuev b{display:block;font-size:15px;overflow-wrap:anywhere}
 .menuev small{display:block;font-size:12.5px;color:var(--muted)}
+.menuev .pp{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .menuev .go{font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap}
 .kakobox{display:grid;gap:6px;padding:10px;border-radius:8px;border:1px dashed var(--accent);background:var(--accent-soft);margin-top:4px}
 .rembox{display:grid;gap:6px;padding:10px;border-radius:8px;background:var(--today);font-size:13px;font-weight:400}
@@ -406,8 +410,8 @@ function dayMenu(s,preset){
   if(!evs.length){openEdit(null,false,preset);return;}
   let close;
   const pickEv=e=>h("button",{type:"button",class:"menuev",onclick:()=>{close();openEdit(e);}},
-    h("span",{class:"bar",style:{background:colorOf(e.site)}}),
-    h("span",null,h("b",{text:siteText(e)}),h("small",{text:(e.people||[]).length?e.people.map(nick).join("・"):"メモ"})),
+    h("span",{class:"bar",style:{background:(e.people||[]).length?pcolor(e.people[0]):NOONE}}),
+    h("span",null,h("b",{text:siteText(e)}),(e.people||[]).length?h("span",{class:"pp"},e.people.map(n=>h("span",{class:"pname",style:"--pc:"+pcolor(n),text:nick(n)}))):h("small",{text:"メモ"})),
     h("span",{class:"go",text:"直す ›"}));
   close=openSheet(h("h2",{text:md(s)+(who?"　"+nick(who):"")}),
     h("button",{class:"btn",type:"button",onclick:()=>{close();openEdit(null,false,preset);}},"＋ 新しい予定を入れる"),
@@ -498,10 +502,10 @@ function renderMem(){
 
 /* ---------- 予定の1行（えらんだ日・一覧で使う） ---------- */
 function evRow(e){
-  const body=[h("span",{class:"bar",style:{background:colorOf(e.site)}}),
+  const body=[h("span",{class:"bar",style:{background:(e.people||[]).length?pcolor(e.people[0]):NOONE}}),
     h("span",{class:"st",text:e.site===FACTORY&&e.kako?FACTORY+"　→ "+e.kako:(e.site||"（現場なし）")}),
     e.end&&e.end!==e.date?h("span",{class:"span",text:md(e.date)+" 〜 "+md(e.end)}):null,
-    (e.people||[]).length?h("span",{class:"pp"},(e.people||[]).map(n=>h("span",{class:n===person?"me":null,style:{background:pcolor(n)},text:nick(n)}))):null,
+    (e.people||[]).length?h("span",{class:"pp"},(e.people||[]).map(n=>h("span",{class:"pname"+(n===person?" me":""),style:"--pc:"+pcolor(n),text:nick(n)}))):null,
     e.memo?h("span",{class:"mm",text:e.memo}):null];
   return h("li",null,editor?h("button",{type:"button",class:"ev","aria-label":"この予定を直す",onclick:()=>openEdit(e)},body):h("div",{class:"ev"},body));
 }
