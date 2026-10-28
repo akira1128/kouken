@@ -348,7 +348,16 @@ const RUNNER='<svg viewBox="0 0 30 32"><g class="lim">'+
 function meter(x){
   // 棟が分かれている現場は towers:[{name:"A棟",floors:10,floor:3},…]。1棟だけなら floors／floor
   const tw=Array.isArray(x.towers)&&x.towers.length?x.towers:(+x.floors?[{name:"",floors:x.floors,floor:x.floor}]:[]);
-  if(!tw.length)return null;
+  if(!tw.length){
+    // マンションで最上階がまだ：空のメーター。編集する人はここで最上階を入れられる
+    if(!x.mansion)return null;
+    const inp=h("input",{class:"units",style:{fontSize:"16px"},type:"number",inputmode:"numeric",min:"1",max:"80",placeholder:"例：12"});
+    return h("div",{class:"meter"},h("div",{class:"mh"},"進み具合",h("span",{class:"fl",text:"最上階はまだ入っていません"})),
+      h("div",{class:"mtrack"}),
+      editor?h("div",{class:"mstep"},"最上階",inp,"階",h("button",{type:"button",style:{fontSize:"13px"},onclick:async()=>{
+        const n=parseInt(inp.value,10);if(!(n>0&&n<=80)){toast("階数を入れてください");return;}
+        try{await updateDoc(doc(fs,"sites",x.id),{floors:n,floor:0});toast("最上階を入れました");}catch(e){toast("保存できませんでした");}}},"入れる")):null);
+  }
   const save=async(k,n)=>{
     try{if(x.towers&&x.towers.length)await updateDoc(doc(fs,"sites",x.id),{towers:x.towers.map((t,i)=>i===k?{...t,floor:n}:t)});
       else await updateDoc(doc(fs,"sites",x.id),{floor:n});}catch(e){toast("保存できませんでした");}};
