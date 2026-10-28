@@ -349,9 +349,9 @@ const runnerSVG=face=>'<svg viewBox="0 0 30 32"><g class="lim">'+
      '<circle cx="18" cy="2" r="10.6" fill="#fff"/><image href="'+face+'" x="8" y="-8" width="20" height="20" clip-path="url(#rface)" preserveAspectRatio="xMidYMid slice"/>'
     :'<circle cx="18.3" cy="6.6" r="3.5" fill="#f2c9a0"/>'+
      '<path d="M14.4 6.3A3.9 3.9 0 0 1 22.2 6.3Z" fill="#f5b301" stroke="#b07f00" stroke-width=".6"/><path d="M21.8 6.3h2.2" stroke="#b07f00" stroke-width="1.3" stroke-linecap="round"/>')+'</svg>';
-/* サプライズ：現場の画面を開くたびにくじを引く。西崎さん 20%・ヒエウ 10%・ズオン 10% でその人の顔が走る（写真が何枚かあればランダム）
+/* サプライズ：現場の画面を開くたびにくじを引く。西崎さん 10%・ヒエウ 10%・ズオン 10% でその人の顔が走る（写真が何枚かあればランダム）
    顔写真は faces/{名前} の imgs（暗証番号を入れた携帯だけ読める）。当たった人の写真だけ、1回読んだら覚えておく */
-const FACE_LUCK=[["西崎",.2],["ヒエウ",.1],["ズオン",.1]];
+const FACE_LUCK=[["西崎",.1],["ヒエウ",.1],["ズオン",.1]];
 let runFace="";
 const faceImgs={};
 async function rollRunFace(){
