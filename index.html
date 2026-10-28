@@ -255,9 +255,9 @@ const NOSUB="分けていない";
 /* 1つの材料に複数の数を持たせる仕組み（今は使っていない。2026/10/28 PF保温筒は2段目で直管・エルボを分ける形に変更） */
 const ELBOW=c=>false;
 /* 1巻の長さ（m）を入れる種類（2026/10/28） */
-const HASLEN=c=>c==="ロール"||c==="遮音シート";
+const HASLEN=c=>c==="ロール"||c==="遮音シート"||c==="金網";
 /* 幅（mm）も入れる種類。一覧に「920×10m」と出す */
-const HASWID=c=>c==="遮音シート";
+const HASWID=c=>c==="遮音シート"||c==="金網";
 const sizeText=it=>Number(it.len)>0?(HASWID(it.cat)&&Number(it.wid)>0?fmtN(it.wid)+"×"+fmtN(it.len)+"m":"1巻 "+fmtN(it.len)+"m"):"";
 /* 一覧の並び：order が小さい順。ロールは ALKロール → ALGCロール → ALKマイティ → ALGCマイティ → その他（2026/10/28） */
 function rank(it){
@@ -266,7 +266,9 @@ function rank(it){
 }
 /* ロールの1巻の長さ（m）。長さが空のときだけ入れる（2026/10/28 ユーザー） */
 /* 遮音シートの大きさ（2026/10/28 ユーザー）：[幅mm, 長さm] */
-const SHEET_SIZE={"サンダム S-10":[920,10],"CZ-12":[940,10]};
+const SHEET_SIZE={"サンダム S-10":[920,10],"CZ-12":[940,10],
+  // 金網は #25 910×25m（東京グラスロンの請求書）
+  "亀甲金網（亜鉛・5分目）":[910,25],"亀甲金網（亜鉛・3分目）":[910,25],"ビニール亀甲（白・3分目）":[910,25],"ビニール亀甲（紫・3分目）":[910,25]};
 const ROLL_LEN={"ALKロール 24K×25t":22,"ALKロール 24K×50t":16,"ALKロール 32K×25t":16,"ALGCロール 32K×25t":16,
   "ALKマイティロール 40K×25t":11,"ALKマイティロール 40K×50t":5.5,"ALGCマイティロール 40K×25t":11,"ALGCマイティロール 40K×50t":5.5};
 const EPARTS=[["ws","溶接ショートエルボ","wsqty"],["wl","溶接ロングエルボ","wlqty"]];
@@ -580,6 +582,9 @@ const EXTRA_ITEMS=[
   // PF保温筒の直管もALKと同じ規格（2026/10/28）
   ...SPECS.flatMap(([t,o,list])=>list.map(a=>({id:"pf"+t.replace("t","")+"-"+a,name:"PF保温筒 "+a+"×"+t,cat:"PF保温筒",sub:"直管",unit:"本",order:o}))),
   {id:"sheet-cz12",name:"CZ-12",cat:"遮音シート",unit:"巻",order:0},
+  // 金網（過去の請求書・受領書で買ったもの 2026/10/28）
+  {id:"ami-zn3",name:"亀甲金網（亜鉛・3分目）",cat:"金網",unit:"本",order:0},
+  {id:"ami-pu3",name:"ビニール亀甲（紫・3分目）",cat:"金網",unit:"本",order:0},
   // ロール（2026/10/28）。長さは分かっているものだけ
   {id:"roll-alk24-50",name:"ALKロール 24K×50t",cat:"ロール",unit:"巻",order:0},
   {id:"roll-algc32-25",name:"ALGCロール 32K×25t",cat:"ロール",unit:"巻",order:0},
