@@ -78,6 +78,11 @@ main{display:grid;gap:16px;padding-top:14px}
 .qty{font-size:22px;font-weight:700;text-align:right;white-space:nowrap}
 .qty small{font-size:13px;font-weight:400;color:var(--muted);margin-left:2px}
 .qty.lowtxt{color:var(--low)}
+/* 在庫あり＝緑の数字と左の緑の線、在庫なし＝うすい灰色（2026/10/28） */
+.row.has{box-shadow:inset 4px 0 0 var(--in)}
+.row.has .qty{color:var(--in)}
+.row.zero .qty{color:var(--muted);opacity:.55;font-weight:400}
+.row.zero .nm{color:var(--muted)}
 .qty .eq{display:block;font-size:14px;font-weight:700;color:var(--muted)}
 .qty .eq.lowtxt{color:var(--low)}
 .pill{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--low);color:var(--surface);margin-left:6px;vertical-align:2px}
@@ -389,7 +394,7 @@ function renderList(){
     else if(arr.length)groups.push([c,arr]);
   }
   list.replaceChildren(...groups.map(([c,arr])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
-    arr.map(it=>h("button",{type:"button",class:"row"+(isLow(it)?" low":""),onclick:()=>openItem(it.id)},
+    arr.map(it=>h("button",{type:"button",class:"row"+(isLow(it)?" low":"")+(Number(it.qty)>0?" has":" zero"),onclick:()=>openItem(it.id)},
       h("span",{class:"nm"},it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
         h("span",{class:"sub",text:((HASLEN(it.cat)||it.no)&&sizeText(it)?(sizeText(it)+" ・ "):"")+(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
       h("span",{class:"qty"+(lowS(it)?" lowtxt":"")},fmtN(it.qty),h("small",{text:it.unit||""}),ELBOW(it.cat)?EPARTS.map(([k,l,f])=>h("span",{class:"eq",text:l.replace("溶接","").replace("エルボ","")+" "+fmtN(it[f]||0)+"個"})):null))))));
