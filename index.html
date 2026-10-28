@@ -193,6 +193,9 @@ details.edit form{padding:12px 0 0}
             <select class="inp" id="aUnit"></select>
           </label>
         </div>
+        <label class="fl" id="aWidBox" hidden>幅（mm） <em>分からなければ空でOK</em>
+          <input class="inp" id="aWid" type="number" inputmode="decimal" min="0" step="any" placeholder="例：920">
+        </label>
         <label class="fl" id="aLenBox" hidden>1巻の長さ（m） <em>分からなければ空でOK</em>
           <input class="inp" id="aLen" type="number" inputmode="decimal" min="0" step="any" placeholder="例：11">
         </label>
@@ -252,13 +255,18 @@ const NOSUB="分けていない";
 /* 1つの材料に複数の数を持たせる仕組み（今は使っていない。2026/10/28 PF保温筒は2段目で直管・エルボを分ける形に変更） */
 const ELBOW=c=>false;
 /* 1巻の長さ（m）を入れる種類（2026/10/28） */
-const HASLEN=c=>c==="ロール";
+const HASLEN=c=>c==="ロール"||c==="遮音シート";
+/* 幅（mm）も入れる種類。一覧に「920×10m」と出す */
+const HASWID=c=>c==="遮音シート";
+const sizeText=it=>Number(it.len)>0?(HASWID(it.cat)&&Number(it.wid)>0?fmtN(it.wid)+"×"+fmtN(it.len)+"m":"1巻 "+fmtN(it.len)+"m"):"";
 /* 一覧の並び：order が小さい順。ロールは ALKロール → ALGCロール → ALKマイティ → ALGCマイティ → その他（2026/10/28） */
 function rank(it){
   if(it.cat==="ロール"){const n=it.name||"";return /^ALKロール/.test(n)?0:/^ALGCロール/.test(n)?1:/^ALKマイティ/.test(n)?2:/^ALGCマイティ/.test(n)?3:4;}
   return Number(it.order)||0;
 }
 /* ロールの1巻の長さ（m）。長さが空のときだけ入れる（2026/10/28 ユーザー） */
+/* 遮音シートの大きさ（2026/10/28 ユーザー）：[幅mm, 長さm] */
+const SHEET_SIZE={"サンダム S-10":[920,10],"CZ-12":[940,10]};
 const ROLL_LEN={"ALKロール 24K×25t":22,"ALKロール 24K×50t":16,"ALKロール 32K×25t":16,"ALGCロール 32K×25t":16,
   "ALKマイティロール 40K×25t":11,"ALKマイティロール 40K×50t":5.5,"ALGCマイティロール 40K×25t":11,"ALGCマイティロール 40K×50t":5.5};
 const EPARTS=[["ws","溶接ショートエルボ","wsqty"],["wl","溶接ロングエルボ","wlqty"]];
@@ -363,7 +371,7 @@ function renderList(){
   list.replaceChildren(...groups.map(([c,arr])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
     arr.map(it=>h("button",{type:"button",class:"row"+(isLow(it)?" low":""),onclick:()=>openItem(it.id)},
       h("span",{class:"nm"},it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
-        h("span",{class:"sub",text:(HASLEN(it.cat)&&Number(it.len)>0?("1巻 "+fmtN(it.len)+"m ・ "):"")+(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
+        h("span",{class:"sub",text:(HASLEN(it.cat)&&sizeText(it)?(sizeText(it)+" ・ "):"")+(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
       h("span",{class:"qty"+(lowS(it)?" lowtxt":"")},fmtN(it.qty),h("small",{text:it.unit||""}),ELBOW(it.cat)?EPARTS.map(([k,l,f])=>h("span",{class:"eq",text:l.replace("溶接","").replace("エルボ","")+" "+fmtN(it[f]||0)+"個"})):null))))));
 }
 
@@ -422,7 +430,9 @@ function openItem(id){
   const eCat=h("select",{class:"inp",id:"eCat"},CATS.map(c=>h("option",{value:c,selected:c===it.cat},c)));
   const eLen=h("input",{class:"inp",id:"eLen",type:"number",inputmode:"decimal",min:"0",step:"any",value:it.len?fmtN(it.len):"",placeholder:"例：11"});
   const eLenBox=h("label",{class:"fl"},"1巻の長さ（m）",eLen);
-  const syncLen=()=>{eLenBox.hidden=!HASLEN(eCat.value);};
+  const eWid=h("input",{class:"inp",id:"eWid",type:"number",inputmode:"decimal",min:"0",step:"any",value:it.wid?fmtN(it.wid):"",placeholder:"例：920"});
+  const eWidBox=h("label",{class:"fl"},"幅（mm）",eWid);
+  const syncLen=()=>{eLenBox.hidden=!HASLEN(eCat.value);eWidBox.hidden=!HASWID(eCat.value);};
   const eSub=h("select",{class:"inp",id:"eSub"});const eSubLbl=h("span");const eSubBox=h("label",{class:"fl"},eSubLbl,eSub);
   const syncSub=()=>{const l=SUBS[eCat.value];eSubBox.hidden=!l;eSubLbl.textContent=SUBLABEL(eCat.value);eSub.replaceChildren(...(l||[]).map(c=>h("option",{value:c,selected:c===it.sub},c)));};
   eCat.addEventListener("change",()=>{syncSub();syncLen();});syncSub();syncLen();
@@ -438,15 +448,15 @@ function openItem(id){
   const edit=h("details",{class:"edit"},h("summary",{text:SHOW_LOW?"名前・長さ・種類・色・少ない目安を変える／削除":"名前・長さ・種類・色を変える／削除"}),
     h("form",{class:"f",style:"padding:12px 0 0",onsubmit:async e=>{e.preventDefault();
       const nm=eName.value.trim();if(!nm){eErr.textContent="名前を入れてください";eErr.hidden=false;return;}
-      try{await db.doc("items/"+id).update({name:nm,cat:eCat.value,sub:SUBS[eCat.value]?eSub.value:"",len:HASLEN(eCat.value)&&Number(eLen.value)>0?Number(eLen.value):0,unit:eUnit.value,min:Math.max(0,Number(eMin.value)||0),updatedAt:Date.now()});close();toast("変更しました");}
+      try{await db.doc("items/"+id).update({name:nm,cat:eCat.value,sub:SUBS[eCat.value]?eSub.value:"",len:HASLEN(eCat.value)&&Number(eLen.value)>0?Number(eLen.value):0,wid:HASWID(eCat.value)&&Number(eWid.value)>0?Number(eWid.value):0,unit:eUnit.value,min:Math.max(0,Number(eMin.value)||0),updatedAt:Date.now()});close();toast("変更しました");}
       catch(x){eErr.textContent=errMsg(x);eErr.hidden=false;}}},
-      h("label",{class:"fl"},"名前",eName),eLenBox,
+      h("label",{class:"fl"},"名前",eName),eWidBox,eLenBox,
       h("div",{class:"two"},h("label",{class:"fl"},"種類",eCat),h("label",{class:"fl"},"数え方",eUnit)),eSubBox,
       h("label",{class:"fl lowonly"},"少ないと知らせる数",eMin),eErr,
       h("button",{class:"btn ghost",type:"submit"},"変更を保存"),delZone));
 
   const close=openSheet(
-    h("h2",{text:it.name}),HASLEN(it.cat)&&Number(it.len)>0?h("p",{class:"hint",text:"1巻 "+fmtN(it.len)+"m"}):null,
+    h("h2",{text:it.name}),HASLEN(it.cat)&&sizeText(it)?h("p",{class:"hint",text:sizeText(it)}):null,
     h("div",{class:"now"},h("span",{text:"いまの在庫"}),h("span",null,h("b",{text:fmtN(it.qty)})," "+(it.unit||""),hasE?EPARTS.map(([k,l,f])=>h("span",{class:"nowpart"},l+" ",h("b",{text:fmtN(it[f]||0)})," 個")):null)),
     partSeg,
     seg,
@@ -495,7 +505,7 @@ async function removeItem(id){
 
 /* ---------- 材料を追加 ---------- */
 $("aCat").replaceChildren(...CATS.map(c=>h("option",{value:c},c)));
-function syncAddSub(){const c=$("aCat").value,l=SUBS[c];$("aSubBox").hidden=!l;$("aSubLbl").textContent=SUBLABEL(c);$("aSub").replaceChildren(...(l||[]).map(x=>h("option",{value:x},x)));$("aEBox").hidden=!ELBOW(c);$("aLenBox").hidden=!HASLEN(c);if(l)$("aSub").dispatchEvent(new Event("change"));}
+function syncAddSub(){const c=$("aCat").value,l=SUBS[c];$("aSubBox").hidden=!l;$("aSubLbl").textContent=SUBLABEL(c);$("aSub").replaceChildren(...(l||[]).map(x=>h("option",{value:x},x)));$("aEBox").hidden=!ELBOW(c);$("aLenBox").hidden=!HASLEN(c);$("aWidBox").hidden=!HASWID(c);if(l)$("aSub").dispatchEvent(new Event("change"));}
 $("aCat").addEventListener("change",syncAddSub);syncAddSub();
 $("aSub").addEventListener("change",()=>{const v=$("aSub").value;if(/エルボ$/.test(v))$("aUnit").value="個";else if(v==="直管")$("aUnit").value="本";});
 $("aUnit").replaceChildren(...unitOpts("本"));
@@ -508,9 +518,9 @@ $("addForm").addEventListener("submit",async e=>{
   const qty=Math.max(0,Number($("aQty").value)||0),min=Math.max(0,Number($("aMin").value)||0);
   $("aBtn").disabled=true;
   try{const now=Date.now();
-    const ref=await db.collection("items").add({name,cat:$("aCat").value,sub:SUBS[$("aCat").value]?$("aSub").value:"",...(HASLEN($("aCat").value)&&Number($("aLen").value)>0?{len:Number($("aLen").value)}:{}),unit:$("aUnit").value,qty,min,...(ELBOW($("aCat").value)?{wsqty:Math.max(0,Number($("aWsQty").value)||0),wlqty:Math.max(0,Number($("aWlQty").value)||0)}:{}),createdAt:now,updatedAt:now,updatedBy:who});
+    const ref=await db.collection("items").add({name,cat:$("aCat").value,sub:SUBS[$("aCat").value]?$("aSub").value:"",...(HASLEN($("aCat").value)&&Number($("aLen").value)>0?{len:Number($("aLen").value)}:{}),...(HASWID($("aCat").value)&&Number($("aWid").value)>0?{wid:Number($("aWid").value)}:{}),unit:$("aUnit").value,qty,min,...(ELBOW($("aCat").value)?{wsqty:Math.max(0,Number($("aWsQty").value)||0),wlqty:Math.max(0,Number($("aWlQty").value)||0)}:{}),createdAt:now,updatedAt:now,updatedBy:who});
     await db.collection("logs").add({at:now,kind:"new",itemId:ref.id,itemName:name,unit:$("aUnit").value,n:qty,after:qty,who,memo:""});
-    $("aName").value="";$("aLen").value="";$("aQty").value="0";$("aMin").value="0";$("aWsQty").value="0";$("aWlQty").value="0";
+    $("aName").value="";$("aLen").value="";$("aWid").value="";$("aQty").value="0";$("aMin").value="0";$("aWsQty").value="0";$("aWlQty").value="0";
     toast("「"+name+"」を登録しました");
     cat=$("aCat").value;store("kouken-cat",cat);sub=SUBS[cat]?$("aSub").value:"すべて";store("kouken-sub",sub);renderCats();show("vStock");renderList();
   }catch(x){err.textContent=errMsg(x);err.hidden=false;}
@@ -569,6 +579,7 @@ const EXTRA_ITEMS=[
   ...SPECS.flatMap(([t,o,list])=>list.map(a=>({id:"algc"+t.replace("t","")+"-"+a,name:(o>0?"ALGCP保温筒 ":"ALGC保温筒 ")+a+"×"+t,cat:"ALGC保温筒",unit:"本",order:o}))),
   // PF保温筒の直管もALKと同じ規格（2026/10/28）
   ...SPECS.flatMap(([t,o,list])=>list.map(a=>({id:"pf"+t.replace("t","")+"-"+a,name:"PF保温筒 "+a+"×"+t,cat:"PF保温筒",sub:"直管",unit:"本",order:o}))),
+  {id:"sheet-cz12",name:"CZ-12",cat:"遮音シート",unit:"巻",order:0},
   // ロール（2026/10/28）。長さは分かっているものだけ
   {id:"roll-alk24-50",name:"ALKロール 24K×50t",cat:"ロール",unit:"巻",order:0},
   {id:"roll-algc32-25",name:"ALGCロール 32K×25t",cat:"ロール",unit:"巻",order:0},
@@ -585,7 +596,7 @@ async function ensureItems(){
   const miss=EXTRA_ITEMS.filter(x=>!have.has(x.id));
   for(let k=0;k<miss.length;k+=400){
     const batch=writeBatch(fs),now=Date.now();
-    for(const x of miss.slice(k,k+400))batch.set(doc(fs,"items",x.id),{name:x.name,cat:x.cat,sub:x.sub||"",unit:x.unit,order:x.order||0,...(ROLL_LEN[x.name]?{len:ROLL_LEN[x.name]}:{}),qty:0,min:0,createdAt:now,updatedAt:now,updatedBy:who||"西崎剣"});
+    for(const x of miss.slice(k,k+400))batch.set(doc(fs,"items",x.id),{name:x.name,cat:x.cat,sub:x.sub||"",unit:x.unit,order:x.order||0,...(ROLL_LEN[x.name]?{len:ROLL_LEN[x.name]}:{}),...(SHEET_SIZE[x.name]?{wid:SHEET_SIZE[x.name][0],len:SHEET_SIZE[x.name][1]}:{}),qty:0,min:0,createdAt:now,updatedAt:now,updatedBy:who||"西崎剣"});
     await batch.commit();
   }
 }
@@ -614,6 +625,7 @@ async function migrateCats(){
   for(const d of q.docs){const x=d.data(),c=newCat(x);if(c)await updateDoc(d.ref,{cat:c});
     // PF保温筒の前の「エルボ」（eqty）は溶接ショートエルボ（wsqty）へ（2026/10/28）
     if(ROLL_LEN[x.name]&&!x.len)await updateDoc(d.ref,{len:ROLL_LEN[x.name]});
+    if(SHEET_SIZE[x.name]&&!x.len)await updateDoc(d.ref,{wid:SHEET_SIZE[x.name][0],len:SHEET_SIZE[x.name][1]});
     // 30t以上は「ALKP保温筒」「ALGCP保温筒」と書く（2026/10/28）
     if(/^ALK保温筒 .*×(30|40|50)t$/.test(x.name||""))await updateDoc(d.ref,{name:x.name.replace(/^ALK保温筒/,"ALKP保温筒")});
     if(/^ALGC保温筒 .*×(30|40|50)t$/.test(x.name||""))await updateDoc(d.ref,{name:x.name.replace(/^ALGC保温筒/,"ALGCP保温筒")});
