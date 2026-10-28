@@ -547,7 +547,7 @@ const EXTRA_ITEMS=[
   // ALGC保温筒もALKと同じ規格（2026/10/28）
   ...[["20t",0,["15A","20A","25A","32A","40A","50A","65A","80A"]],["25t",0,["100A","125A","150A"]],["30t",1,["15A","20A","25A","32A","40A","50A"]],
       ["40t",2,["32A","40A","50A","65A","80A","100A","125A","150A","200A","250A","300A"]],["50t",3,["200A","250A","300A"]]]
-    .flatMap(([t,o,list])=>list.map(a=>({id:"algc"+t.replace("t","")+"-"+a,name:"ALGC保温筒 "+a+"×"+t,cat:"ALGC保温筒",unit:"本",order:o})))
+    .flatMap(([t,o,list])=>list.map(a=>({id:"algc"+t.replace("t","")+"-"+a,name:(o>0?"ALGCP保温筒 ":"ALGC保温筒 ")+a+"×"+t,cat:"ALGC保温筒",unit:"本",order:o})))
 ];
 async function ensureItems(){
   for(const x of EXTRA_ITEMS){
@@ -581,8 +581,9 @@ async function migrateCats(){
   const q=await getDocs(collection(fs,"items"));
   for(const d of q.docs){const x=d.data(),c=newCat(x);if(c)await updateDoc(d.ref,{cat:c});
     // PF保温筒の前の「エルボ」（eqty）は溶接ショートエルボ（wsqty）へ（2026/10/28）
-    // 30t以上のALK保温筒は「ALKP保温筒」と書く（2026/10/28）
+    // 30t以上は「ALKP保温筒」「ALGCP保温筒」と書く（2026/10/28）
     if(/^ALK保温筒 .*×(30|40|50)t$/.test(x.name||""))await updateDoc(d.ref,{name:x.name.replace(/^ALK保温筒/,"ALKP保温筒")});
+    if(/^ALGC保温筒 .*×(30|40|50)t$/.test(x.name||""))await updateDoc(d.ref,{name:x.name.replace(/^ALGC保温筒/,"ALGCP保温筒")});
     if(x.cat==="PF保温筒"&&["鉄管","塩ビ","Sus"].includes(x.sub))await updateDoc(d.ref,{sub:"直管"});
     if(x.eqty!==undefined&&x.wsqty===undefined)await updateDoc(d.ref,{wsqty:Number(x.eqty)||0,eqty:deleteField(),emin:deleteField()});}
 }
