@@ -194,7 +194,11 @@ const nick=n=>NICK[n]||n||"";
 /* 現場の情報の欄：[キー, 見出し, 入れ方の例] */
 const FIELDS=[["address","住所","例：東京都八王子市明神町4-1"],["parking","駐車場・搬入","例：現場前に2台。搬入は北側ゲートから"],
   ["gc","元請","例：株式会社エステック"],["outsource","外注（施工する会社）","例：竹内工業"],["contact","担当者","例：佐藤さん（設備）"],["tel","電話","例：090-1234-5678"],
-  ["rules","入場ルール","例：朝礼8:00、新規入場は前日までに書類"],["caution","注意事項","例：17時以降は音の出る作業ダメ"]];
+  ["rules","入場ルール","例：朝礼8:00、新規入場は前日までに書類"],["caution","注意事項","例：17時以降は音の出る作業ダメ"],
+  // 建物・時期・数量・仕様・進み具合も、現場の情報に入れる（2026/10/28 ユーザー）
+  ["building","建物","例：10階・81部屋（A棟・B棟）"],["period","時期","例：2026年11月くらい？"],["volume","数量のめやす","例：配管 4,518m"],
+  ["spec","保温の仕様","例：EA 1m ALK24K/25tロール＋亀甲金網"],["progress","進み具合","例：キッチンの結び 10階まで終わり"]];
+const LONG=new Set(["parking","rules","caution","building","spec","progress"]);
 /* 現場の状態。「予定」はまだ決まっていない現場（どれにするかは西崎さんが決める 2026/10/28） */
 const STATUSES=["施工中","これから","予定","終わった"];
 const STATUS_ORDER={"施工中":0,"これから":1,"予定":2};
@@ -321,7 +325,7 @@ function renderSite(){
 }
 function editInfo(x){
   const inf=x.info||{};
-  const ins=Object.fromEntries(FIELDS.map(([k,,ph])=>[k,(k==="rules"||k==="caution"||k==="parking")?h("textarea",{class:"inp",placeholder:ph},inf[k]||""):h("input",{class:"inp",placeholder:ph,value:inf[k]||""})]));
+  const ins=Object.fromEntries(FIELDS.map(([k,,ph])=>[k,LONG.has(k)?h("textarea",{class:"inp",placeholder:ph},inf[k]||""):h("input",{class:"inp",placeholder:ph,value:inf[k]||""})]));
   const err=h("p",{class:"err",hidden:true});
   const save=h("button",{class:"btn",type:"submit"},"保存する");
   let close;
