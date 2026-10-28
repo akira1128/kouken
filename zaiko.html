@@ -71,6 +71,7 @@ main{display:grid;gap:16px;padding-top:14px}
 .chips button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px}
 .chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .chips.subs button{font-size:13px;padding:4px 11px}
+.chips.sub2 button{min-width:96px;font-weight:700}
 .chips.subs button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
 .group h3{margin:0;padding:10px 14px 6px;font-size:12px;letter-spacing:.12em;color:var(--muted)}
 .row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:12px 14px;min-height:60px}
@@ -174,6 +175,7 @@ details.edit form{padding:12px 0 0}
       <input class="search" id="q" type="search" placeholder="さがす（例：ALK 25 20、ALK テープ）" aria-label="材料をさがす">
       <div class="chips" id="cats" role="toolbar" aria-label="種類でしぼる"></div>
       <div class="chips subs" id="subs" role="toolbar" aria-label="色・材質でしぼる" hidden></div>
+      <div class="chips subs sub2" id="subs2" role="toolbar" aria-label="ジャケットかエルボかでしぼる" hidden></div>
     </div>
     <div id="list" class="tools"></div>
   </main>
@@ -330,6 +332,10 @@ const SHOW_ALL=false;
 const CAT_BTNS=SHOW_ALL?["すべて",...CATS]:CATS;
 if(!CAT_BTNS.includes(cat))cat=CAT_BTNS[0];
 let sub=store("kouken-sub")||"すべて";
+/* 3段目：ジャケット・エルボの中を、さらに「ジャケット」「エルボ」で分ける（名前の頭で見分ける 2026/10/28） */
+const SUB2={"ジャケット・エルボ":["ジャケット","エルボ"]};
+const sub2Of=it=>/^エルボ/.test(it.name||"")?"エルボ":/^ジャケット/.test(it.name||"")?"ジャケット":"";
+let sub2=store("kouken-sub2")||"ジャケット";
 fixSub();
 
 function setBanner(msg){$("banner").textContent=msg||"";$("banner").hidden=!msg;}
@@ -371,6 +377,9 @@ function renderCats(){
   $("cats").replaceChildren(...CAT_BTNS.map(c=>h("button",{type:"button","aria-pressed":String(c===cat),onclick:()=>{cat=c;store("kouken-cat",c);sub="すべて";fixSub();store("kouken-sub",sub);renderCats();renderList();}},c)));
   const list=subBtns(cat);$("subs").hidden=!list.length;
   $("subs").replaceChildren(...list.map(c=>h("button",{type:"button","aria-pressed":String(c===sub),onclick:()=>{sub=c;store("kouken-sub",c);renderCats();renderList();}},c)));
+  const l2=SUB2[cat]||[];$("subs2").hidden=!l2.length;
+  if(l2.length&&!l2.includes(sub2))sub2=l2[0];
+  $("subs2").replaceChildren(...l2.map(c=>h("button",{type:"button","aria-pressed":String(c===sub2),onclick:()=>{sub2=c;store("kouken-sub2",c);renderCats();renderList();}},c)));
 }
 $("q").addEventListener("input",()=>renderList());
 
@@ -416,12 +425,14 @@ function renderList(){
       h("span",{text:"下の「材料を追加」から、保温筒・ロール・コイルなどを登録してください。"}),
       readOnly?null:h("button",{class:"btn",type:"button",style:"max-width:260px",onclick:()=>show("vAdd")},"材料を追加する")));
     return;}
-  const shown=items.filter(it=>(q||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(!q||matchQ(it,q)));
+  const shown=items.filter(it=>(q||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===sub2)&&(!q||matchQ(it,q)));
   if(!shown.length){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"見つかりません"}),h("span",{text:"ことばや種類を変えてさがしてください。"})));return;}
   const groups=[];
   for(const c of CATS){
     const arr=shown.filter(it=>(CATS.includes(it.cat)?it.cat:"その他")===c);
-    if(SUBS[c]){for(const sc of [...SUBS[c],NOSUB]){const a2=arr.filter(it=>(SUBS[c].includes(it.sub)?it.sub:NOSUB)===sc);if(a2.length)groups.push([c+"／"+sc,a2]);}}
+    if(SUBS[c]){for(const sc of [...SUBS[c],NOSUB]){const a2=arr.filter(it=>(SUBS[c].includes(it.sub)?it.sub:NOSUB)===sc);if(!a2.length)continue;
+      if(SUB2[c]){for(const k of [...SUB2[c],""]){const a3=a2.filter(it=>sub2Of(it)===k);if(a3.length)groups.push([c+"／"+sc+(k?"／"+k:""),a3]);}}
+      else groups.push([c+"／"+sc,a2]);}}
     else if(arr.length)groups.push([c,arr]);
   }
   list.replaceChildren(...groups.map(([c,arr])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
