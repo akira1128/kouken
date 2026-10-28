@@ -79,6 +79,10 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .st{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;margin-right:6px;vertical-align:2px}
 .st.now{background:var(--in-soft);color:var(--in)}
 .st.next{background:var(--accent-soft);color:var(--accent)}
+.st.plan{background:var(--out-soft);color:var(--out);border:1px dashed var(--out)}
+.stseg{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted)}
+.stseg button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700}
+.stseg button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
 .st.other{background:var(--bg);color:var(--muted)}
 .grouph{margin:0;padding:10px 14px 4px;font-size:12px;letter-spacing:.12em;color:var(--muted)}
 /* 現場の詳しい画面 */
@@ -179,7 +183,10 @@ const nick=n=>NICK[n]||n||"";
 const FIELDS=[["address","住所","例：東京都八王子市明神町4-1"],["parking","駐車場・搬入","例：現場前に2台。搬入は北側ゲートから"],
   ["gc","元請","例：株式会社エステック"],["contact","担当者","例：佐藤さん（設備）"],["tel","電話","例：090-1234-5678"],
   ["rules","入場ルール","例：朝礼8:00、新規入場は前日までに書類"],["caution","注意事項","例：17時以降は音の出る作業ダメ"]];
-const STATUS_ORDER={"施工中":0,"これから":1};
+/* 現場の状態。「予定」はまだ決まっていない現場（どれにするかは西崎さんが決める 2026/10/28） */
+const STATUSES=["施工中","これから","予定","終わった"];
+const STATUS_ORDER={"施工中":0,"これから":1,"予定":2};
+const stClass=st=>st==="施工中"?"now":st==="これから"?"next":st==="予定"?"plan":"other";
 const shortSite=s=>(s||"").replace(/[（(]仮称[）)]\s*/g,"").replace(/\s*新築工事$/,"").trim();
 
 const $=id=>document.getElementById(id);
@@ -241,12 +248,12 @@ const siteName=id=>{const s=sites.find(x=>x.id===id);return s?s.name:"";};
 function renderSites(){
   const box=$("vSites");
   if(!sites.length){box.replaceChildren(h("div",{class:"panel empty",text:fs?"現場がまだありません":"読み込んでいます…"}));return;}
-  const groups=[["施工中",x=>x.status==="施工中"],["これから",x=>x.status==="これから"],["そのほか",x=>!(x.status in STATUS_ORDER)]];
+  const groups=[["施工中",x=>x.status==="施工中"],["これから",x=>x.status==="これから"],["予定（まだ決まっていない）",x=>x.status==="予定"],["そのほか",x=>!(x.status in STATUS_ORDER)]];
   box.replaceChildren(...groups.map(([t,f])=>{const arr=sites.filter(f);if(!arr.length)return null;
     return h("section",{class:"panel"},h("h3",{class:"grouph",text:t+"（"+arr.length+"）"}),arr.map(x=>{
       const inf=x.info||{}, nOrd=orders.filter(o=>o.siteId===x.id).length, nNote=(x.notes||[]).length;
       return h("button",{type:"button",class:"sitecard",onclick:()=>openSite(x.id)},
-        h("b",null,h("span",{class:"st "+(x.status==="施工中"?"now":x.status==="これから"?"next":"other"),text:x.status||"―"}),shortSite(x.name)),
+        h("b",null,h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),shortSite(x.name)),
         h("span",{class:"go",text:"›"}),
         h("span",{class:"sub",text:[inf.address||"住所はまだ",nNote?"メモ "+nNote+"件":"",nOrd?"注文 "+nOrd+"回":""].filter(Boolean).join("　")}));
     }));}));
@@ -269,7 +276,9 @@ function renderSite(){
   box.replaceChildren(
     h("section",{class:"panel dhead"},
       h("button",{type:"button",class:"backlink",onclick:()=>{siteId="";history.replaceState(null,"",location.pathname);show("vSites");}},h("b",{text:"‹"}),"現場一覧"),
-      h("h2",null,h("span",{class:"st "+(x.status==="施工中"?"now":x.status==="これから"?"next":"other"),text:x.status||"―"}),x.name),
+      h("h2",null,h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),x.name),
+      editor?h("div",{class:"stseg",role:"group","aria-label":"現場の状態"},"状態：",STATUSES.map(st=>h("button",{type:"button","aria-pressed":String(x.status===st),
+        onclick:async()=>{if(x.status===st)return;try{await updateDoc(doc(fs,"sites",x.id),{status:st,statusAt:Date.now(),statusBy:me()});toast("「"+st+"」にしました");}catch(e){toast("変えられませんでした");}}},st))):null,
       h("a",{class:"btn",href:"zaiko.html?order="+encodeURIComponent(x.id),style:{textAlign:"center",textDecoration:"none"}},"この現場に材料を頼む")),
     h("section",{class:"panel sec"},
       h("h3",null,"現場の情報",h("button",{type:"button",class:"btn ghost small",onclick:()=>needWho(()=>editInfo(x))},"書きかえる")),
