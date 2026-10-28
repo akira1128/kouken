@@ -380,10 +380,19 @@ function renderAlert(){
 /* さがす：スペース（全角も）で区切った言葉が全部入っている材料を出す。
    数字はかたまりで比べ（25 は 25A に当たり 125A には当たらない）、数字は書いた順に並んでいるものだけ（「25 20」→ 25A×20t）（2026/10/28） */
 const nz=t=>String(t||"").normalize("NFKC").toLowerCase();
+/* 探すときの別名（2026/10/28）：アルミ粘着テープ＝ALK、SUS⇔ステン */
+function aliases(it){
+  const n=it.name||"",c=it.sub||"";let a="";
+  if(/アルミ粘着テープ/.test(n))a+=" alk アルミテープ";
+  if(/ステン/.test(n+c))a+=" sus";
+  if(/SUS|Sus/.test(n+c))a+=" ステン";
+  return a;
+}
 function matchQ(it,q){
-  const text=nz(it.name+" "+it.cat+" "+(it.sub||"")+" "+(it.no?"no."+it.no:"")+" "+sizeText(it));
+  const text=nz(it.name+" "+it.cat+" "+(it.sub||"")+" "+(it.no?"no."+it.no:"")+" "+sizeText(it)+" "+aliases(it));
   // 「/」「×」「x」「*」「-」も区切り。数字に付いた A・t・K・m は外す（「40A/20t」→「40 20」）（2026/10/28）
-  const words=nz(q).replace(/[\/×xX*＊\-－]/g," ").split(/\s+/).filter(Boolean).map(w=>/^[0-9.]+[atkm]$/.test(w)?w.slice(0,-1):w);
+  // 漢字・かなと、アルファベット・数字の境目でも区切る（「黒ALGC」→「黒 algc」）
+  const words=nz(q).replace(/([a-z0-9.])(?=[^\x00-\x7f])|([^\x00-\x7f])(?=[a-z0-9])/g,"$1$2 ").replace(/([a-z])(?=[0-9])/g,"$1 ").replace(/[\/×xX*＊\-－]/g," ").split(/\s+/).filter(Boolean).map(w=>/^[0-9.]+[atkm]$/.test(w)?w.slice(0,-1):w);
   let pos=0;
   for(const w of words){
     if(/^[0-9.]+$/.test(w)){
