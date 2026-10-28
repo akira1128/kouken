@@ -118,6 +118,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .seg button{border:2px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 4px;font-weight:700;font-size:15px}
 .seg.two-seg{grid-template-columns:1fr 1fr}
+.seg.three-seg{grid-template-columns:1fr 1fr 1fr}.seg.three-seg button{font-size:13px;line-height:1.3}
+.now{flex-wrap:wrap}.now .nowpart{display:block;text-align:right;font-size:14px}.now .nowpart b{font-size:20px}
 .seg button[data-p][aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--surface)}
 .seg button[data-k="out"][aria-pressed="true"]{border-color:var(--out);background:var(--out-soft);color:var(--out)}
 .seg button[data-k="in"][aria-pressed="true"]{border-color:var(--in);background:var(--in-soft);color:var(--in)}
@@ -195,11 +197,11 @@ details.edit form{padding:12px 0 0}
           <select class="inp" id="aSub"></select>
         </label>
         <div class="two" id="aEBox" hidden>
-          <label class="fl">エルボの今ある数（個）
-            <input class="inp" id="aEQty" type="number" inputmode="decimal" min="0" step="any" value="0">
+          <label class="fl">溶接ショートエルボの今ある数（個）
+            <input class="inp" id="aWsQty" type="number" inputmode="decimal" min="0" step="any" value="0">
           </label>
-          <label class="fl lowonly">エルボの少ないと知らせる数
-            <input class="inp" id="aEMin" type="number" inputmode="decimal" min="0" step="any" value="0">
+          <label class="fl">溶接ロングエルボの今ある数（個）
+            <input class="inp" id="aWlQty" type="number" inputmode="decimal" min="0" step="any" value="0">
           </label>
         </div>
         <div class="two">
@@ -230,7 +232,7 @@ details.edit form{padding:12px 0 0}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,getDocs,setDoc,onSnapshot,query,orderBy,limit,runTransaction,writeBatch} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,getDocs,setDoc,onSnapshot,query,orderBy,limit,runTransaction,writeBatch,deleteField} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {FIREBASE_CONFIG} from "./firebase-config.js";
 import {SEED_SITES,SEED_ITEMS} from "./seed.js";
 (function(){
@@ -244,8 +246,11 @@ const COLORS=["ガルバリウム","ステン","アイボリー","ニューク�
 const SUBS={"ジャケット・エルボ":COLORS,"フランジカバー":COLORS,"PF保温筒":["鉄管","塩ビ","Sus"]};
 const SUBLABEL=c=>c==="PF保温筒"?"管の種類":"色・材質";
 const NOSUB="分けていない";
-/* 直管（本）とエルボ（個）の2つの数を持つ種類。エルボは eqty・emin に入れる */
+/* PF保温筒は1つの材料に3つの数：直管（qty・本）、溶接ショートエルボ（wsqty・個）、溶接ロングエルボ（wlqty・個）（2026/10/28） */
 const ELBOW=c=>c==="PF保温筒";
+const EPARTS=[["ws","溶接ショートエルボ","wsqty"],["wl","溶接ロングエルボ","wlqty"]];
+const partField=p=>p==="s"?"qty":(EPARTS.find(x=>x[0]===p)||[])[2]||"qty";
+const partName=p=>p==="s"?"直管":(EPARTS.find(x=>x[0]===p)||[])[1]||"直管";
 const CATS=["ALK（P）保温筒","ALGC保温筒","PF保温筒","ロール","セラカバー","遮音シート","金網","テープ・副資材","ジャケット・エルボ","フランジカバー","コイル","板","その他"];
 const UNITS=["本","個","巻","枚","ケース","箱","m","kg"];
 const KIND={in:"入庫",out:"持ち出し",set:"数を直す",new:"登録",del:"削除"};
@@ -280,7 +285,7 @@ function setBanner(msg){$("banner").textContent=msg||"";$("banner").hidden=!msg;
 const SHOW_LOW=false;
 if(!SHOW_LOW)document.documentElement.classList.add("nolow");
 const lowS=it=>SHOW_LOW&&Number(it.min)>0&&Number(it.qty)<=Number(it.min);
-const lowE=it=>SHOW_LOW&&ELBOW(it.cat)&&Number(it.emin)>0&&(Number(it.eqty)||0)<=Number(it.emin);
+const lowE=it=>SHOW_LOW&&ELBOW(it.cat)&&EPARTS.some(([k,,f])=>Number(it[k+"min"])>0&&(Number(it[f])||0)<=Number(it[k+"min"]));
 const isLow=it=>lowS(it)||lowE(it);
 
 /* ---------- だれが入力するか ---------- */
@@ -322,7 +327,7 @@ function renderAlert(){
   const a=$("alert");a.classList.toggle("has",low.length>0);
   if(!loaded){$("alertTitle").textContent="読み込み中…";$("lowList").replaceChildren();return;}
   $("alertTitle").textContent=low.length?("少ないもの "+low.length+"件"):(items.length?"少ないものはありません":"まだ材料がありません");
-  $("lowList").replaceChildren(...low.map(it=>h("button",{type:"button",onclick:()=>openItem(it.id)},it.name+"  "+(lowS(it)||!lowE(it)?fmtN(it.qty)+(it.unit||""):"")+(lowE(it)?(lowS(it)?"・":"")+"エルボ "+fmtN(it.eqty||0)+"個":""))));
+  $("lowList").replaceChildren(...low.map(it=>h("button",{type:"button",onclick:()=>openItem(it.id)},it.name+"  "+(lowS(it)||!lowE(it)?fmtN(it.qty)+(it.unit||""):"")+(lowE(it)?(lowS(it)?"・":"")+"エルボ":""))));
 }
 function renderList(){
   renderAlert();
@@ -345,8 +350,8 @@ function renderList(){
   list.replaceChildren(...groups.map(([c,arr])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
     arr.map(it=>h("button",{type:"button",class:"row"+(isLow(it)?" low":""),onclick:()=>openItem(it.id)},
       h("span",{class:"nm"},it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
-        h("span",{class:"sub",text:(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(SHOW_LOW&&ELBOW(it.cat)&&Number(it.emin)>0?("エルボ目安 "+fmtN(it.emin)+"個 ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
-      h("span",{class:"qty"+(lowS(it)?" lowtxt":"")},fmtN(it.qty),h("small",{text:it.unit||""}),ELBOW(it.cat)?h("span",{class:"eq"+(lowE(it)?" lowtxt":""),text:"エルボ "+fmtN(it.eqty||0)+"個"}):null))))));
+        h("span",{class:"sub",text:(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
+      h("span",{class:"qty"+(lowS(it)?" lowtxt":"")},fmtN(it.qty),h("small",{text:it.unit||""}),ELBOW(it.cat)?EPARTS.map(([k,l,f])=>h("span",{class:"eq",text:l.replace("溶接","").replace("エルボ","")+" "+fmtN(it[f]||0)+"個"})):null))))));
 }
 
 /* ---------- 1つの材料：入庫・持ち出し ---------- */
@@ -354,8 +359,8 @@ function openItem(id){
   const it=items.find(x=>x.id===id);if(!it)return;
   if(!who){pickWho(()=>openItem(id));return;}
   let kind="out";
-  const hasE=ELBOW(it.cat);let part=store("kouken-part")==="e"&&hasE?"e":"s";
-  const unitOf=()=>part==="e"?"個":(it.unit||"");
+  const hasE=ELBOW(it.cat);let part=store("kouken-part")||"s";if(!hasE||!["s",...EPARTS.map(x=>x[0])].includes(part))part="s";
+  const unitOf=()=>part==="s"?(it.unit||""):"個";
   const num=h("input",{class:"inp",id:"mvNum",type:"number",inputmode:"decimal",min:"0",step:"any",value:"1","aria-label":"数"});
   const memo=h("input",{class:"inp",id:"mvMemo",maxlength:"80",placeholder:"なくてもOK"});
   /* 持ち出し先の現場（現場一覧の正式名）。前に選んだ現場を覚えておく */
@@ -369,9 +374,9 @@ function openItem(id){
   siteSel.addEventListener("change",()=>upd());
   const after=h("p",{class:"after"});const err=h("p",{class:"err",hidden:true});
   const go=h("button",{class:"btn",type:"button"});
-  const nowQty=()=>{const x=items.find(y=>y.id===id)||it;return Number(part==="e"?x.eqty:x.qty)||0;};
-  const partSeg=hasE?h("div",{class:"seg two-seg",role:"group","aria-label":"どちらを数えるか"},
-    [["s","直管（"+(it.unit||"本")+"）"],["e","エルボ（個）"]].map(([k,l])=>h("button",{type:"button","data-p":k,"aria-pressed":String(k===part),onclick:()=>{part=k;store("kouken-part",k);if(kind==="set")num.value=fmtN(nowQty());upd();}},l))):null;
+  const nowQty=()=>{const x=items.find(y=>y.id===id)||it;return Number(x[partField(part)])||0;};
+  const partSeg=hasE?h("div",{class:"seg three-seg",role:"group","aria-label":"どれを数えるか"},
+    [["s","直管（"+(it.unit||"本")+"）"],...EPARTS.map(([k,l])=>[k,l+"（個）"])].map(([k,l])=>h("button",{type:"button","data-p":k,"aria-pressed":String(k===part),onclick:()=>{part=k;store("kouken-part",k);if(kind==="set")num.value=fmtN(nowQty());upd();}},l))):null;
   const seg=h("div",{class:"seg",role:"group","aria-label":"何をするか"},
     [["out","持ち出し"],["in","入庫"],["set","数を直す"]].map(([k,l])=>h("button",{type:"button","data-k":k,"aria-pressed":String(k===kind),onclick:()=>{const was=kind;kind=k;if(k==="set")num.value=fmtN(nowQty());else if(was==="set"||num.value==="")num.value="1";upd();}},l)));
   function upd(){
@@ -379,7 +384,7 @@ function openItem(id){
     if(partSeg)partSeg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.p===part)));
     const n=Number(num.value);const cur=nowQty();
     const next=kind==="in"?cur+n:kind==="out"?cur-n:n;
-    after.replaceChildren((hasE?(part==="e"?"エルボ ":"直管 "):"")+"このあと ",h("b",{text:isFinite(next)?fmtN(next)+unitOf():"―"}));
+    after.replaceChildren((hasE?partName(part)+" ":"")+"このあと ",h("b",{text:isFinite(next)?fmtN(next)+unitOf():"―"}));
     go.textContent=kind==="in"?"入庫する":kind==="out"?"持ち出す":"この数に直す";
     err.hidden=true;
     siteBox.hidden=kind!=="out";
@@ -395,7 +400,7 @@ function openItem(id){
     const site=kind==="out"?siteSel.value:"";
     if(site)store("kouken-site",site);
     try{const r=await moveStock(id,kind,n,memo.value.trim(),site,part);close();
-      toast((hasE?(part==="e"?"エルボ：":"直管："):"")+(kind==="in"?"入庫しました":kind==="out"?"持ち出しを記録しました":"数を直しました")+"（残り "+fmtN(r)+unitOf()+"）");}
+      toast((hasE?partName(part)+"：":"")+(kind==="in"?"入庫しました":kind==="out"?"持ち出しを記録しました":"数を直しました")+"（残り "+fmtN(r)+unitOf()+"）");}
     catch(e){err.textContent=errMsg(e);err.hidden=false;upd();}
   });
 
@@ -403,9 +408,7 @@ function openItem(id){
   const eName=h("input",{class:"inp",id:"eName",maxlength:"60",value:it.name});
   const eCat=h("select",{class:"inp",id:"eCat"},CATS.map(c=>h("option",{value:c,selected:c===it.cat},c)));
   const eSub=h("select",{class:"inp",id:"eSub"});const eSubLbl=h("span");const eSubBox=h("label",{class:"fl"},eSubLbl,eSub);
-  const eEMin=h("input",{class:"inp",id:"eEMin",type:"number",inputmode:"decimal",min:"0",step:"any",value:fmtN(it.emin||0)});
-  const eEBox=h("label",{class:"fl lowonly"},"エルボの少ないと知らせる数（個）",eEMin);
-  const syncSub=()=>{const l=SUBS[eCat.value];eSubBox.hidden=!l;eSubLbl.textContent=SUBLABEL(eCat.value);eSub.replaceChildren(...(l||[]).map(c=>h("option",{value:c,selected:c===it.sub},c)));eEBox.hidden=!ELBOW(eCat.value);};
+  const syncSub=()=>{const l=SUBS[eCat.value];eSubBox.hidden=!l;eSubLbl.textContent=SUBLABEL(eCat.value);eSub.replaceChildren(...(l||[]).map(c=>h("option",{value:c,selected:c===it.sub},c)));};
   eCat.addEventListener("change",syncSub);syncSub();
   const eUnit=h("select",{class:"inp",id:"eUnit"},unitOpts(it.unit));
   const eMin=h("input",{class:"inp",id:"eMin",type:"number",inputmode:"decimal",min:"0",step:"any",value:fmtN(it.min)});
@@ -419,16 +422,16 @@ function openItem(id){
   const edit=h("details",{class:"edit"},h("summary",{text:SHOW_LOW?"名前・種類・色・少ない目安を変える／削除":"名前・種類・色を変える／削除"}),
     h("form",{class:"f",style:"padding:12px 0 0",onsubmit:async e=>{e.preventDefault();
       const nm=eName.value.trim();if(!nm){eErr.textContent="名前を入れてください";eErr.hidden=false;return;}
-      try{await db.doc("items/"+id).update({name:nm,cat:eCat.value,sub:SUBS[eCat.value]?eSub.value:"",unit:eUnit.value,min:Math.max(0,Number(eMin.value)||0),...(ELBOW(eCat.value)?{emin:Math.max(0,Number(eEMin.value)||0),eqty:Number(it.eqty)||0}:{}),updatedAt:Date.now()});close();toast("変更しました");}
+      try{await db.doc("items/"+id).update({name:nm,cat:eCat.value,sub:SUBS[eCat.value]?eSub.value:"",unit:eUnit.value,min:Math.max(0,Number(eMin.value)||0),updatedAt:Date.now()});close();toast("変更しました");}
       catch(x){eErr.textContent=errMsg(x);eErr.hidden=false;}}},
       h("label",{class:"fl"},"名前",eName),
       h("div",{class:"two"},h("label",{class:"fl"},"種類",eCat),h("label",{class:"fl"},"数え方",eUnit)),eSubBox,
-      h("label",{class:"fl lowonly"},"少ないと知らせる数",eMin),eEBox,eErr,
+      h("label",{class:"fl lowonly"},"少ないと知らせる数",eMin),eErr,
       h("button",{class:"btn ghost",type:"submit"},"変更を保存"),delZone));
 
   const close=openSheet(
     h("h2",{text:it.name}),
-    h("div",{class:"now"},h("span",{text:"いまの在庫"}),h("span",null,h("b",{text:fmtN(it.qty)})," "+(it.unit||""),hasE?h("span",null,"　エルボ ",h("b",{text:fmtN(it.eqty||0)})," 個"):null)),
+    h("div",{class:"now"},h("span",{text:"いまの在庫"}),h("span",null,h("b",{text:fmtN(it.qty)})," "+(it.unit||""),hasE?EPARTS.map(([k,l,f])=>h("span",{class:"nowpart"},l+" ",h("b",{text:fmtN(it[f]||0)})," 個")):null)),
     partSeg,
     seg,
     h("div",{class:"stepper"},h("button",{type:"button","aria-label":"1へらす",onclick:()=>step(-1)},"−"),num,h("button",{type:"button","aria-label":"1ふやす",onclick:()=>step(1)},"＋")),
@@ -452,7 +455,7 @@ function errMsg(e){
   return "記録できませんでした。電波を確認して、もう一度押してください。";
 }
 async function moveStock(id,kind,n,memo,site,part){
-  const ref=doc(fs,"items",id);let d,cur,next;const f=part==="e"?"eqty":"qty";
+  const ref=doc(fs,"items",id);let d,cur,next;const f=partField(part);
   // 同時に押されても数がずれないよう、トランザクションで書く
   await runTransaction(fs,async t=>{
     const snap=await t.get(ref);if(!snap.exists())throw new Error("nodoc");
@@ -463,7 +466,7 @@ async function moveStock(id,kind,n,memo,site,part){
     t.update(ref,{[f]:next,updatedAt:Date.now(),updatedBy:who});
   });
   const delta=kind==="set"?Math.round((next-cur)*100)/100:n;
-  await db.collection("logs").add({at:Date.now(),kind,itemId:id,itemName:d.name+(part==="e"?" エルボ":""),unit:part==="e"?"個":(d.unit||""),n:delta,after:next,who,memo:memo||"",site:site||"",part:part==="e"?"e":"s"});
+  await db.collection("logs").add({at:Date.now(),kind,itemId:id,itemName:d.name+(part&&part!=="s"?" "+partName(part):""),unit:part&&part!=="s"?"個":(d.unit||""),n:delta,after:next,who,memo:memo||"",site:site||"",part:part||"s"});
   return next;
 }
 async function removeItem(id){
@@ -486,9 +489,9 @@ $("addForm").addEventListener("submit",async e=>{
   const qty=Math.max(0,Number($("aQty").value)||0),min=Math.max(0,Number($("aMin").value)||0);
   $("aBtn").disabled=true;
   try{const now=Date.now();
-    const ref=await db.collection("items").add({name,cat:$("aCat").value,sub:SUBS[$("aCat").value]?$("aSub").value:"",unit:$("aUnit").value,qty,min,...(ELBOW($("aCat").value)?{eqty:Math.max(0,Number($("aEQty").value)||0),emin:Math.max(0,Number($("aEMin").value)||0)}:{}),createdAt:now,updatedAt:now,updatedBy:who});
+    const ref=await db.collection("items").add({name,cat:$("aCat").value,sub:SUBS[$("aCat").value]?$("aSub").value:"",unit:$("aUnit").value,qty,min,...(ELBOW($("aCat").value)?{wsqty:Math.max(0,Number($("aWsQty").value)||0),wlqty:Math.max(0,Number($("aWlQty").value)||0)}:{}),createdAt:now,updatedAt:now,updatedBy:who});
     await db.collection("logs").add({at:now,kind:"new",itemId:ref.id,itemName:name,unit:$("aUnit").value,n:qty,after:qty,who,memo:""});
-    $("aName").value="";$("aQty").value="0";$("aMin").value="0";$("aEQty").value="0";$("aEMin").value="0";
+    $("aName").value="";$("aQty").value="0";$("aMin").value="0";$("aWsQty").value="0";$("aWlQty").value="0";
     toast("「"+name+"」を登録しました");
     cat=$("aCat").value;store("kouken-cat",cat);sub=SUBS[cat]?$("aSub").value:"すべて";store("kouken-sub",sub);renderCats();show("vStock");renderList();
   }catch(x){err.textContent=errMsg(x);err.hidden=false;}
@@ -575,7 +578,9 @@ function newCat(x){
 }
 async function migrateCats(){
   const q=await getDocs(collection(fs,"items"));
-  for(const d of q.docs){const c=newCat(d.data());if(c)await updateDoc(d.ref,{cat:c});}
+  for(const d of q.docs){const x=d.data(),c=newCat(x);if(c)await updateDoc(d.ref,{cat:c});
+    // PF保温筒の前の「エルボ」（eqty）は溶接ショートエルボ（wsqty）へ（2026/10/28）
+    if(x.eqty!==undefined&&x.wsqty===undefined)await updateDoc(d.ref,{wsqty:Number(x.eqty)||0,eqty:deleteField(),emin:deleteField()});}
 }
 
 /* ---------- 起動 ---------- */
