@@ -130,7 +130,9 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 @media (prefers-reduced-motion:reduce){.mfill::before,.mfill::after{animation:none}.mfill{transition:none}}
 /* メーターの上を走る人（黄色いヘルメットの職人）。メーターの先っぽについていく */
 .mwrap{position:relative;padding-top:40px}.mwrap.fc{padding-top:54px}
-.runner{position:absolute;bottom:21px;width:38px;height:40px;margin-left:-22px;transition:left 1.4s cubic-bezier(.2,.8,.2,1);color:var(--ink)}
+/* 走る位置はトラック（メーターと同じ幅）の translateX で動かす。left で動かすと顔写真の層とずれてカクつくため 2026/10/29 */
+.rtrack{position:absolute;left:0;right:0;bottom:21px;height:40px;pointer-events:none;transition:transform 1.4s cubic-bezier(.2,.8,.2,1);will-change:transform}
+.runner{position:absolute;left:0;bottom:0;width:38px;height:40px;margin-left:-22px;color:var(--ink)}
 .runner svg{display:block;width:100%;height:100%;overflow:visible;animation:rbob .32s ease-in-out infinite alternate}
 .runner .lim path{fill:none;stroke-linecap:round;stroke-linejoin:round}
 .runner .leg{stroke:#1f3550;stroke-width:3.4}.runner .arm{stroke:#0b5cab;stroke-width:2.8}.runner .body{stroke:#0b5cab;stroke-width:5}
@@ -143,9 +145,9 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 @keyframes rbob{from{transform:translateY(0)}to{transform:translateY(-2px)}}
 /* 顔写真は SVG とは別の img（体と同じリズムで上下）。transform だけで動かすので携帯でもなめらか */
 .runner .rface{position:absolute;left:9px;top:-13px;width:28px;height:28px;pointer-events:none;
-  animation:rbob .32s ease-in-out infinite alternate;will-change:transform;-webkit-user-drag:none}
+  animation:rbob .32s ease-in-out infinite alternate;-webkit-user-drag:none}
 .runner svg.over{position:absolute;left:0;top:0;pointer-events:none}
-@media (prefers-reduced-motion:reduce){.runner svg,.runner .la,.runner .lb,.runner .aa,.runner .ab,.runner .rface{animation:none}.runner{transition:none}}
+@media (prefers-reduced-motion:reduce){.runner svg,.runner .la,.runner .lb,.runner .aa,.runner .ab,.runner .rface{animation:none}.rtrack{transition:none}}
 .mstep{display:flex;gap:6px;align-items:center;justify-content:flex-end;font-size:12px;color:var(--muted)}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
 /* 現場の詳しい画面 */
@@ -373,10 +375,11 @@ const runnerSVG=face=>'<svg viewBox="0 0 30 32"><g class="lim">'+
    最初に全員分を読んでおき、くじはその場で引く（後から描き直すと走りがやり直しになってカクつくため） */
 const FACE_LUCK=[["西崎",.1],["ヒエウ",.1],["ズオン",.1]];
 let runFace="", runFacePick=0;
-const faceImgs={};
+const faceImgs={}, faceDecoded=[];
 async function loadFaces(){
   await Promise.all(FACE_LUCK.map(async([n])=>{
     try{const d=await getDoc(doc(fs,"faces",n));faceImgs[n]=d.exists()?d.data().imgs||[]:[];}catch(e){faceImgs[n]=[];}
+    for(const src of faceImgs[n]){const i=new Image();i.src=src;faceDecoded.push(i);if(i.decode)i.decode().catch(()=>{});}
   }));
 }
 function rollRunFace(){
@@ -409,12 +412,13 @@ function meter(x){
     const now=Math.max(0,Math.min(top,+t.floor||0)), key=x.id+"/"+k;
     // 開いたときは0から伸ばす。階を変えたときは前の長さから伸び縮みさせる
     const w0=meterW[key]??0, w=now/top*100, fill=h("div",{class:"mfill",style:{width:w0+"%"}});meterW[key]=w;
-    const run=h("span",{class:"runner",style:{left:w0+"%"},"aria-hidden":"true"});run.innerHTML=runnerSVG(k===fk?runFace:"");
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{fill.style.width=w+"%";run.style.left=w+"%";}));
+    const run=h("span",{class:"runner"});run.innerHTML=runnerSVG(k===fk?runFace:"");
+    const trk=h("span",{class:"rtrack",style:{transform:"translateX("+w0+"%)"},"aria-hidden":"true"},run);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{fill.style.width=w+"%";trk.style.transform="translateX("+w+"%)";}));
     const set=n=>{n=Math.max(0,Math.min(top,n));if(n!==now)save(k,n);};
     return h("div",{class:"mone"},
       h("div",{class:"mh"},t.name?h("span",{class:"tw",text:t.name}):null,h("span",{class:"fl"},"いま",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
-      h("div",{class:runFace&&k===fk?"mwrap fc":"mwrap"},run,
+      h("div",{class:runFace&&k===fk?"mwrap fc":"mwrap"},trk,
         h("div",{class:"mtrack",role:"img","aria-label":(t.name||"")+"いま"+now+"階、"+top+"階まで"},fill,h("div",{class:"mticks"},Array.from({length:top},()=>h("i"))))),
       editor?h("div",{class:"mstep"},(t.name||"")+"のいまの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")):null);
   }));
