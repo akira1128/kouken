@@ -91,6 +91,8 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* 週：マスを高くして、予定を折り返して全部出す */
 .cal.week .day{min-height:220px}
 .cal.week .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.3;padding:2px 3px}
+/* 月：えらんだ日の週は広げて、全員の予定を折り返して全部出す */
+.cal .day.open .chip{white-space:normal;overflow-wrap:anywhere;line-height:1.3;padding:1px 3px}
 /* メンバー予定表：縦に人、横に1週間 */
 .mem{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));padding:0 4px 6px}
 .mem .hd{font-size:11px;font-weight:700;text-align:center;padding:4px 0;color:var(--muted);line-height:1.2}
@@ -313,13 +315,13 @@ function dayItems(s){
 const chip=it=>h("span",{class:"chip"+(it.off?" off":""),style:{background:it.color},text:it.text});
 function select(s){const old=range().join();sel=s;ym=s.slice(0,7);if(range().join()!==old)listen();renderAll();}
 function renderCal(){
-  const [a,b]=range(), t=todayS(), wk=view==="week";
+  const [a,b]=range(), t=todayS(), wk=view==="week", [wa,wb]=weekRange();
   $("cal").classList.toggle("week",wk);
   const cells=[...WD].map((w,i)=>h("div",{class:"wd"+(i===0?" sun":i===6?" sat":""),text:w}));
   for(let s=a;s<=b;s=addDays(s,1)){
-    const d=parse(s), dow=d.getDay(), its=dayItems(s);
-    const cls="day"+(dow===0?" sun":dow===6?" sat":"")+(HOLI[s]?" hol":"")+(!wk&&s.slice(0,7)!==ym?" out":"")+(s===t?" today":"");
-    const max=wk?99:4;
+    const d=parse(s), dow=d.getDay(), its=dayItems(s), open=!wk&&s>=wa&&s<=wb;
+    const cls="day"+(open?" open":"")+(dow===0?" sun":dow===6?" sat":"")+(HOLI[s]?" hol":"")+(!wk&&s.slice(0,7)!==ym?" out":"")+(s===t?" today":"");
+    const max=wk||open?99:4;
     cells.push(h("button",{type:"button",class:cls,"aria-pressed":String(s===sel),"aria-label":md(s)+(HOLI[s]?" "+HOLI[s]:"")+" 予定"+its.length+"件",onclick:()=>select(s)},
       h("span",{class:"n",text:d.getDate()}),
       its.slice(0,max).map(chip),
