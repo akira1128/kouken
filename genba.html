@@ -372,7 +372,7 @@ const runnerSVG=face=>'<svg viewBox="0 0 30 32"><g class="lim">'+
    顔写真は faces/{名前} の imgs（背景を透明にした PNG。暗証番号を入れた携帯だけ読める）。
    最初に全員分を読んでおき、くじはその場で引く（後から描き直すと走りがやり直しになってカクつくため） */
 const FACE_LUCK=[["西崎",.1],["ヒエウ",.1],["ズオン",.1]];
-let runFace="";
+let runFace="", runFacePick=0;
 const faceImgs={};
 async function loadFaces(){
   await Promise.all(FACE_LUCK.map(async([n])=>{
@@ -384,6 +384,8 @@ function rollRunFace(){
   for(const [n,p] of FACE_LUCK){if(r<p){who=n;break;}r-=p;}
   const imgs=who&&faceImgs[who]||[];
   runFace=imgs.length?imgs[Math.floor(Math.random()*imgs.length)]:"";
+  // 棟が分かれてメーターが何本かあっても、顔写真は1人だけ（どの棟で走るかもくじで決める）
+  runFacePick=Math.random();
 }
 function meter(x){
   // 棟が分かれている現場は towers:[{name:"A棟",floors:10,floor:3},…]。1棟だけなら floors／floor
@@ -401,17 +403,18 @@ function meter(x){
   const save=async(k,n)=>{
     try{if(x.towers&&x.towers.length)await updateDoc(doc(fs,"sites",x.id),{towers:x.towers.map((t,i)=>i===k?{...t,floor:n}:t)});
       else await updateDoc(doc(fs,"sites",x.id),{floor:n});}catch(e){toast("保存できませんでした");}};
+  const fk=Math.floor(runFacePick*tw.length);
   return h("div",{class:"meter"},h("div",{class:"mh"},"進行状況"),tw.map((t,k)=>{
     const top=+t.floors||0;if(!top)return null;
     const now=Math.max(0,Math.min(top,+t.floor||0)), key=x.id+"/"+k;
     // 開いたときは0から伸ばす。階を変えたときは前の長さから伸び縮みさせる
     const w0=meterW[key]??0, w=now/top*100, fill=h("div",{class:"mfill",style:{width:w0+"%"}});meterW[key]=w;
-    const run=h("span",{class:"runner",style:{left:w0+"%"},"aria-hidden":"true"});run.innerHTML=runnerSVG(runFace);
+    const run=h("span",{class:"runner",style:{left:w0+"%"},"aria-hidden":"true"});run.innerHTML=runnerSVG(k===fk?runFace:"");
     requestAnimationFrame(()=>requestAnimationFrame(()=>{fill.style.width=w+"%";run.style.left=w+"%";}));
     const set=n=>{n=Math.max(0,Math.min(top,n));if(n!==now)save(k,n);};
     return h("div",{class:"mone"},
       h("div",{class:"mh"},t.name?h("span",{class:"tw",text:t.name}):null,h("span",{class:"fl"},"いま",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
-      h("div",{class:runFace?"mwrap fc":"mwrap"},run,
+      h("div",{class:runFace&&k===fk?"mwrap fc":"mwrap"},run,
         h("div",{class:"mtrack",role:"img","aria-label":(t.name||"")+"いま"+now+"階、"+top+"階まで"},fill,h("div",{class:"mticks"},Array.from({length:top},()=>h("i"))))),
       editor?h("div",{class:"mstep"},(t.name||"")+"のいまの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")):null);
   }));
