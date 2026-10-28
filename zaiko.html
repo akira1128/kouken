@@ -425,7 +425,9 @@ function renderList(){
       h("span",{text:"下の「材料を追加」から、保温筒・ロール・コイルなどを登録してください。"}),
       readOnly?null:h("button",{class:"btn",type:"button",style:"max-width:260px",onclick:()=>show("vAdd")},"材料を追加する")));
     return;}
-  const shown=items.filter(it=>(q||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===sub2)&&(!q||matchQ(it,q)));
+  // ジャケット・エルボを開いているときは、さがす欄に文字を入れても、選んでいる「ジャケット」か「エルボ」の中だけで探す（色は全部）（2026/10/28）
+  const inSub2=!!SUB2[cat];
+  const shown=items.filter(it=>(q&&!inSub2||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q&&!inSub2||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===sub2)&&(!q||matchQ(it,q)));
   if(!shown.length){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"見つかりません"}),h("span",{text:"ことばや種類を変えてさがしてください。"})));return;}
   const groups=[];
   for(const c of CATS){
