@@ -243,11 +243,11 @@ const nick=n=>NICK[n]||n||"";
 const FACTORY="工場（加工）", OTHER="その他（メモに書く）";
 /* 種類の中をさらに分ける（色・材質）。ジャケット・エルボとフランジカバー */
 const COLORS=["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"];
-const SUBS={"ジャケット・エルボ":COLORS,"フランジカバー":COLORS,"PF保温筒":["鉄管","塩ビ","Sus"]};
-const SUBLABEL=c=>c==="PF保温筒"?"管の種類":"色・材質";
+const SUBS={"ジャケット・エルボ":COLORS,"フランジカバー":COLORS,"PF保温筒":["直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
+const SUBLABEL=c=>c==="PF保温筒"?"直管・エルボ":"色・材質";
 const NOSUB="分けていない";
-/* PF保温筒は1つの材料に3つの数：直管（qty・本）、溶接ショートエルボ（wsqty・個）、溶接ロングエルボ（wlqty・個）（2026/10/28） */
-const ELBOW=c=>c==="PF保温筒";
+/* 1つの材料に複数の数を持たせる仕組み（今は使っていない。2026/10/28 PF保温筒は2段目で直管・エルボを分ける形に変更） */
+const ELBOW=c=>false;
 const EPARTS=[["ws","溶接ショートエルボ","wsqty"],["wl","溶接ロングエルボ","wlqty"]];
 const partField=p=>p==="s"?"qty":(EPARTS.find(x=>x[0]===p)||[])[2]||"qty";
 const partName=p=>p==="s"?"直管":(EPARTS.find(x=>x[0]===p)||[])[1]||"直管";
@@ -477,8 +477,9 @@ async function removeItem(id){
 
 /* ---------- 材料を追加 ---------- */
 $("aCat").replaceChildren(...CATS.map(c=>h("option",{value:c},c)));
-function syncAddSub(){const c=$("aCat").value,l=SUBS[c];$("aSubBox").hidden=!l;$("aSubLbl").textContent=SUBLABEL(c);$("aSub").replaceChildren(...(l||[]).map(x=>h("option",{value:x},x)));$("aEBox").hidden=!ELBOW(c);}
+function syncAddSub(){const c=$("aCat").value,l=SUBS[c];$("aSubBox").hidden=!l;$("aSubLbl").textContent=SUBLABEL(c);$("aSub").replaceChildren(...(l||[]).map(x=>h("option",{value:x},x)));$("aEBox").hidden=!ELBOW(c);if(l)$("aSub").dispatchEvent(new Event("change"));}
 $("aCat").addEventListener("change",syncAddSub);syncAddSub();
+$("aSub").addEventListener("change",()=>{const v=$("aSub").value;if(/エルボ$/.test(v))$("aUnit").value="個";else if(v==="直管")$("aUnit").value="本";});
 $("aUnit").replaceChildren(...unitOpts("本"));
 $("addForm").addEventListener("submit",async e=>{
   e.preventDefault();const err=$("aErr");err.hidden=true;
@@ -580,6 +581,7 @@ async function migrateCats(){
   const q=await getDocs(collection(fs,"items"));
   for(const d of q.docs){const x=d.data(),c=newCat(x);if(c)await updateDoc(d.ref,{cat:c});
     // PF保温筒の前の「エルボ」（eqty）は溶接ショートエルボ（wsqty）へ（2026/10/28）
+    if(x.cat==="PF保温筒"&&["鉄管","塩ビ","Sus"].includes(x.sub))await updateDoc(d.ref,{sub:"直管"});
     if(x.eqty!==undefined&&x.wsqty===undefined)await updateDoc(d.ref,{wsqty:Number(x.eqty)||0,eqty:deleteField(),emin:deleteField()});}
 }
 
