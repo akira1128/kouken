@@ -112,6 +112,8 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* 進み具合のメーター：いまの階／最上階。％は出さない。中身は流れるしま模様と光 2026/10/28 ユーザー */
 .meter{display:grid;gap:6px;margin:2px 0 4px}
 .meter .mh{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--muted);font-weight:700}
+.mone{display:grid;gap:4px}.mone+.mone{margin-top:4px}
+.meter .mh .tw{font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 8px}
 .meter .mh .fl{margin-left:auto;font-size:13px;color:var(--muted);font-weight:500}
 .meter .mh .fl b{font-size:22px;color:var(--in);font-weight:700;margin:0 1px}
 .mtrack{position:relative;height:22px;border-radius:999px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
@@ -126,6 +128,20 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 @keyframes mstripe{to{background-position:25.4px 0}}
 @keyframes mshine{0%{left:-40%}60%,100%{left:110%}}
 @media (prefers-reduced-motion:reduce){.mfill::before,.mfill::after{animation:none}.mfill{transition:none}}
+/* メーターの上を走る人（黄色いヘルメットの職人）。メーターの先っぽについていく */
+.mwrap{position:relative;padding-top:40px}
+.runner{position:absolute;top:1px;width:38px;height:40px;margin-left:-22px;transition:left 1.4s cubic-bezier(.2,.8,.2,1);color:var(--ink)}
+.runner svg{display:block;width:100%;height:100%;overflow:visible;animation:rbob .32s ease-in-out infinite alternate}
+.runner .lim path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.runner .leg{stroke:#1f3550;stroke-width:3.4}.runner .arm{stroke:#0b5cab;stroke-width:2.8}.runner .body{stroke:#0b5cab;stroke-width:5}
+.runner .la{transform-origin:14.5px 19px;animation:rleg .32s ease-in-out infinite alternate}
+.runner .lb{transform-origin:14.5px 19px;animation:rleg .32s ease-in-out infinite alternate-reverse}
+.runner .aa{transform-origin:17px 12px;animation:rarm .32s ease-in-out infinite alternate-reverse}
+.runner .ab{transform-origin:17px 12px;animation:rarm .32s ease-in-out infinite alternate}
+@keyframes rleg{from{transform:rotate(-32deg)}to{transform:rotate(32deg)}}
+@keyframes rarm{from{transform:rotate(-40deg)}to{transform:rotate(40deg)}}
+@keyframes rbob{from{transform:translateY(0)}to{transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){.runner svg,.runner .la,.runner .lb,.runner .aa,.runner .ab{animation:none}.runner{transition:none}}
 .mstep{display:flex;gap:6px;align-items:center;justify-content:flex-end;font-size:12px;color:var(--muted)}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
 /* 現場の詳しい画面 */
@@ -295,7 +311,7 @@ function show(v){
   render();window.scrollTo(0,0);
 }
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.v==="vSites")siteId="";show(b.dataset.v);}));
-function openSite(id){delete meterW[id];siteId=id;history.replaceState(null,"","?site="+encodeURIComponent(id));show("vSite");}
+function openSite(id){for(const k in meterW)if(k.startsWith(id+"/"))delete meterW[k];siteId=id;history.replaceState(null,"","?site="+encodeURIComponent(id));show("vSite");}
 function render(){
   if(view==="vSites")renderSites();else if(view==="vSite")renderSite();else if(view==="vOrders")renderOrders();else renderSum();
   renderNotice();
@@ -322,18 +338,34 @@ function renderSites(){
 
 /* ---------- 進み具合のメーター（floors＝最上階、floor＝いまの階）。階を変えるのは編集する人だけ ---------- */
 const meterW={};
+// 走る人の絵：右へ走る。足と腕は CSS でふる
+const RUNNER='<svg viewBox="0 0 30 32"><g class="lim">'+
+  '<path class="lb leg" d="M14.5 19L11 24.5L6.5 26.5"/><path class="ab arm" d="M17 12.5L13.5 16L10.5 15"/>'+
+  '<path class="body" d="M17.2 11.5L14.8 18.5"/>'+
+  '<path class="la leg" d="M14.5 19L18.5 24.5L17 30.3"/><path class="aa arm" d="M17 12.5L20.5 16L23.5 13.5"/></g>'+
+  '<circle cx="18.3" cy="6.6" r="3.5" fill="#f2c9a0"/>'+
+  '<path d="M14.4 6.3A3.9 3.9 0 0 1 22.2 6.3Z" fill="#f5b301" stroke="#b07f00" stroke-width=".6"/><path d="M21.8 6.3h2.2" stroke="#b07f00" stroke-width="1.3" stroke-linecap="round"/></svg>';
 function meter(x){
-  const top=+x.floors||0;if(!top)return null;
-  const now=Math.max(0,Math.min(top,+x.floor||0));
-  // 開いたときは0から伸ばす。階を変えたときは前の長さから伸び縮みさせる
-  const w=now/top*100, fill=h("div",{class:"mfill",style:{width:(meterW[x.id]??0)+"%"}});meterW[x.id]=w;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{fill.style.width=w+"%";}));
-  const set=async n=>{n=Math.max(0,Math.min(top,n));if(n===now)return;
-    try{await updateDoc(doc(fs,"sites",x.id),{floor:n});}catch(e){toast("保存できませんでした");}};
-  return h("div",{class:"meter"},
-    h("div",{class:"mh"},"進み具合",h("span",{class:"fl"},"いま",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
-    h("div",{class:"mtrack",role:"img","aria-label":"いま"+now+"階、"+top+"階まで"},fill,h("div",{class:"mticks"},Array.from({length:top},()=>h("i")))),
-    editor?h("div",{class:"mstep"},"いまの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")):null);
+  // 棟が分かれている現場は towers:[{name:"A棟",floors:10,floor:3},…]。1棟だけなら floors／floor
+  const tw=Array.isArray(x.towers)&&x.towers.length?x.towers:(+x.floors?[{name:"",floors:x.floors,floor:x.floor}]:[]);
+  if(!tw.length)return null;
+  const save=async(k,n)=>{
+    try{if(x.towers&&x.towers.length)await updateDoc(doc(fs,"sites",x.id),{towers:x.towers.map((t,i)=>i===k?{...t,floor:n}:t)});
+      else await updateDoc(doc(fs,"sites",x.id),{floor:n});}catch(e){toast("保存できませんでした");}};
+  return h("div",{class:"meter"},h("div",{class:"mh"},"進み具合"),tw.map((t,k)=>{
+    const top=+t.floors||0;if(!top)return null;
+    const now=Math.max(0,Math.min(top,+t.floor||0)), key=x.id+"/"+k;
+    // 開いたときは0から伸ばす。階を変えたときは前の長さから伸び縮みさせる
+    const w0=meterW[key]??0, w=now/top*100, fill=h("div",{class:"mfill",style:{width:w0+"%"}});meterW[key]=w;
+    const run=h("span",{class:"runner",style:{left:w0+"%"},"aria-hidden":"true"});run.innerHTML=RUNNER;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{fill.style.width=w+"%";run.style.left=w+"%";}));
+    const set=n=>{n=Math.max(0,Math.min(top,n));if(n!==now)save(k,n);};
+    return h("div",{class:"mone"},
+      h("div",{class:"mh"},t.name?h("span",{class:"tw",text:t.name}):null,h("span",{class:"fl"},"いま",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
+      h("div",{class:"mwrap"},run,
+        h("div",{class:"mtrack",role:"img","aria-label":(t.name||"")+"いま"+now+"階、"+top+"階まで"},fill,h("div",{class:"mticks"},Array.from({length:top},()=>h("i"))))),
+      editor?h("div",{class:"mstep"},(t.name||"")+"のいまの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")):null);
+  }));
 }
 
 /* ---------- 現場の詳しい画面 ---------- */
