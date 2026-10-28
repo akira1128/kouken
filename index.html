@@ -535,6 +535,18 @@ function askPin(){
 }
 
 /* ---------- 初めて使うとき：現場と材料のひな形を入れる ---------- */
+/* あとから足す材料（なければ作る。数は0）。order が大きいほど一覧の下に出る */
+const EXTRA_ITEMS=[
+  ...["15A","20A","25A","32A","40A","50A"].map(a=>({id:"alk30-"+a,name:"ALK保温筒 "+a+"×30t",cat:"ALK（P）保温筒",unit:"本",order:1})) // 2026/10/28 使う頻度が少ないので20tの下に
+];
+async function ensureItems(){
+  for(const x of EXTRA_ITEMS){
+    const ref=doc(fs,"items",x.id);let made=false;
+    await runTransaction(fs,async t=>{const sn=await t.get(ref);if(sn.exists())return;
+      const now=Date.now();t.set(ref,{name:x.name,cat:x.cat,unit:x.unit,order:x.order||0,qty:0,min:0,createdAt:now,updatedAt:now,updatedBy:who||"西崎剣"});made=true;});
+    if(made)await addDoc(collection(fs,"logs"),{at:Date.now(),kind:"new",itemId:x.id,itemName:x.name,unit:x.unit,n:0,after:0,who:who||"西崎剣",memo:"",site:""});
+  }
+}
 async function seedIfEmpty(){
   const [a,b]=await Promise.all([getDocs(query(collection(fs,"sites"),limit(1))),getDocs(query(collection(fs,"items"),limit(1)))]);
   if(!a.empty||!b.empty)return;
@@ -576,8 +588,9 @@ renderWho();renderCats();renderList();renderLog();show(view);
       collection:n=>({add:d=>addDoc(collection(fs,n),d)})};
   try{await seedIfEmpty();}catch(e){}
   try{await migrateCats();}catch(e){}
+  try{await ensureItems();}catch(e){}
   onSnapshot(collection(fs,"items"),s=>{
-    items=s.docs.map(d=>Object.assign({id:d.id},d.data())).sort((a,b)=>(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
+    items=s.docs.map(d=>Object.assign({id:d.id},d.data())).sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0)||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
     loaded=true;renderList();
   },e=>{setBanner("在庫を読み込めませんでした。ページを開き直してください。");});
   onSnapshot(query(collection(fs,"logs"),orderBy("at","desc"),limit(300)),s=>{logs=s.docs.map(d=>d.data());renderLog();},()=>{});
