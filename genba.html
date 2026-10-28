@@ -141,7 +141,10 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 @keyframes rleg{from{transform:rotate(-32deg)}to{transform:rotate(32deg)}}
 @keyframes rarm{from{transform:rotate(-40deg)}to{transform:rotate(40deg)}}
 @keyframes rbob{from{transform:translateY(0)}to{transform:translateY(-2px)}}
-@media (prefers-reduced-motion:reduce){.runner svg,.runner .la,.runner .lb,.runner .aa,.runner .ab{animation:none}.runner{transition:none}}
+/* 顔写真は SVG とは別の img（体と同じリズムで上下）。transform だけで動かすので携帯でもなめらか */
+.runner .rface{position:absolute;left:9px;top:-13px;width:28px;height:28px;pointer-events:none;
+  animation:rbob .32s ease-in-out infinite alternate;will-change:transform;-webkit-user-drag:none}
+@media (prefers-reduced-motion:reduce){.runner svg,.runner .la,.runner .lb,.runner .aa,.runner .ab,.runner .rface{animation:none}.runner{transition:none}}
 .mstep{display:flex;gap:6px;align-items:center;justify-content:flex-end;font-size:12px;color:var(--muted)}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
 /* 現場の詳しい画面 */
@@ -343,26 +346,27 @@ const runnerSVG=face=>'<svg viewBox="0 0 30 32"><g class="lim">'+
   '<path class="lb leg" d="M14.5 19L11 24.5L6.5 26.5"/><path class="ab arm" d="M17 12.5L13.5 16L10.5 15"/>'+
   '<path class="body" d="M17.2 11.5L14.8 18.5"/>'+
   '<path class="la leg" d="M14.5 19L18.5 24.5L17 30.3"/><path class="aa arm" d="M17 12.5L20.5 16L23.5 13.5"/></g>'+
-  (face
-    // サプライズの顔：大きめの丸い顔写真（白いふち）
-    ?'<clipPath id="rface" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5"/></clipPath>'+
-     '<circle cx="18" cy="2" r="10.6" fill="#fff"/><image href="'+face+'" x="8" y="-8" width="20" height="20" clip-path="url(#rface)" preserveAspectRatio="xMidYMid slice"/>'
-    :'<circle cx="18.3" cy="6.6" r="3.5" fill="#f2c9a0"/>'+
-     '<path d="M14.4 6.3A3.9 3.9 0 0 1 22.2 6.3Z" fill="#f5b301" stroke="#b07f00" stroke-width=".6"/><path d="M21.8 6.3h2.2" stroke="#b07f00" stroke-width="1.3" stroke-linecap="round"/>')+'</svg>';
+  (face?'':
+     '<circle cx="18.3" cy="6.6" r="3.5" fill="#f2c9a0"/>'+
+     '<path d="M14.4 6.3A3.9 3.9 0 0 1 22.2 6.3Z" fill="#f5b301" stroke="#b07f00" stroke-width=".6"/><path d="M21.8 6.3h2.2" stroke="#b07f00" stroke-width="1.3" stroke-linecap="round"/>')+'</svg>'+
+  // サプライズの顔：背景を透明にした顔写真。SVG の中で描くとカクつくので、別の img にして動かす
+  (face?'<img class="rface" src="'+face+'" alt="">':'');
 /* サプライズ：現場の画面を開くたびにくじを引く。西崎さん 10%・ヒエウ 10%・ズオン 10% でその人の顔が走る（写真が何枚かあればランダム）
-   顔写真は faces/{名前} の imgs（暗証番号を入れた携帯だけ読める）。当たった人の写真だけ、1回読んだら覚えておく */
+   顔写真は faces/{名前} の imgs（背景を透明にした PNG。暗証番号を入れた携帯だけ読める）。
+   最初に全員分を読んでおき、くじはその場で引く（後から描き直すと走りがやり直しになってカクつくため） */
 const FACE_LUCK=[["西崎",.1],["ヒエウ",.1],["ズオン",.1]];
 let runFace="";
 const faceImgs={};
-async function rollRunFace(){
+async function loadFaces(){
+  await Promise.all(FACE_LUCK.map(async([n])=>{
+    try{const d=await getDoc(doc(fs,"faces",n));faceImgs[n]=d.exists()?d.data().imgs||[]:[];}catch(e){faceImgs[n]=[];}
+  }));
+}
+function rollRunFace(){
   let r=Math.random(),who="";
   for(const [n,p] of FACE_LUCK){if(r<p){who=n;break;}r-=p;}
-  runFace="";if(!who||!fs)return;
-  try{
-    if(!faceImgs[who]){const d=await getDoc(doc(fs,"faces",who));faceImgs[who]=d.exists()?d.data().imgs||[]:[];}
-    const imgs=faceImgs[who];
-    if(imgs.length){runFace=imgs[Math.floor(Math.random()*imgs.length)];if(view==="vSite")renderSite();}
-  }catch(e){}
+  const imgs=who&&faceImgs[who]||[];
+  runFace=imgs.length?imgs[Math.floor(Math.random()*imgs.length)]:"";
 }
 function meter(x){
   // 棟が分かれている現場は towers:[{name:"A棟",floors:10,floor:3},…]。1棟だけなら floors／floor
@@ -546,7 +550,8 @@ if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みまし
   }catch(e){fs=null;setBanner("つながりません。電波を確認して、ページを開き直してください。");return;}
   try{const ed=await getDoc(doc(fs,"editors",uid));if(ed.exists())editor=ed.data().name||"";}catch(e){}
   renderWho();
-  if(siteId)rollRunFace();
+  const facesP=loadFaces();
+  if(siteId){await facesP;rollRunFace();}
   // 現場（在庫・予定表と同じ一覧。施工中→これから→そのほか）
   onSnapshot(collection(fs,"sites"),s=>{
     sites=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(x=>x&&x.name&&x.active!==false)
