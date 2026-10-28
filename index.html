@@ -160,7 +160,7 @@ details.edit form{padding:12px 0 0}
       <div class="lowlist" id="lowList"></div>
     </section>
     <div class="tools">
-      <input class="search" id="q" type="search" placeholder="さがす（例：25A、ガルバ、テープ）" aria-label="材料をさがす">
+      <input class="search" id="q" type="search" placeholder="さがす（全部の種類から。例：25A、ガルバ）" aria-label="材料をさがす">
       <div class="chips" id="cats" role="toolbar" aria-label="種類でしぼる"></div>
       <div class="chips subs" id="subs" role="toolbar" aria-label="色・材質でしぼる" hidden></div>
     </div>
@@ -268,7 +268,10 @@ let who=store("kouken-who")||"";
 if(who&&!NICK[who])who="";              // 前の版の名前の書き方だったら選び直してもらう
 let logSite="すべて";
 let cat=store("kouken-cat")||"すべて";
-if(!["すべて",...CATS].includes(cat))cat="すべて";
+/* 種類の「すべて」ボタン。false で出さない（2026/10/28 ユーザー：いったん消す） */
+const SHOW_ALL=false;
+const CAT_BTNS=SHOW_ALL?["すべて",...CATS]:CATS;
+if(!CAT_BTNS.includes(cat))cat=CAT_BTNS[0];
 let sub=store("kouken-sub")||"すべて";
 if(!SUBS[cat]||!["すべて",...SUBS[cat],NOSUB].includes(sub))sub="すべて";
 
@@ -308,7 +311,7 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("clic
 
 /* ---------- 在庫一覧 ---------- */
 function renderCats(){
-  $("cats").replaceChildren(...["すべて",...CATS].map(c=>h("button",{type:"button","aria-pressed":String(c===cat),onclick:()=>{cat=c;store("kouken-cat",c);sub="すべて";store("kouken-sub",sub);renderCats();renderList();}},c)));
+  $("cats").replaceChildren(...CAT_BTNS.map(c=>h("button",{type:"button","aria-pressed":String(c===cat),onclick:()=>{cat=c;store("kouken-cat",c);sub="すべて";store("kouken-sub",sub);renderCats();renderList();}},c)));
   const list=SUBS[cat];$("subs").hidden=!list;
   $("subs").replaceChildren(...(list?["すべて",...list]:[]).map(c=>h("button",{type:"button","aria-pressed":String(c===sub),onclick:()=>{sub=c;store("kouken-sub",c);renderCats();renderList();}},c)));
 }
@@ -331,7 +334,7 @@ function renderList(){
       h("span",{text:"下の「材料を追加」から、保温筒・ロール・コイルなどを登録してください。"}),
       readOnly?null:h("button",{class:"btn",type:"button",style:"max-width:260px",onclick:()=>show("vAdd")},"材料を追加する")));
     return;}
-  const shown=items.filter(it=>(cat==="すべて"||it.cat===cat)&&(!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(!q||(it.name+" "+it.cat+" "+(it.sub||"")).toLowerCase().includes(q)));
+  const shown=items.filter(it=>(q||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(!q||(it.name+" "+it.cat+" "+(it.sub||"")).toLowerCase().includes(q)));
   if(!shown.length){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"見つかりません"}),h("span",{text:"ことばや種類を変えてさがしてください。"})));return;}
   const groups=[];
   for(const c of CATS){
