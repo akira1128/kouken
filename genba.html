@@ -109,7 +109,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .grp-plan .grouph::before{background:none;border:2px dashed currentColor;width:9px;height:9px}
 .grp-other{border-left:5px solid var(--line)} .grp-other .grouph{color:var(--muted);background:var(--bg)}
 .grp-plan .sitecard b{color:var(--muted)}
-/* 進み具合のメーター：いまの階／最上階。％は出さない。中身は流れるしま模様と光 2026/10/28 ユーザー */
+/* 進行状況のメーター：いまの階／最上階。％は出さない。中身は流れるしま模様と光 2026/10/28 ユーザー */
 .meter{display:grid;gap:6px;margin:2px 0 4px}
 .meter .mh{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--muted);font-weight:700}
 .mone{display:grid;gap:4px}.mone+.mone{margin-top:4px}
@@ -158,6 +158,15 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .info dt{color:var(--muted);font-size:13px;white-space:nowrap;padding-top:1px}
 .info dd{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
 .info dd.none{color:var(--muted)}
+/* この現場に行った人（予定表から） */
+.visits{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.visits li{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;border:1px solid var(--line);border-radius:8px;padding:8px 11px;background:var(--bg);font-size:14.5px}
+.visits li b{min-width:6.4em}
+.visits .memo{flex-basis:100%;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.visits .tag{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:#fbeecd;color:#93650d}
+.visits.next li{background:var(--surface);border-style:dashed}
+.vsum{font-size:13.5px;margin:0 0 8px}.vsum b{font-size:15px}
+h4.vh{margin:14px 0 6px;font-size:13px;color:var(--muted)}
 .notes{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .notes li{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--bg);display:grid;gap:4px}
 .notes .tx{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px}
@@ -247,9 +256,11 @@ const FIELDS=[["address","住所","例：東京都八王子市明神町4-1"],
   ["station","最寄り駅","例：京王線 京王八王子駅（徒歩5分くらい）"],["route","現場までの行き方","例：京王八王子駅の北口を出て、歩いて5分"],["parking","駐車場・搬入","例：現場前に2台。搬入は北側ゲートから"],
   ["gc","元請","例：株式会社エステック"],["outsource","外注（施工する会社）","例：竹内工業"],["contact","担当者","例：佐藤さん（設備）"],["tel","電話","例：090-1234-5678"],
   ["rules","入場ルール","例：朝礼8:00、新規入場は前日までに書類"],["caution","注意事項","例：17時以降は音の出る作業ダメ"],
-  // 建物・時期・数量・仕様・進み具合も、現場の情報に入れる（2026/10/28 ユーザー）
+  // 建物・時期・数量・仕様・進行状況も、現場の情報に入れる（2026/10/28 ユーザー）
   ["building","建物","例：10階・81部屋（A棟・B棟）"],["period","時期","例：2026年11月くらい？"],["volume","数量のめやす","例：配管 4,518m"],
-  ["spec","保温の仕様","例：EA 1m ALK24K/25tロール＋亀甲金網"],["progress","進み具合","例：キッチンの結び 10階まで終わり"]];
+  ["spec","保温の仕様","例：EA 1m ALK24K/25tロール＋亀甲金網"],["progress","進行状況","例：キッチンの結び 10階まで終わり"],
+  // 予定表で使っている現場の呼び方。「この現場に行った人」を探すのに使う（2026/10/29）
+  ["yotei","予定表での呼び方","例：大和田、大和田町（、で区切る）"]];
 const LONG=new Set(["route","parking","rules","caution","building","spec","progress"]);
 /* 現場の状態。「予定」はまだ決まっていない現場（どれにするかは西崎さんが決める 2026/10/28） */
 const STATUSES=["施工中","これから","予定","終わった"];
@@ -339,7 +350,7 @@ function renderSites(){
     }));}));
 }
 
-/* ---------- 進み具合のメーター（floors＝最上階、floor＝いまの階）。階を変えるのは編集する人だけ ---------- */
+/* ---------- 進行状況のメーター（floors＝最上階、floor＝いまの階）。階を変えるのは編集する人だけ ---------- */
 const meterW={};
 // 走る人の絵：右へ走る。足と腕は CSS でふる
 const runnerSVG=face=>'<svg viewBox="0 0 30 32"><g class="lim">'+
@@ -375,7 +386,7 @@ function meter(x){
     // マンションで最上階がまだ：空のメーター。編集する人はここで最上階を入れられる
     if(!x.mansion)return null;
     const inp=h("input",{class:"units",style:{fontSize:"16px"},type:"number",inputmode:"numeric",min:"1",max:"80",placeholder:"12"});
-    return h("div",{class:"meter"},h("div",{class:"mh"},"進み具合",h("span",{class:"fl",text:"最上階はまだ入っていません"})),
+    return h("div",{class:"meter"},h("div",{class:"mh"},"進行状況",h("span",{class:"fl",text:"最上階はまだ入っていません"})),
       h("div",{class:"mtrack"}),
       editor?h("div",{class:"mstep"},"最上階",inp,"階",h("button",{type:"button",style:{fontSize:"13px"},onclick:async()=>{
         const n=parseInt(inp.value,10);if(!(n>0&&n<=80)){toast("階数を入れてください");return;}
@@ -384,7 +395,7 @@ function meter(x){
   const save=async(k,n)=>{
     try{if(x.towers&&x.towers.length)await updateDoc(doc(fs,"sites",x.id),{towers:x.towers.map((t,i)=>i===k?{...t,floor:n}:t)});
       else await updateDoc(doc(fs,"sites",x.id),{floor:n});}catch(e){toast("保存できませんでした");}};
-  return h("div",{class:"meter"},h("div",{class:"mh"},"進み具合"),tw.map((t,k)=>{
+  return h("div",{class:"meter"},h("div",{class:"mh"},"進行状況"),tw.map((t,k)=>{
     const top=+t.floors||0;if(!top)return null;
     const now=Math.max(0,Math.min(top,+t.floor||0)), key=x.id+"/"+k;
     // 開いたときは0から伸ばす。階を変えたときは前の長さから伸び縮みさせる
@@ -401,6 +412,52 @@ function meter(x){
 }
 
 /* ---------- 現場の詳しい画面 ---------- */
+/* ---------- この現場に行った人（予定表 events から）。予定表の現場名は正式名と短い呼び方が混ざるので、呼び名でも合わせる ---------- */
+const FACTORY="工場（加工）";
+let events=[];
+const pd=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);};
+const tokens=t=>(t||"").split(/[、,，\s　]+/).map(w=>w.trim()).filter(w=>w.length>=2);
+function siteKeys(x){
+  const s=shortSite(x.name).replace(/[（(][^（）()]*[）)]/g,"").trim();
+  // 呼び名の芯：市・区を外し、丁目・計画・マンションなどの手前まで（例：八王子市大和田町計画→大和田、墨田区両国3丁目計画→両国）
+  const core=s.replace(/^クリオ/,"").replace(/^[^\s]{1,4}?[市区](?=.{2})/,"")
+    .split(/[0-9０-９一二三四五六七八九十]*丁目|町計画|計画|マンション|プロジェクト|PJ|・/)[0].trim();
+  return {full:[x.name,shortSite(x.name),s], core:core.length>=2?core:s, alias:tokens((x.info||{}).yotei)};
+}
+function eventHits(e,k){
+  const t=e.site===FACTORY?e.kako:e.site;if(!t)return false;
+  if(k.full.includes(t))return true;
+  return tokens(t).some(w=>k.alias.some(a=>w.includes(a))||w.includes(k.core)||k.core.includes(w));
+}
+function siteVisits(x){
+  const k=siteKeys(x), days={};
+  for(const e of events){
+    if(e.deleted||!e.date||!eventHits(e,k))continue;
+    const kako=e.site===FACTORY, note=[!kako&&!k.full.includes(e.site)?"予定表："+e.site:"",e.memo].filter(Boolean).join("　");
+    let d=pd(e.date);const end=e.end&&e.end>e.date?pd(e.end):d;
+    for(let i=0;d<=end&&i<92;i++,d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1)){
+      const key=ymd(d), r=days[key]||(days[key]={date:key,people:[],kako:false,notes:[]});
+      (e.people||[]).forEach(n=>{if(!r.people.includes(n))r.people.push(n);});
+      if(kako)r.kako=true;if(note&&!r.notes.includes(note))r.notes.push(note);
+    }
+  }
+  return Object.values(days);
+}
+function fillVisits(box,x){
+  const today=ymd(new Date()), all=siteVisits(x);
+  const past=all.filter(r=>r.date<=today).sort((a,b)=>b.date.localeCompare(a.date));
+  const next=all.filter(r=>r.date>today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,10);
+  const cnt={};let nin=0;past.forEach(r=>r.people.forEach(n=>{cnt[n]=(cnt[n]||0)+1;nin++;}));
+  const row=r=>h("li",null,h("b",{text:md(r.date)}),h("span",{text:r.people.map(nick).join("・")||"―"}),
+    r.kako?h("span",{class:"tag",text:"工場で加工"}):null,r.notes.length?h("span",{class:"memo",text:r.notes.join("　")}):null);
+  box.replaceChildren(h("div",{class:"sec"},
+    h("h3",{text:"この現場に行った人（予定表より）"}),
+    past.length?h("p",{class:"vsum"},"のべ ",h("b",{text:nin+"人工"}),"（"+past.length+"日）　"+
+      Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([n,c])=>nick(n)+" "+c).join("・")):null,
+    past.length?h("ul",{class:"visits"},past.map(row)):h("p",{class:"empty",text:events.length?"予定表にこの現場の日はまだありません":"読み込んでいます…"}),
+    next.length?[h("h4",{class:"vh",text:"これからの予定"}),h("ul",{class:"visits next"},next.map(row))]:null,
+    h("p",{class:"hint",style:{marginTop:"10px"},text:"予定表の現場名で探しています。出てこない日があるときは、現場の情報の「予定表での呼び方」に予定表で使っている名前を入れてください。"})));
+}
 function renderSite(){
   const box=$("vSite"), x=sites.find(s=>s.id===siteId);
   if(!x){box.replaceChildren(h("div",{class:"panel empty",text:fs?"この現場は見つかりません":"読み込んでいます…"}));return;}
@@ -438,6 +495,7 @@ function renderSite(){
       h("button",{type:"button",class:"btn",onclick:()=>needWho(async()=>{const t=noteIn.value.trim();if(!t)return;
         try{await updateDoc(doc(fs,"sites",x.id),{notes:arrayUnion({text:t,who:me(),at:Date.now()})});noteIn.value="";toast("メモを書きました");}
         catch(e){toast(e&&e.code==="permission-denied"?"書く権限がありません":"書けませんでした。電波を確認してください");}})},"メモを書く")),
+    (()=>{const vb=h("section",{class:"panel",id:"visitBox"});fillVisits(vb,x);return vb;})(),
     h("section",{class:"panel"},h("div",{class:"sec"},h("h3",{text:"この現場の注文履歴（新しい順）"})),
       siteOrders.length?siteOrders.slice(0,20).map(orderRow):h("p",{class:"empty",text:"まだ注文はありません"})));
 }
@@ -561,6 +619,11 @@ if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みまし
   // 注文（新しい順に500件まで）
   onSnapshot(query(collection(fs,"orders"),orderBy("at","desc"),limit(500)),s=>{
     orders=s.docs.map(d=>Object.assign({id:d.id},d.data()));render();
+  },()=>{});
+  // 予定表（だれがどの現場に行ったか）。変わったら「この現場に行った人」の欄だけ直す
+  onSnapshot(collection(fs,"events"),s=>{
+    events=s.docs.map(d=>d.data());
+    const vb=$("visitBox"), x=sites.find(t=>t.id===siteId);if(view==="vSite"&&vb&&x)fillVisits(vb,x);
   },()=>{});
   if(!editor&&!who)setTimeout(()=>{if(!who&&$("scrim").hidden)pickWho();},400);
 })();
