@@ -37,6 +37,8 @@ service cloud.firestore {
     match /sites/{id} { allow read, write: if member(); }
     // 現場に頼んだ材料：社員も頼める（足すだけ）。直す・消す（在庫から出した印）は編集する人だけ
     match /orders/{id} { allow read, create: if member(); allow update, delete: if editor(); }
+    // 社員の顔写真（現場一覧のメーターを走るサプライズ用）：見るのは社員、入れる・消すのは編集する人だけ
+    match /faces/{name} { allow read: if member(); allow write: if editor(); }
     // 履歴は足すだけ（直したり消したりはできない）
     match /logs/{id} { allow read, create: if member(); allow update, delete: if false; }
   }
