@@ -89,6 +89,8 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
   :root:not([data-theme="light"]) .chip b{color:color-mix(in srgb,var(--pc) 55%,#fff)}}
 .cal .day.open .chip,.cal.week .chip{padding:2px 2px 2px 3px}
 .cal .day.open .chip b,.cal.week .chip b{display:block;font-size:12px;line-height:1.25;white-space:nowrap;letter-spacing:-.04em}
+/* 外注さんの会社名など4文字以上は、マスに入るよう小さめに */
+.cal .day.open .chip b.long,.cal.week .chip b.long{font-size:10px;letter-spacing:-.06em;line-height:1.5}
 .cal .day.open .chip .w,.cal.week .chip .w{display:block;font-size:11px;line-height:1.3}
 .more{font-size:10px;color:var(--muted);padding-left:2px;line-height:1.2}
 .chip.off{opacity:.55}
@@ -163,6 +165,7 @@ textarea.inp{min-height:68px;resize:vertical}
 .names{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .names button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:11px 4px;font-size:15px;font-weight:700}
 .names button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.names button.out{font-size:13px;border-style:dashed}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:20;background:var(--ink);color:var(--bg);
   padding:10px 18px;border-radius:999px;font-weight:700;font-size:15px;max-width:calc(100% - 32px);text-align:center}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
@@ -212,9 +215,13 @@ import {FIREBASE_CONFIG} from "./firebase-config.js";
 (function(){
 /* 社員：[正式名, 呼び名]。在庫（zaiko.html）と同じ。予定には正式名を残す（あとで人工の集計に使う） */
 const STAFF=[["西崎剣","西崎"],["原田弓子","原田"],["福島正純","福島"],["田中嗣音","嗣穏"],["NGUYEN VAN HIEU","ヒエウ"],["DANG BINH DUONG","ズオン"],["NGUYEN NGOC LONG","ロン"]];
-const NICK=Object.fromEntries(STAFF);
+/* 外注さん（会社名で予定に入れる）。上の「人でしぼる」と「あなたはだれ」には出さない（2026/10/28 ユーザー） */
+const OUTS=[["竹内工業","竹内工業"],["高橋断熱","高橋断熱"]];
+const NICK=Object.fromEntries([...STAFF,...OUTS]);
 /* 予定表に出す人。原田さんは予定に入れない（2026/10/28 ユーザー）。予定を入れる人としては残る */
 const PEOPLE=STAFF.filter(([n])=>n!=="原田弓子");
+/* 予定に入れられる人：社員と外注さん */
+const ASSIGN=[...PEOPLE,...OUTS];
 const nick=n=>NICK[n]||n||"";
 /* 予定を入れられる人 */
 const EDITORS=["西崎剣","原田弓子"];
@@ -242,10 +249,10 @@ function colorOf(site){
 const SHORT={"中防不燃・粗大ごみ処理施設整備工事":"中防不燃","八王子市明神町計画":"明神町","八王子市大和田町計画":"大和田町","三鷹市下連雀マンション計画":"三鷹","墨田区両国3丁目計画":"両国","新宿区大久保2丁目計画":"大久保"};
 const shortSite=s=>{const t=(s||"").replace(/[（(]仮称[）)]\s*/g,"").replace(/\s*新築工事$/,"").replace(/^株式会社|株式会社$/g,"").replace(/[（(][^（）()]*[）)]$/,"").trim();return SHORT[t]||t;};
 /* 人の色。LINE WORKSと同じく、カレンダーは人ごとに色を分ける。人のいない予定は灰色 */
-const PCOLOR={"西崎剣":"#0b5cab","原田弓子":"#be185d","福島正純":"#c2410c","田中嗣音":"#0e7490","NGUYEN VAN HIEU":"#15803d","DANG BINH DUONG":"#7c3aed","NGUYEN NGOC LONG":"#a16207"};
+const PCOLOR={"西崎剣":"#0b5cab","原田弓子":"#be185d","福島正純":"#c2410c","田中嗣音":"#0e7490","NGUYEN VAN HIEU":"#15803d","DANG BINH DUONG":"#7c3aed","NGUYEN NGOC LONG":"#a16207","竹内工業":"#be123c","高橋断熱":"#4d7c0f"};
 const NOONE="#64748b";
 const pcolor=n=>PCOLOR[n]||NOONE;
-const ORDER=Object.fromEntries(STAFF.map((s,i)=>[s[0],i]));
+const ORDER=Object.fromEntries([...STAFF,...OUTS].map((s,i)=>[s[0],i]));
 const VIEWS=[["month","月"],["week","週"],["list","一覧"],["member","メンバー"]];
 
 const $=id=>document.getElementById(id);
@@ -328,7 +335,7 @@ function dayItems(s){
   }
   return out.sort((a,b)=>(a.n?ORDER[a.n]??50:99)-(b.n?ORDER[b.n]??50:99));
 }
-const chip=it=>h("span",{class:"chip"+(it.off?" off":""),style:"--pc:"+it.color},it.name?h("b",{text:it.name}):null,it.name?" ":null,h("span",{class:"w",text:it.what}));
+const chip=it=>h("span",{class:"chip"+(it.off?" off":""),style:"--pc:"+it.color},it.name?h("b",{class:it.name.length>=4?"long":null,text:it.name}):null,it.name?" ":null,h("span",{class:"w",text:it.what}));
 function select(s){const old=range().join();sel=s;ym=s.slice(0,7);openWeek=weekRange()[0];if(range().join()!==old)listen();renderAll();}
 /* 月：広げている週（その週の日曜日）。""なら閉じている。同じ日をもう一度押すと閉じる */
 let openWeek=weekRange()[0], animNext=false;
@@ -410,7 +417,7 @@ function renderMem(){
         evs.map(e=>h("span",{class:"chip"+(e.site===OFF?" off":""),style:"--pc:"+color,text:shortSite(e.site)||e.memo||"予定"}))));
     }
   };
-  for(const [n,k] of PEOPLE)if(person==="すべて"||person===n)row(k,pcolor(n),l=>l.filter(e=>(e.people||[]).includes(n)),n);
+  for(const [n,k] of ASSIGN)if(person==="すべて"||person===n)row(k,pcolor(n),l=>l.filter(e=>(e.people||[]).includes(n)),n);
   if(person==="すべて"&&isBoss())row("メモ",NOONE,l=>l.filter(e=>!(e.people||[]).length),"");
   $("mem").replaceChildren(...cells);
 }
@@ -503,7 +510,7 @@ function openEdit(ev,copy,preset){
   const picked=new Set(e.people||[]);
   const dIn=h("input",{class:"inp",type:"date",value:copy?addDays(e.date,1):e.date,required:true});
   const eIn=h("input",{class:"inp",type:"date",value:copy?"":(e.end&&e.end!==e.date?e.end:"")});
-  const names=h("div",{class:"names",role:"group","aria-label":"だれが"},PEOPLE.map(([n,k])=>h("button",{type:"button","aria-pressed":String(picked.has(n)),
+  const names=h("div",{class:"names",role:"group","aria-label":"だれが"},ASSIGN.map(([n,k])=>h("button",{type:"button",class:OUTS.some(o=>o[0]===n)?"out":null,"aria-pressed":String(picked.has(n)),
     onclick:ev2=>{picked.has(n)?picked.delete(n):picked.add(n);ev2.currentTarget.setAttribute("aria-pressed",String(picked.has(n)));}},k)));
   const known=[...sites.map(s=>s.name),FACTORY,OFF];
   const isOther=!!e.site&&!known.includes(e.site);
@@ -524,7 +531,7 @@ function openEdit(ev,copy,preset){
     if(!date)return fail("日にちを入れてください。");
     if(end&&end<date)return fail("終わりの日が、はじめの日より前になっています。");
     if(!site&&!mIn.value.trim())return fail("現場をえらぶか、メモを書いてください。");
-    const people=PEOPLE.map(s=>s[0]).filter(n=>picked.has(n));
+    const people=ASSIGN.map(s=>s[0]).filter(n=>picked.has(n));
     if(!people.length&&!isBoss())return fail("「だれが」をえらんでください。");
     const col=people.length?"events":"memos", was=isNew?"":(e.col||"events");
     const data={date,end,people,prevPeople:isNew?[]:(e.people||[]),site,memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
