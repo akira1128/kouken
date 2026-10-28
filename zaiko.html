@@ -143,6 +143,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
 .seg button[data-k="back"][aria-pressed="true"]{border-color:var(--in);background:var(--in-soft);color:var(--in)}
 .seg button[data-k="in"][aria-pressed="true"]{border-color:var(--in);background:var(--in-soft);color:var(--in)}
 .seg button[data-k="set"][aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.seg button .segsub{display:block;font-size:10.5px;font-weight:400;line-height:1.2;margin-top:2px;opacity:.75;letter-spacing:-.02em}
 .stepper{display:grid;grid-template-columns:64px 1fr 64px;gap:8px}
 .stepper button{border:1px solid var(--line);background:var(--bg);border-radius:10px;font-size:28px;font-weight:700;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 .stepper button:active{background:var(--accent-soft)}
@@ -483,7 +484,8 @@ function openItem(id){
     [["s","直管（"+(it.unit||"本")+"）"],...EPARTS.map(([k,l])=>[k,l+"（個）"])].map(([k,l])=>h("button",{type:"button","data-p":k,"aria-pressed":String(k===part),onclick:()=>{part=k;store("kouken-part",k);if(kind==="set")num.value=fmtN(nowQty());upd();}},l))):null;
   const seg=h("div",{class:"seg",role:"group","aria-label":"何をするか"},
     // 入庫ボタンは外した（2026/10/28 ユーザー）。買った材料は「数を直す」で合わせる。前の入庫の履歴はそのまま出る
-    [["out","持ち出し"],["back","戻し"],["set","数を直す"]].map(([k,l])=>h("button",{type:"button","data-k":k,"aria-pressed":String(k===kind),onclick:()=>{const was=kind;kind=k;if(k==="set")num.value=fmtN(nowQty());else if(was==="set"||num.value==="")num.value="1";upd();}},l)));
+    // 「数を直す」には、在庫が合わないときに使うことを小さく書く（2026/10/28 ユーザー）
+    [["out","持ち出し"],["back","戻し"],["set","数を直す","在庫が合わないとき"]].map(([k,l,sub])=>h("button",{type:"button","data-k":k,"aria-pressed":String(k===kind),onclick:()=>{const was=kind;kind=k;if(k==="set")num.value=fmtN(nowQty());else if(was==="set"||num.value==="")num.value="1";upd();}},l,sub?h("small",{class:"segsub",text:sub}):null)));
   function upd(){
     seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===kind)));
     if(partSeg)partSeg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.p===part)));
