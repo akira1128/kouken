@@ -156,6 +156,10 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .rowbtns .btn{flex:1}
 /* 下から出るパネル */
 .scrim{position:fixed;inset:0;z-index:10;background:rgba(10,18,26,.5);display:flex;align-items:flex-end;justify-content:center}
+/* 下から出る画面の左上の「‹ 戻る」（2026/10/28 ユーザー）。下にスクロールしても上に残る */
+.sheetback{position:sticky;top:-18px;z-index:2;justify-self:start;display:inline-flex;align-items:center;gap:2px;margin:-8px 0 -6px -6px;
+  border:0;background:var(--bg);border-radius:10px;padding:6px 14px 6px 8px;min-height:40px;font-size:15px;font-weight:700;color:var(--accent);box-shadow:var(--shadow)}
+.sheetback b{font-size:26px;line-height:1;font-weight:400;margin-top:-3px}
 .sheet{background:var(--surface);width:100%;max-width:640px;max-height:92%;overflow-y:auto;border-radius:16px 16px 0 0;
   padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:grid;gap:14px}
 .sheet h2{margin:0;font-size:19px}
@@ -539,6 +543,7 @@ function openSheet(...kids){
   const s=$("scrim");s.replaceChildren(h("div",{class:"sheet",role:"dialog","aria-modal":"true"},kids));s.hidden=false;
   const close=()=>{s.hidden=true;s.replaceChildren();};
   s.onclick=e=>{if(e.target===s)close();};
+  s.firstChild.prepend(h("button",{type:"button",class:"sheetback","aria-label":"もどる",onclick:close},h("b",{text:"‹"}),"戻る"));
   return close;
 }
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scrim").hidden&&$("scrim").onclick){$("scrim").hidden=true;$("scrim").replaceChildren();}});
@@ -697,6 +702,7 @@ function askPin(){
     }},h("h2",{text:"会社の暗証番号"}),h("p",{class:"hint",text:"最初の1回だけ入れてください。この携帯に覚えておきます。"}),inp,err,go);
     openSheet(form);
     $("scrim").onclick=null;               // 番号を入れるまで閉じられない
+    $("scrim").querySelector(".sheetback")?.remove();
   });
 }
 
