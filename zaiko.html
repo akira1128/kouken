@@ -381,8 +381,9 @@ function renderAlert(){
    数字はかたまりで比べ（25 は 25A に当たり 125A には当たらない）、数字は書いた順に並んでいるものだけ（「25 20」→ 25A×20t）（2026/10/28） */
 const nz=t=>String(t||"").normalize("NFKC").toLowerCase();
 function matchQ(it,q){
-  const text=nz(it.name+" "+it.cat+" "+(it.sub||"")+" "+(it.no?"no."+it.no:""));
-  const words=nz(q).split(/\s+/).filter(Boolean);
+  const text=nz(it.name+" "+it.cat+" "+(it.sub||"")+" "+(it.no?"no."+it.no:"")+" "+sizeText(it));
+  // 「/」「×」「x」「*」「-」も区切り。数字に付いた A・t・K・m は外す（「40A/20t」→「40 20」）（2026/10/28）
+  const words=nz(q).replace(/[\/×xX*＊\-－]/g," ").split(/\s+/).filter(Boolean).map(w=>/^[0-9.]+[atkm]$/.test(w)?w.slice(0,-1):w);
   let pos=0;
   for(const w of words){
     if(/^[0-9.]+$/.test(w)){
