@@ -329,15 +329,16 @@ let openWeek=weekRange()[0], animNext=false;
 const reduceMotion=()=>window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
 function tapDay(s){
   animNext=view==="month";
-  if(view==="month"&&s===sel&&openWeek){openWeek="";renderAll();return;}
+  // 広げた週のどこを押しても閉じる（押した日はえらんだ日にする）
+  if(view==="month"&&openWeek&&s>=openWeek&&s<=addDays(openWeek,6)){openWeek="";sel=s;renderAll();return;}
   select(s);
 }
-function renderCal(){
+/* 開く・閉じる動き。閉じるときは今の見た目のまま縮めてから描き直し、開くときは描き直してから伸ばす
+   （別の週に移るときは、閉じてから開く） */
+const DUR_CLOSE=280, DUR_OPEN=360, EASE="cubic-bezier(.22,.8,.24,1)";
+let calAnim=null;
+function calCells(){
   const [a,b]=range(), t=todayS(), wk=view==="week", wa=openWeek, wb=openWeek?addDays(openWeek,6):"";
-  // 開く・閉じる動き：前の高さを覚えておき、描き直したあと前の高さから新しい高さへ動かす
-  const anim=animNext&&!wk&&!reduceMotion();animNext=false;
-  const before=anim?Object.fromEntries([...$("cal").querySelectorAll(".day")].map(el=>[el.dataset.d,el.getBoundingClientRect().height])):null;
-  $("cal").classList.toggle("week",wk);
   const cells=[...WD].map((w,i)=>h("div",{class:"wd"+(i===0?" sun":i===6?" sat":""),text:w}));
   for(let s=a;s<=b;s=addDays(s,1)){
     const d=parse(s), dow=d.getDay(), its=dayItems(s), open=!wk&&!!wa&&s>=wa&&s<=wb;
@@ -348,13 +349,45 @@ function renderCal(){
       its.slice(0,max).map(chip),
       its.length>max?h("span",{class:"more",text:"+"+(its.length-max)}):null));
   }
-  $("cal").replaceChildren(...cells);
-  if(before)for(const el of $("cal").querySelectorAll(".day")){
-    const from=before[el.dataset.d], to=el.getBoundingClientRect().height;
-    if(from==null||Math.abs(from-to)<2)continue;
-    el.animate([{height:from+"px",overflow:"hidden"},{height:to+"px",overflow:"hidden"}],{duration:260,easing:"cubic-bezier(.2,.8,.2,1)"});
-    if(to>from)[...el.querySelectorAll(".chip")].slice(4).forEach((c,i)=>c.animate([{opacity:0,transform:"translateY(-4px)"},{opacity:1,transform:"none"}],{duration:220,delay:60+i*15,easing:"ease-out",fill:"backwards"}));
+  return cells;
+}
+function renderCal(){
+  const wk=view==="week", cal=$("cal");
+  const anim=animNext&&!wk&&!reduceMotion();animNext=false;
+  if(calAnim){calAnim.cancel();calAnim=null;}
+  cal.classList.toggle("week",wk);
+  const cells=calCells();
+  if(!anim){cal.replaceChildren(...cells);return;}
+  const olds=[...cal.querySelectorAll(".day")];
+  const before=Object.fromEntries(olds.map(el=>[el.dataset.d,el.getBoundingClientRect().height]));
+  // 描き直したあとの高さを、見えない所で先に測る
+  const m=h("div",{class:"cal","aria-hidden":"true",style:{position:"absolute",visibility:"hidden",left:"0",top:"0",width:cal.getBoundingClientRect().width+"px"}},cells);
+  document.body.append(m);
+  const after=Object.fromEntries([...m.querySelectorAll(".day")].map(el=>[el.dataset.d,el.getBoundingClientRect().height]));
+  m.remove();
+  const shrunk=new Set();
+  const grow=()=>{
+    cal.replaceChildren(...cells);
+    for(const el of cal.querySelectorAll(".day")){
+      const d=el.dataset.d, from=before[d], to=after[d];
+      if(shrunk.has(d)){el.animate([{opacity:.35},{opacity:1}],{duration:160,easing:"ease-out"});continue;}
+      if(from==null||to-from<2)continue;
+      el.animate([{height:from+"px",overflow:"hidden"},{height:to+"px",overflow:"hidden"}],{duration:DUR_OPEN,easing:EASE});
+      [...el.querySelectorAll(".chip")].forEach((c,i)=>c.animate([{opacity:i<4?.3:0,transform:i<4?"none":"translateY(-6px)"},{opacity:1,transform:"none"}],
+        {duration:i<4?180:260,delay:i<4?0:40+(i-4)*25,easing:"ease-out",fill:"backwards"}));
+    }
+  };
+  const closing=olds.filter(el=>before[el.dataset.d]-(after[el.dataset.d]??before[el.dataset.d])>2);
+  if(!closing.length){grow();return;}
+  const anims=[];
+  for(const el of closing){
+    const d=el.dataset.d;shrunk.add(d);
+    [...el.querySelectorAll(".chip")].slice(4).forEach(c=>anims.push(c.animate([{opacity:1},{opacity:0}],{duration:160,easing:"ease-in",fill:"forwards"})));
+    anims.push(el.animate([{height:before[d]+"px",overflow:"hidden"},{height:after[d]+"px",overflow:"hidden"}],{duration:DUR_CLOSE,easing:EASE,fill:"forwards"}));
   }
+  const me={cancel:()=>{anims.forEach(x=>x.cancel());}};
+  calAnim=me;
+  anims[anims.length-1].finished.then(()=>{if(calAnim!==me)return;calAnim=null;grow();anims.forEach(x=>x.cancel());}).catch(()=>{});
 }
 
 /* ---------- メンバー予定表（縦に人、横に1週間） ---------- */
