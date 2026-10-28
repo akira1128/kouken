@@ -309,7 +309,7 @@ function renderSite(){
     if(!v)return h("dd",{class:"none",text:"―"});
     if(k==="address"){const q=encodeURIComponent(v.replace(/（.*?）/g,""));
       return h("dd",null,v,h("br"),h("a",{href:"https://www.google.com/maps/search/?api=1&query="+q,target:"_blank",rel:"noopener"},"地図を開く"),"　",
-        h("a",{href:"https://www.google.com/maps/dir/?api=1&destination="+q+"&travelmode=transit",target:"_blank",rel:"noopener"},"今いる所からの行き方（電車・バス・徒歩）"));}
+        h("a",{href:"https://www.google.com/maps/dir/?api=1&destination="+q+"&travelmode=transit",target:"_blank",rel:"noopener"},"今いる所からの行き方"));}
     if(k==="tel")return h("dd",null,...String(v).split(/[、,\s]+/).filter(Boolean).flatMap((t,i)=>[i?"　":"",h("a",{href:"tel:"+t.replace(/[^\d+]/g,"")},t)]));
     return h("dd",{text:v});
   };
