@@ -186,6 +186,13 @@ textarea.inp{min-height:68px;resize:vertical}
 .remchip .forget{border:1px solid var(--line);border-left:1px dashed var(--line);background:var(--bg);border-radius:0 999px 999px 0;padding:0 10px;font-size:14px;color:var(--muted)}
 .remchip .forget[data-ok="1"]{background:var(--low);border-color:var(--low);color:#fff;font-weight:700}
 .btn.change{background:var(--today);color:var(--ink);border:1px solid var(--line);font-size:15px;padding:11px 14px}
+/* 2回タップしたときの「入れる／直す」えらび */
+.menulist{display:grid;gap:8px}
+.menuev{display:grid;grid-template-columns:6px 1fr auto;gap:10px;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px}
+.menuev .bar{align-self:stretch;border-radius:3px}
+.menuev b{display:block;font-size:15px;overflow-wrap:anywhere}
+.menuev small{display:block;font-size:12.5px;color:var(--muted)}
+.menuev .go{font-size:13px;font-weight:700;color:var(--accent);white-space:nowrap}
 .kakobox{display:grid;gap:6px;padding:10px;border-radius:8px;border:1px dashed var(--accent);background:var(--accent-soft);margin-top:4px}
 .rembox{display:grid;gap:6px;padding:10px;border-radius:8px;background:var(--today);font-size:13px;font-weight:400}
 .seg2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -225,7 +232,7 @@ textarea.inp{min-height:68px;resize:vertical}
     <section class="panel" id="listPanel" hidden>
       <ul class="evs" id="list"></ul>
     </section>
-    <p class="foot"><span id="addHint" hidden>日にちを2回タップすると予定を入れられます。直すときは、下の予定を押します</span><button type="button" id="editLogin" hidden>編集する人はこちら</button></p>
+    <p class="foot"><span id="addHint" hidden>日にちを2回タップすると、予定を入れたり直したりできます</span><button type="button" id="editLogin" hidden>編集する人はこちら</button></p>
   </main>
 </div>
 <div class="scrim" id="scrim" hidden></div>
@@ -387,7 +394,22 @@ function dbl(key,one,two){
   if(tapT){clearTimeout(tapT);tapOne&&tapOne();}           // 別の日を押したら、前の1回分をすぐやる
   tapK=key;tapOne=one;tapT=setTimeout(()=>{tapT=null;tapK="";tapOne=null;one();},260);
 }
-const addOn=(s,preset)=>{select(s);openEdit(null,false,preset);};
+/* 2回タップ：その日に予定があれば「新しく入れる」か「どの予定を直す」かをえらぶ。なければすぐ入れる画面（2026/10/28 ユーザー） */
+const addOn=(s,preset)=>{select(s);dayMenu(s,preset);};
+function dayMenu(s,preset){
+  const who=preset&&preset[0];
+  const evs=sortEv(onDay(events,s).filter(e=>who?(e.people||[]).includes(who):(person==="すべて"||(e.people||[]).includes(person)||!(e.people||[]).length)));
+  if(!evs.length){openEdit(null,false,preset);return;}
+  let close;
+  const pickEv=e=>h("button",{type:"button",class:"menuev",onclick:()=>{close();openEdit(e);}},
+    h("span",{class:"bar",style:{background:colorOf(e.site)}}),
+    h("span",null,h("b",{text:siteText(e)}),h("small",{text:(e.people||[]).length?e.people.map(nick).join("・"):"メモ"})),
+    h("span",{class:"go",text:"直す ›"}));
+  close=openSheet(h("h2",{text:md(s)+(who?"　"+nick(who):"")}),
+    h("button",{class:"btn",type:"button",onclick:()=>{close();openEdit(null,false,preset);}},"＋ 新しい予定を入れる"),
+    h("p",{class:"hint",text:"この日の予定を直す（押した予定の画面が開きます）"}),
+    h("div",{class:"menulist"},evs.map(pickEv)));
+}
 function tapDay(s){
   animNext=view==="month";
   // 広げた週のどこを押しても閉じる（押した日はえらんだ日にする）
