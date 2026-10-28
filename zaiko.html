@@ -526,7 +526,7 @@ function openCart(){
       h("button",{type:"button","aria-label":"1ふやす",onclick:()=>{l.n+=1;saveCart();draw();}},"＋")),
     h("button",{type:"button",class:"rm",onclick:()=>{delete cart[id];saveCart();draw();}},"外す"))));
   draw();
-  const send=h("button",{class:"btn",type:"button"},"西崎さんに送る");
+  const send=h("button",{class:"btn",type:"button"},"西崎へ送る");
   let close;
   send.addEventListener("click",async()=>{
     const lines=Object.entries(cart).map(([id,l])=>({itemId:id.startsWith("x")?"":id,name:l.name,unit:l.unit,cat:l.cat||"",qty:l.n}));
@@ -537,7 +537,7 @@ function openCart(){
       await addDoc(collection(fs,"orders"),{at:Date.now(),date:d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()),siteId:ORDER,siteName:orderSite,who,lines,memo:memo.value.trim(),fromStock:false});
       cart={};try{sessionStorage.removeItem(cartKey);}catch(e){}
       location.href="genba.html?site="+encodeURIComponent(ORDER)+"&sent=1";
-    }catch(e){err.textContent=e&&e.code==="permission-denied"?"送る権限がありません。ページを開き直してください。":"送れませんでした。電波を確認してください。";err.hidden=false;send.disabled=false;send.textContent="西崎さんに送る";}
+    }catch(e){err.textContent=e&&e.code==="permission-denied"?"送る権限がありません。ページを開き直してください。":"送れませんでした。電波を確認してください。";err.hidden=false;send.disabled=false;send.textContent="西崎へ送る";}
   });
   close=openSheet(h("h2",{text:"頼むもの"}),h("p",{class:"hint",text:"現場："+(orderSite||"―")+"　頼む人："+nick(who)}),list,
     h("label",{class:"fl"},h("span",null,"メモ ",h("em",{text:"なくてもよい"})),memo),err,send);
