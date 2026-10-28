@@ -474,7 +474,7 @@ function fillVisits(box,x){
   const row=r=>h("li",null,h("b",{text:md(r.date)}),h("span",{text:r.people.map(nick).join("・")||"―"}),
     r.kako?h("span",{class:"tag",text:"工場で加工"}):null,r.notes.length?h("span",{class:"memo",text:r.notes.join("　")}):null);
   box.replaceChildren(h("div",{class:"sec"},
-    h("h3",{text:"この現場に行った人（予定表より）"}),
+    h("h3",{text:"この現場に行った履歴"}),
     past.length?h("p",{class:"vsum"},"のべ ",h("b",{text:nin+"人工"}),"（"+past.length+"日）"):null,
     past.length?h("ul",{class:"vwho"},Object.entries(cnt).sort((a,b)=>b[1]-a[1]||last[b[0]].localeCompare(last[a[0]])).map(([n,c])=>
       h("li",null,h("b",{text:nick(n)}),h("span",{text:c+"日"}),h("small",{text:"最後 "+md(last[n])})))):null,
