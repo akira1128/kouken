@@ -185,6 +185,7 @@ textarea.inp{min-height:68px;resize:vertical}
 .remchip button[data-n]{border-radius:999px 0 0 999px;border-right:0}
 .remchip .forget{border:1px solid var(--line);border-left:1px dashed var(--line);background:var(--bg);border-radius:0 999px 999px 0;padding:0 10px;font-size:14px;color:var(--muted)}
 .remchip .forget[data-ok="1"]{background:var(--low);border-color:var(--low);color:#fff;font-weight:700}
+.kakobox{display:grid;gap:6px;padding:10px;border-radius:8px;border:1px dashed var(--accent);background:var(--accent-soft);margin-top:4px}
 .rembox{display:grid;gap:6px;padding:10px;border-radius:8px;background:var(--today);font-size:13px;font-weight:400}
 .seg2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .seg2 button{border:2px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 4px;font-weight:700;font-size:14px}
@@ -283,6 +284,8 @@ function colorOf(site){
 /* カレンダーのマスに出す短い現場名 */
 /* 長い現場名は、LINE WORKSで書いていた呼び方にする */
 const SHORT={"中防不燃・粗大ごみ処理施設整備工事":"中防不燃","八王子市明神町計画":"明神町","八王子市大和田町計画":"大和田町","三鷹市下連雀マンション計画":"三鷹","墨田区両国3丁目計画":"両国","新宿区大久保2丁目計画":"大久保"};
+/* 予定に出す現場名。工場（加工）のときは、どの現場の加工かも出す（2026/10/28 ユーザー） */
+const siteText=e=>e.site===FACTORY&&e.kako?"工場→"+shortSite(e.kako):(shortSite(e.site)||e.memo||"予定");
 const shortSite=s=>{const t=(s||"").replace(/[（(]仮称[）)]\s*/g,"").replace(/\s*新築工事$/,"").replace(/^株式会社|株式会社$/g,"").replace(/[（(][^（）()]*[）)]$/,"").trim();return SHORT[t]||t;};
 /* 人の色。LINE WORKSと同じく、カレンダーは人ごとに色を分ける。人のいない予定は灰色 */
 const PCOLOR={"西崎剣":"#0b5cab","原田弓子":"#be185d","福島正純":"#c2410c","田中嗣音":"#0e7490","NGUYEN VAN HIEU":"#15803d","DANG BINH DUONG":"#7c3aed","NGUYEN NGOC LONG":"#a16207","竹内工業":"#be123c","高橋断熱":"#4d7c0f"};
@@ -364,7 +367,7 @@ const range=()=>weekly()?weekRange():gridRange();
 function dayItems(s){
   const out=[];
   for(const e of sortEv(onDay(shown(),s))){
-    const what=shortSite(e.site)||e.memo||"予定", off=e.site===OFF;
+    const what=siteText(e), off=e.site===OFF;
     const ps=(e.people||[]).filter(n=>person==="すべて"||n===person).sort((a,b)=>(ORDER[a]??50)-(ORDER[b]??50));
     if(ps.length)for(const n of ps)out.push({n,name:nick(n),what,color:pcolor(n),off});
     else out.push({n:"",name:"",what,color:NOONE,off});
@@ -458,7 +461,7 @@ function renderMem(){
       const evs=sortEv(pick(onDay(events,s)));
       cells.push(h("button",{type:"button",class:"cell","aria-pressed":String(s===sel),"aria-label":label+" "+md(s)+" "+(evs.map(e=>e.site||e.memo).join("、")||"予定なし"),
         onclick:()=>dbl("m"+s+who,()=>select(s),()=>addOn(s,who?[who]:null))},
-        evs.map(e=>h("span",{class:"chip"+(e.site===OFF?" off":""),style:"--pc:"+color,text:shortSite(e.site)||e.memo||"予定"}))));
+        evs.map(e=>h("span",{class:"chip"+(e.site===OFF?" off":""),style:"--pc:"+color,text:siteText(e)}))));
     }
   };
   for(const [n,k] of ASSIGN)if(person==="すべて"||person===n)row(k,pcolor(n),l=>l.filter(e=>(e.people||[]).includes(n)),n);
@@ -469,7 +472,7 @@ function renderMem(){
 /* ---------- 予定の1行（えらんだ日・一覧で使う） ---------- */
 function evRow(e){
   const body=[h("span",{class:"bar",style:{background:colorOf(e.site)}}),
-    h("span",{class:"st",text:e.site||"（現場なし）"}),
+    h("span",{class:"st",text:e.site===FACTORY&&e.kako?FACTORY+"　→ "+e.kako:(e.site||"（現場なし）")}),
     e.end&&e.end!==e.date?h("span",{class:"span",text:md(e.date)+" 〜 "+md(e.end)}):null,
     (e.people||[]).length?h("span",{class:"pp"},(e.people||[]).map(n=>h("span",{class:n===person?"me":null,style:{background:pcolor(n)},text:nick(n)}))):null,
     e.memo?h("span",{class:"mm",text:e.memo}):null];
@@ -572,8 +575,17 @@ function openEdit(ev,copy,preset){
       try{await forgetSite(n);w.remove();known.splice(known.indexOf(n),1);toast("「"+n+"」を消しました");}catch(y){x.disabled=false;}
     }},"×");
     const w=h("span",{class:"remchip"},b,x);return w;}));
-  const syncSite=()=>{const v=sIn.value.trim();pick.querySelectorAll("button[data-n]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.n===v)));remBox.hidden=!v||known.includes(v);};
-  sIn.addEventListener("input",syncSite);syncSite();
+  let syncSite=()=>{const v=sIn.value.trim();pick.querySelectorAll("button[data-n]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.n===v)));remBox.hidden=!v||known.includes(v);};
+  sIn.addEventListener("input",syncSite);
+  const kIn=h("input",{class:"inp",type:"text",placeholder:"加工する現場（下からもえらべます）",value:e.kako||"",autocomplete:"off"});
+  const kPick=h("div",{class:"sitepick",role:"group","aria-label":"加工する現場をえらぶ"},known.filter(n=>n!==FACTORY&&n!==OFF).map(n=>
+    h("button",{type:"button","data-k":n,title:n,onclick:()=>{kIn.value=n;syncKako();}},shortSite(n)||n)));
+  const syncKako=()=>{const v=kIn.value.trim();kPick.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===v)));};
+  kIn.addEventListener("input",syncKako);syncKako();
+  const kBox=h("div",{class:"kakobox",hidden:true},h("label",{class:"fl"},"どの現場の加工？ ",kIn),h("span",{class:"pickcap",text:"下からえらぶ（なくてもよい）"}),kPick);
+  const syncSite0=syncSite;
+  syncSite=()=>{syncSite0();kBox.hidden=sIn.value.trim()!==FACTORY;};
+  syncSite();
   const mIn=h("textarea",{class:"inp",placeholder:"例：8時現地集合、車は2台"},e.memo||"");
   const err=h("p",{class:"err",hidden:true});
   const save=h("button",{class:"btn",type:"submit"},isNew?"入れる":"直す");
@@ -590,7 +602,8 @@ function openEdit(ev,copy,preset){
     const isNewSite=!!site&&!known.includes(site);
     if(isNewSite&&rem===null)return fail("新しい現場名を、覚えるか今回だけか、えらんでください。");
     const col=people.length?"events":"memos", was=isNew?"":(e.col||"events");
-    const data={date,end,people,prevPeople:isNew?[]:(e.people||[]),site,memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
+    const kako=site===FACTORY?kIn.value.trim():"";
+    const data={date,end,people,prevPeople:isNew?[]:(e.people||[]),site,kako,memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
     save.disabled=true;err.hidden=true;
     try{
       if(isNew)await addDoc(collection(fs,col),{...data,createdAt:Date.now(),createdBy:editor});
@@ -609,7 +622,7 @@ function openEdit(ev,copy,preset){
     h("h2",{text:isNew?(copy?"予定をコピー":"予定を入れる"):"予定を直す"}),
     h("div",{class:"two"},h("label",{class:"fl"},"日にち",dIn),h("label",{class:"fl"},h("span",null,"終わりの日 ",h("em",{text:"何日か続くとき"})),eIn)),
     h("div",{class:"fl"},h("span",null,"だれが ",h("em",{text:isBoss()?"だれもえらばないと、西崎さんだけが見られるメモになります":"何人でもえらべます"})),names),
-    h("div",{class:"fl"},h("label",{class:"fl"},"現場",sIn),remBox,h("span",{class:"pickcap",text:"下からえらぶ"}),pick),
+    h("div",{class:"fl"},h("label",{class:"fl"},"現場",sIn),remBox,h("span",{class:"pickcap",text:"下からえらぶ"}),pick,kBox),
     h("label",{class:"fl"},h("span",null,"メモ ",h("em",{text:"なくてもよい"})),mIn),
     err,save,
     !isNew?h("div",{class:"rowbtns"},
@@ -684,7 +697,7 @@ function renderNotices(list){
   box.hidden=false;
   box.replaceChildren(h("h3",null,h("span",{class:"dot"}),nick(n)+"さんの予定が"+list.length+"件変わりました"),
     h("ul",null,list.map(e=>h("li",null,h("button",{type:"button",onclick:()=>select(e.date)},
-      h("b",{text:md(e.date)+(e.end&&e.end!==e.date?"〜"+md(e.end):"")}),"　"+(shortSite(e.site)||e.memo||"予定")+" が"+noticeKind(e,n))))),
+      h("b",{text:md(e.date)+(e.end&&e.end!==e.date?"〜"+md(e.end):"")}),"　"+siteText(e)+" が"+noticeKind(e,n))))),
     h("button",{class:"btn ghost",type:"button",onclick:()=>{store(seenKey(),String(Date.now()));listenNotices();}},"確認した"));
 }
 
