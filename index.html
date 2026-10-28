@@ -269,7 +269,14 @@ const HASWID=c=>c==="遮音シート"||c==="金網"||c==="コイル"||c==="板";
 const HASTHK=c=>c==="コイル"||c==="板";
 /* 板は「50×605×910」（すべてmm）と出す（2026/10/28） */
 const ISPLATE=c=>c==="板";
-const sizeText=it=>ISPLATE(it.cat)?(Number(it.thk)>0&&Number(it.wid)>0&&Number(it.len)>0?String(it.thk)+"×"+fmtN(it.wid)+"×"+fmtN(it.len):""):Number(it.len)>0?((HASTHK(it.cat)&&Number(it.thk)>0?String(it.thk)+"×":"")+(HASWID(it.cat)&&Number(it.wid)>0?fmtN(it.wid)+"×"+fmtN(it.len)+"m":"1巻 "+fmtN(it.len)+"m")):"";
+/* 旭産業ラッキングカバーの番号 → [外周mm, 外径φ]（akira2「旭産業_ラッキングカバーサイズ表.pdf」2026/10/8） */
+const LAG_NO=[["特2",170,54],["特1",190,61],["0",215,68],["1",230,73],["2S",240,76],["2",250,80],["3S",265,84],["3",280,89],["4",300,96],["5S",315,100],["5",325,104],
+  ["6S",335,107],["6",345,110],["7S",355,113],["7",370,118],["8S",385,123],["8",400,127],["9S",410,131],["9",425,135],["10",455,145],["11",470,150],["12",490,156],
+  ["13",510,162],["14",540,172],["15",555,177],["16",575,183],["17",600,191],["18",620,197],["19S",635,202],["19",650,207],["20",670,213],["21",700,223],
+  ["22S",715,228],["22",730,232],["23",780,248],["24",795,253],["25",830,264],["26",860,274],["27",900,287],["28",935,298],["29",960,306],["30",990,315],
+  ["31",1020,325],["32",1050,334],["33",1120,357],["34",1150,366],["35",1200,382],["36",1250,398]];
+const LAG=Object.fromEntries(LAG_NO.map(([n,o,d])=>[n,[o,d]]));
+const sizeText=it=>it.no&&LAG[it.no]?"No."+it.no+"（外周"+LAG[it.no][0]+"・φ"+LAG[it.no][1]+"）":ISPLATE(it.cat)?(Number(it.thk)>0&&Number(it.wid)>0&&Number(it.len)>0?String(it.thk)+"×"+fmtN(it.wid)+"×"+fmtN(it.len):""):Number(it.len)>0?((HASTHK(it.cat)&&Number(it.thk)>0?String(it.thk)+"×":"")+(HASWID(it.cat)&&Number(it.wid)>0?fmtN(it.wid)+"×"+fmtN(it.len)+"m":"1巻 "+fmtN(it.len)+"m")):"";
 /* 一覧の並び：order が小さい順。ロールは ALKロール → ALGCロール → ALKマイティ → ALGCマイティ → その他（2026/10/28） */
 function rank(it){
   if(it.cat==="ロール"){const n=it.name||"";return /^ALKロール/.test(n)?0:/^ALGCロール/.test(n)?1:/^ALKマイティ/.test(n)?2:/^ALGCマイティ/.test(n)?3:4;}
@@ -384,7 +391,7 @@ function renderList(){
   list.replaceChildren(...groups.map(([c,arr])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
     arr.map(it=>h("button",{type:"button",class:"row"+(isLow(it)?" low":""),onclick:()=>openItem(it.id)},
       h("span",{class:"nm"},it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
-        h("span",{class:"sub",text:(HASLEN(it.cat)&&sizeText(it)?(sizeText(it)+" ・ "):"")+(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
+        h("span",{class:"sub",text:((HASLEN(it.cat)||it.no)&&sizeText(it)?(sizeText(it)+" ・ "):"")+(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
       h("span",{class:"qty"+(lowS(it)?" lowtxt":"")},fmtN(it.qty),h("small",{text:it.unit||""}),ELBOW(it.cat)?EPARTS.map(([k,l,f])=>h("span",{class:"eq",text:l.replace("溶接","").replace("エルボ","")+" "+fmtN(it[f]||0)+"個"})):null))))));
 }
 
@@ -471,7 +478,7 @@ function openItem(id){
       h("button",{class:"btn ghost",type:"submit"},"変更を保存"),delZone));
 
   const close=openSheet(
-    h("h2",{text:it.name}),HASLEN(it.cat)&&sizeText(it)?h("p",{class:"hint",text:sizeText(it)}):null,
+    h("h2",{text:it.name}),(HASLEN(it.cat)||it.no)&&sizeText(it)?h("p",{class:"hint",text:sizeText(it)}):null,
     h("div",{class:"now"},h("span",{text:"いまの在庫"}),h("span",null,h("b",{text:fmtN(it.qty)})," "+(it.unit||""),hasE?EPARTS.map(([k,l,f])=>h("span",{class:"nowpart"},l+" ",h("b",{text:fmtN(it[f]||0)})," 個")):null)),
     partSeg,
     seg,
@@ -607,6 +614,9 @@ const EXTRA_ITEMS=[
   ...[["GW40K GC4232","50"],["MGボード080-P","50"],["MGボード080-P","75"],["MGボード080-ALGC","25"],["GW ALGC平貼40K","25"],["GW ALGC平貼40K","50"],
       ["GW40K ALGC(S)","50"],["MGボード150 ALGC","25"],["GW32K","25"],["GW32K ALK(S)","25"]]
     .map(([n,t],i)=>({id:"plate"+i,name:n+" "+t+"t",cat:"板",unit:"枚",order:i,thk:t,wid:605,len:910})),
+  // ジャケット・エルボ：旭産業の番号 特2〜36 を色ごとに（2026/10/28 ユーザー「番号は36番まで」）
+  ...COLORS.flatMap((col,ci)=>[["jk","ジャケット","本",0],["el","エルボ","個",1]].flatMap(([k,n,u,t])=>
+    LAG_NO.map(([no],ni)=>({id:k+ci+"-"+no,name:n+" No."+no,cat:"ジャケット・エルボ",sub:col,unit:u,order:t*100+ni,no})))),
   // テープ類（東京グラスロンの請求書 2024/12〜2026/10 で買ったもの 2026/10/28）。order で種類ごとにまとめる
   ...[[0,"アルミ粘着テープ セパなし",["50×90m","65×90m"]],[0,"アルミ粘着テープ",["50×90m","65×90m"]],
       [1,"ALGC粘着テープ アクリル",["25×20m","50×20m","65×20m","75×20m","100×20m"]],[2,"ALGC粘着テープ",["25×20m","50×20m","65×20m"]],
@@ -636,7 +646,7 @@ async function ensureItems(){
   const miss=EXTRA_ITEMS.filter(x=>!have.has(x.id));
   for(let k=0;k<miss.length;k+=400){
     const batch=writeBatch(fs),now=Date.now();
-    for(const x of miss.slice(k,k+400))batch.set(doc(fs,"items",x.id),{name:x.name,cat:x.cat,sub:x.sub||"",unit:x.unit,order:x.order||0,...(ROLL_LEN[x.name]?{len:ROLL_LEN[x.name]}:{}),...(SHEET_SIZE[x.name]?{wid:SHEET_SIZE[x.name][0],len:SHEET_SIZE[x.name][1]}:{}),...(x.thk?{thk:x.thk}:{}),...(x.wid?{wid:x.wid}:{}),...(x.len?{len:x.len}:{}),qty:0,min:0,createdAt:now,updatedAt:now,updatedBy:who||"西崎剣"});
+    for(const x of miss.slice(k,k+400))batch.set(doc(fs,"items",x.id),{name:x.name,cat:x.cat,sub:x.sub||"",unit:x.unit,order:x.order||0,...(ROLL_LEN[x.name]?{len:ROLL_LEN[x.name]}:{}),...(SHEET_SIZE[x.name]?{wid:SHEET_SIZE[x.name][0],len:SHEET_SIZE[x.name][1]}:{}),...(x.thk?{thk:x.thk}:{}),...(x.no?{no:x.no}:{}),...(x.wid?{wid:x.wid}:{}),...(x.len?{len:x.len}:{}),qty:0,min:0,createdAt:now,updatedAt:now,updatedBy:who||"西崎剣"});
     await batch.commit();
   }
 }
