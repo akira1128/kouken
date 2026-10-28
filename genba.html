@@ -186,7 +186,7 @@ const NICK=Object.fromEntries(STAFF);
 const nick=n=>NICK[n]||n||"";
 /* 現場の情報の欄：[キー, 見出し, 入れ方の例] */
 const FIELDS=[["address","住所","例：東京都八王子市明神町4-1"],["parking","駐車場・搬入","例：現場前に2台。搬入は北側ゲートから"],
-  ["gc","元請","例：株式会社エステック"],["contact","担当者","例：佐藤さん（設備）"],["tel","電話","例：090-1234-5678"],
+  ["gc","元請","例：株式会社エステック"],["outsource","外注（施工する会社）","例：竹内工業"],["contact","担当者","例：佐藤さん（設備）"],["tel","電話","例：090-1234-5678"],
   ["rules","入場ルール","例：朝礼8:00、新規入場は前日までに書類"],["caution","注意事項","例：17時以降は音の出る作業ダメ"]];
 /* 現場の状態。「予定」はまだ決まっていない現場（どれにするかは西崎さんが決める 2026/10/28） */
 const STATUSES=["施工中","これから","予定","終わった"];
@@ -269,7 +269,7 @@ function renderSites(){
       return h("button",{type:"button",class:"sitecard",onclick:()=>openSite(x.id)},
         h("b",null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),shortSite(x.name)),
         h("span",{class:"go",text:"›"}),
-        h("span",{class:"sub",text:[inf.address||"住所はまだ",nNote?"メモ "+nNote+"件":"",nOrd?"注文 "+nOrd+"回":""].filter(Boolean).join("　")}));
+        h("span",{class:"sub",text:[inf.outsource?inf.outsource+"が"+(x.status==="施工中"?"施工中":"施工"):"",inf.address||"住所はまだ",nNote?"メモ "+nNote+"件":"",nOrd?"注文 "+nOrd+"回":""].filter(Boolean).join("　")}));
     }));}));
 }
 
