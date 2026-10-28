@@ -185,6 +185,7 @@ textarea.inp{min-height:68px;resize:vertical}
 .remchip button[data-n]{border-radius:999px 0 0 999px;border-right:0}
 .remchip .forget{border:1px solid var(--line);border-left:1px dashed var(--line);background:var(--bg);border-radius:0 999px 999px 0;padding:0 10px;font-size:14px;color:var(--muted)}
 .remchip .forget[data-ok="1"]{background:var(--low);border-color:var(--low);color:#fff;font-weight:700}
+.btn.change{background:var(--today);color:var(--ink);border:1px solid var(--line);font-size:15px;padding:11px 14px}
 .kakobox{display:grid;gap:6px;padding:10px;border-radius:8px;border:1px dashed var(--accent);background:var(--accent-soft);margin-top:4px}
 .rembox{display:grid;gap:6px;padding:10px;border-radius:8px;background:var(--today);font-size:13px;font-weight:400}
 .seg2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -224,7 +225,7 @@ textarea.inp{min-height:68px;resize:vertical}
     <section class="panel" id="listPanel" hidden>
       <ul class="evs" id="list"></ul>
     </section>
-    <p class="foot"><span id="addHint" hidden>日にちを2回タップすると、予定を入れられます</span><button type="button" id="editLogin" hidden>編集する人はこちら</button></p>
+    <p class="foot"><span id="addHint" hidden>日にちを2回タップすると予定を入れられます。直すときは、下の予定を押します</span><button type="button" id="editLogin" hidden>編集する人はこちら</button></p>
   </main>
 </div>
 <div class="scrim" id="scrim" hidden></div>
@@ -233,7 +234,7 @@ textarea.inp{min-height:68px;resize:vertical}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,setDoc,onSnapshot,query,where,orderBy,limit,deleteField,FieldPath} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,setDoc,onSnapshot,query,where,orderBy,limit,deleteField,FieldPath,writeBatch} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {FIREBASE_CONFIG} from "./firebase-config.js";
 (function(){
 /* 社員：[正式名, 呼び名]。在庫（zaiko.html）と同じ。予定には正式名を残す（あとで人工の集計に使う） */
@@ -552,6 +553,44 @@ function openSheet(...kids){
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scrim").hidden&&$("scrim").onclick){$("scrim").hidden=true;$("scrim").replaceChildren();}});
 
 /* ---------- 予定を入れる・直す（西崎・原田だけ） ---------- */
+/* 現場の入力（上に手入力、下にえらぶボタン。新しい名前は覚えるかえらぶ。工場（加工）は加工する現場もえらぶ）
+   予定を入れる画面と「この日だけ変える」画面で使う */
+function sitePicker(site0,kako0){
+  const known=[...new Set([FACTORY,OFF,...sites.map(s=>s.name),...remembered])];
+  const sIn=h("input",{class:"inp",type:"text",placeholder:"現場名を入れる（下からもえらべます）",value:site0||"",autocomplete:"off"});
+  let rem=null;
+  const remBtns=[["yes","覚える"],["no","今回だけ"]].map(([v,t])=>h("button",{type:"button","aria-pressed":"false",onclick:()=>{rem=v==="yes";remBtns.forEach(b=>b.setAttribute("aria-pressed",String(b===remBtns[v==="yes"?0:1])));}},t));
+  const remBox=h("div",{class:"rembox",hidden:true},h("span",{text:"この現場名を次からもえらべるようにしますか？"}),h("div",{class:"seg2"},remBtns));
+  const pick=h("div",{class:"sitepick",role:"group","aria-label":"現場をえらぶ"},known.map(n=>{
+    const b=h("button",{type:"button","data-n":n,title:n,onclick:()=>{sIn.value=n;sync();}},shortSite(n)||n);
+    if(!remembered.includes(n))return b;
+    const x=h("button",{type:"button",class:"forget","aria-label":n+"を覚えた現場から消す",onclick:async()=>{
+      if(x.dataset.ok!=="1"){x.dataset.ok="1";x.textContent="消す";return;}
+      x.disabled=true;
+      try{await forgetSite(n);w.remove();known.splice(known.indexOf(n),1);toast("「"+n+"」を消しました");}catch(y){x.disabled=false;}
+    }},"×");
+    const w=h("span",{class:"remchip"},b,x);return w;}));
+  const kIn=h("input",{class:"inp",type:"text",placeholder:"加工する現場（下からもえらべます）",value:kako0||"",autocomplete:"off"});
+  const kPick=h("div",{class:"sitepick",role:"group","aria-label":"加工する現場をえらぶ"},known.filter(n=>n!==FACTORY&&n!==OFF).map(n=>
+    h("button",{type:"button","data-k":n,title:n,onclick:()=>{kIn.value=n;syncKako();}},shortSite(n)||n)));
+  const syncKako=()=>{const v=kIn.value.trim();kPick.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===v)));};
+  const kBox=h("div",{class:"kakobox",hidden:true},h("label",{class:"fl"},"どの現場の加工？ ",kIn),h("span",{class:"pickcap",text:"下からえらぶ（なくてもよい）"}),kPick);
+  const sync=()=>{const v=sIn.value.trim();pick.querySelectorAll("button[data-n]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.n===v)));
+    remBox.hidden=!v||known.includes(v);kBox.hidden=v!==FACTORY;};
+  sIn.addEventListener("input",sync);kIn.addEventListener("input",syncKako);sync();syncKako();
+  return {
+    el:h("div",{class:"fl"},h("label",{class:"fl"},"現場",sIn),remBox,h("span",{class:"pickcap",text:"下からえらぶ"}),pick,kBox),
+    site:()=>sIn.value.trim(),
+    kako:()=>sIn.value.trim()===FACTORY?kIn.value.trim():"",
+    // 新しい現場名なのに、覚えるかどうかをえらんでいなければ、そのことを返す
+    check:()=>{const v=sIn.value.trim();return v&&!known.includes(v)&&rem===null?"新しい現場名を、覚えるか今回だけか、えらんでください。":"";},
+    isNew:()=>{const v=sIn.value.trim();return !!v&&!known.includes(v);},
+    // 保存のあと：覚える現場名・覚えている現場名は「最後に行く日」を更新
+    remember:async last=>{const v=sIn.value.trim();const nw=!!v&&!known.includes(v);
+      if((nw&&rem)||remembered.includes(v)){if(!(usedMap[v]>=last))try{await setDoc(yoteiRef(),{used:{[v]:last}},{merge:true});}catch(y){}}
+      return nw&&rem;}
+  };
+}
 function openEdit(ev,copy,preset){
   const isNew=!ev||copy;
   const e=ev||{date:sel,end:"",people:preset||(person!=="すべて"?[person]:[]),site:"",memo:""};
@@ -560,38 +599,13 @@ function openEdit(ev,copy,preset){
   const eIn=h("input",{class:"inp",type:"date",value:copy?"":(e.end&&e.end!==e.date?e.end:"")});
   const names=h("div",{class:"names",role:"group","aria-label":"だれが"},ASSIGN.map(([n,k])=>h("button",{type:"button",class:OUTS.some(o=>o[0]===n)?"out":null,"aria-pressed":String(picked.has(n)),
     onclick:ev2=>{picked.has(n)?picked.delete(n):picked.add(n);ev2.currentTarget.setAttribute("aria-pressed",String(picked.has(n)));}},k)));
-  /* 現場：上に手で入れる欄、下にえらぶ現場。新しい名前を入れたときは、覚えるかどうかをえらぶ */
-  const known=[...new Set([FACTORY,OFF,...sites.map(s=>s.name),...remembered])];
-  const sIn=h("input",{class:"inp",type:"text",placeholder:"現場名を入れる（下からもえらべます）",value:e.site||"",autocomplete:"off"});
-  let rem=null;
-  const remBtns=[["yes","覚える"],["no","今回だけ"]].map(([v,t])=>h("button",{type:"button","aria-pressed":"false",onclick:()=>{rem=v==="yes";remBtns.forEach(b=>b.setAttribute("aria-pressed",String(b===remBtns[v==="yes"?0:1])));}},t));
-  const remBox=h("div",{class:"rembox",hidden:true},h("span",{text:"この現場名を次からもえらべるようにしますか？"}),h("div",{class:"seg2"},remBtns));
-  const pick=h("div",{class:"sitepick",role:"group","aria-label":"現場をえらぶ"},known.map(n=>{
-    const b=h("button",{type:"button","data-n":n,title:n,onclick:()=>{sIn.value=n;syncSite();}},shortSite(n)||n);
-    if(!remembered.includes(n))return b;
-    const x=h("button",{type:"button",class:"forget","aria-label":n+"を覚えた現場から消す",onclick:async()=>{
-      if(x.dataset.ok!=="1"){x.dataset.ok="1";x.textContent="消す";return;}
-      x.disabled=true;
-      try{await forgetSite(n);w.remove();known.splice(known.indexOf(n),1);toast("「"+n+"」を消しました");}catch(y){x.disabled=false;}
-    }},"×");
-    const w=h("span",{class:"remchip"},b,x);return w;}));
-  let syncSite=()=>{const v=sIn.value.trim();pick.querySelectorAll("button[data-n]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.n===v)));remBox.hidden=!v||known.includes(v);};
-  sIn.addEventListener("input",syncSite);
-  const kIn=h("input",{class:"inp",type:"text",placeholder:"加工する現場（下からもえらべます）",value:e.kako||"",autocomplete:"off"});
-  const kPick=h("div",{class:"sitepick",role:"group","aria-label":"加工する現場をえらぶ"},known.filter(n=>n!==FACTORY&&n!==OFF).map(n=>
-    h("button",{type:"button","data-k":n,title:n,onclick:()=>{kIn.value=n;syncKako();}},shortSite(n)||n)));
-  const syncKako=()=>{const v=kIn.value.trim();kPick.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===v)));};
-  kIn.addEventListener("input",syncKako);syncKako();
-  const kBox=h("div",{class:"kakobox",hidden:true},h("label",{class:"fl"},"どの現場の加工？ ",kIn),h("span",{class:"pickcap",text:"下からえらぶ（なくてもよい）"}),kPick);
-  const syncSite0=syncSite;
-  syncSite=()=>{syncSite0();kBox.hidden=sIn.value.trim()!==FACTORY;};
-  syncSite();
+  const sp=sitePicker(e.site,e.kako);
   const mIn=h("textarea",{class:"inp",placeholder:"例：8時現地集合、車は2台"},e.memo||"");
   const err=h("p",{class:"err",hidden:true});
   const save=h("button",{class:"btn",type:"submit"},isNew?"入れる":"直す");
   let close;
   const form=h("form",{class:"f",onsubmit:async x=>{x.preventDefault();
-    const site=sIn.value.trim();
+    const site=sp.site();
     const date=dIn.value, end=eIn.value&&eIn.value!==date?eIn.value:"";
     const fail=m=>{err.textContent=m;err.hidden=false;};
     if(!date)return fail("日にちを入れてください。");
@@ -599,11 +613,9 @@ function openEdit(ev,copy,preset){
     if(!site&&!mIn.value.trim())return fail("現場をえらぶか、メモを書いてください。");
     const people=ASSIGN.map(s=>s[0]).filter(n=>picked.has(n));
     if(!people.length&&!isBoss())return fail("「だれが」をえらんでください。");
-    const isNewSite=!!site&&!known.includes(site);
-    if(isNewSite&&rem===null)return fail("新しい現場名を、覚えるか今回だけか、えらんでください。");
+    if(sp.check())return fail(sp.check());
     const col=people.length?"events":"memos", was=isNew?"":(e.col||"events");
-    const kako=site===FACTORY?kIn.value.trim():"";
-    const data={date,end,people,prevPeople:isNew?[]:(e.people||[]),site,kako,memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
+    const data={date,end,people,prevPeople:isNew?[]:(e.people||[]),site,kako:sp.kako(),memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
     save.disabled=true;err.hidden=true;
     try{
       if(isNew)await addDoc(collection(fs,col),{...data,createdAt:Date.now(),createdBy:editor});
@@ -613,16 +625,18 @@ function openEdit(ev,copy,preset){
         if(was==="memos")await deleteDoc(doc(fs,"memos",e.id));
         else await updateDoc(doc(fs,"events",e.id),{deleted:true,prevPeople:e.people||[],updatedAt:Date.now(),updatedBy:editor});
       }
-      if((isNewSite&&rem)||remembered.includes(site)){const last=end||date;
-        if(!(usedMap[site]>=last))try{await setDoc(yoteiRef(),{used:{[site]:last}},{merge:true});}catch(y){}}
+      const remd=await sp.remember(end||date);
       close();select(date);
-      toast((isNew?"予定を入れました":"予定を直しました")+(isNewSite&&rem?"（現場名を覚えました）":""));
+      toast((isNew?"予定を入れました":"予定を直しました")+(remd?"（現場名を覚えました）":""));
     }catch(y){fail(y&&y.code==="permission-denied"?"入れる権限がありません。":"保存できませんでした。電波を確認してください。");save.disabled=false;}
   }},
     h("h2",{text:isNew?(copy?"予定をコピー":"予定を入れる"):"予定を直す"}),
+    // 何人か・何日かの予定は、この日だけ・一部の人だけを別の現場に変えられる
+    !isNew&&e.col!=="memos"&&((e.people||[]).length>1||(e.end&&e.end!==e.date))?
+      h("button",{class:"btn change",type:"button",onclick:()=>{close();openChange(e);}},"この日だけ・一部の人だけ 変える"):null,
     h("div",{class:"two"},h("label",{class:"fl"},"日にち",dIn),h("label",{class:"fl"},h("span",null,"終わりの日 ",h("em",{text:"何日か続くとき"})),eIn)),
     h("div",{class:"fl"},h("span",null,"だれが ",h("em",{text:isBoss()?"だれもえらばないと、西崎さんだけが見られるメモになります":"何人でもえらべます"})),names),
-    h("div",{class:"fl"},h("label",{class:"fl"},"現場",sIn),remBox,h("span",{class:"pickcap",text:"下からえらぶ"}),pick,kBox),
+    sp.el,
     h("label",{class:"fl"},h("span",null,"メモ ",h("em",{text:"なくてもよい"})),mIn),
     err,save,
     !isNew?h("div",{class:"rowbtns"},
@@ -637,6 +651,52 @@ function openEdit(ev,copy,preset){
           close();toast(e.col==="memos"?"メモを消しました":"予定を消しました");}
         catch(y){fail("消せませんでした。電波を確認してください。");t.disabled=false;}
       }},"消す")):null);
+  close=openSheet(form);
+}
+/* この日だけ・一部の人だけ変える（例：ヒエウだけ、今日は目黒マンションから三鷹へ）
+   元の予定からえらんだ人を外し、その人のほかの日は元の現場のまま残し、この日だけ新しい現場の予定を作る */
+function openChange(e){
+  const a=e.date, b=e.end||e.date, P=e.people||[];
+  const d0=sel>=a&&sel<=b?sel:a;
+  const dIn=h("input",{class:"inp",type:"date",value:d0,min:a,max:b,required:true});
+  const picked=new Set(P.length===1?P:(person!=="すべて"&&P.includes(person)?[person]:[]));
+  const names=h("div",{class:"names",role:"group","aria-label":"だれを変える"},ASSIGN.filter(([n])=>P.includes(n)).map(([n,k])=>h("button",{type:"button","aria-pressed":String(picked.has(n)),
+    onclick:ev2=>{picked.has(n)?picked.delete(n):picked.add(n);ev2.currentTarget.setAttribute("aria-pressed",String(picked.has(n)));}},k)));
+  const sp=sitePicker("","");
+  const mIn=h("textarea",{class:"inp",placeholder:"例：午後から三鷹へ"},"");
+  const err=h("p",{class:"err",hidden:true});
+  const save=h("button",{class:"btn",type:"submit"},"変える");
+  let close;
+  const form=h("form",{class:"f",onsubmit:async x=>{x.preventDefault();
+    const fail=m=>{err.textContent=m;err.hidden=false;};
+    const d=dIn.value, who=ASSIGN.map(s=>s[0]).filter(n=>picked.has(n)), site=sp.site();
+    if(!d||d<a||d>b)return fail(md(a)+"から"+md(b)+"の間の日をえらんでください。");
+    if(!who.length)return fail("だれを変えるかえらんでください。");
+    if(!site)return fail("新しい現場をえらんでください。");
+    if(sp.check())return fail(sp.check());
+    save.disabled=true;err.hidden=true;
+    try{
+      const now=Date.now(), R=P.filter(n=>!who.includes(n)), batch=writeBatch(fs), col=collection(fs,"events");
+      // ほかの日の分は、知らせを出さない（quiet）
+      const keep={site:e.site||"",kako:e.kako||"",memo:e.memo||"",people:who,prevPeople:who,quiet:true,createdAt:now,createdBy:editor,updatedAt:now,updatedBy:editor};
+      if(R.length)batch.update(doc(fs,"events",e.id),{people:R,prevPeople:P,quiet:true,updatedAt:now,updatedBy:editor});
+      else batch.update(doc(fs,"events",e.id),{deleted:true,prevPeople:P,quiet:true,updatedAt:now,updatedBy:editor});
+      if(a<d)batch.set(doc(col),{...keep,date:a,end:addDays(d,-1)===a?"":addDays(d,-1)});
+      if(d<b)batch.set(doc(col),{...keep,date:addDays(d,1),end:addDays(d,1)===b?"":b});
+      batch.set(doc(col),{date:d,end:"",people:who,prevPeople:[],site,kako:sp.kako(),memo:mIn.value.trim(),createdAt:now,createdBy:editor,updatedAt:now,updatedBy:editor});
+      await batch.commit();
+      const remd=await sp.remember(d);
+      close();select(d);
+      toast(who.map(nick).join("・")+"の"+md(d)+"を変えました"+(remd?"（現場名を覚えました）":""));
+    }catch(y){fail(y&&y.code==="permission-denied"?"変える権限がありません。":"保存できませんでした。電波を確認してください。");save.disabled=false;}
+  }},
+    h("h2",{text:"この日だけ変える"}),
+    h("p",{class:"hint",text:"いまの予定："+(a===b?md(a):md(a)+"〜"+md(b))+"　"+siteText(e)+"（"+P.map(nick).join("・")+"）"}),
+    h("label",{class:"fl"},h("span",null,"変える日 ",h("em",{text:"この日だけ新しい現場になります"})),dIn),
+    h("div",{class:"fl"},h("span",null,"だれを ",h("em",{text:"えらんだ人だけ変わります"})),names),
+    sp.el,
+    h("label",{class:"fl"},h("span",null,"メモ ",h("em",{text:"なくてもよい"})),mIn),
+    err,save);
   close=openSheet(form);
 }
 
@@ -682,7 +742,7 @@ function listenNotices(){
   if(!seen){seen=Date.now();store(seenKey(),String(seen));}   // はじめての携帯は、今から先の変更だけ知らせる
   unNotice=onSnapshot(query(collection(fs,"events"),where("updatedAt",">",seen),orderBy("updatedAt","desc"),limit(50)),s=>{
     renderNotices(s.docs.map(d=>Object.assign({id:d.id},d.data()))
-      .filter(e=>e.updatedBy!==n&&((e.people||[]).includes(n)||(e.prevPeople||[]).includes(n))));
+      .filter(e=>!e.quiet&&e.updatedBy!==n&&((e.people||[]).includes(n)||(e.prevPeople||[]).includes(n))));
   },()=>{});
 }
 function noticeKind(e,n){
