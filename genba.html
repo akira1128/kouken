@@ -184,7 +184,7 @@ label.fl em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,getDoc,setDoc,onSnapshot,query,orderBy,limit,arrayUnion,arrayRemove,runTransaction} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,getDoc,setDoc,onSnapshot,query,orderBy,limit,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {FIREBASE_CONFIG} from "./firebase-config.js";
 (function(){
 /* 社員：[正式名, 呼び名]。在庫・予定表と同じ。「使う人」は在庫で選んだ名前（kouken-who）と同じものを使う */
@@ -343,29 +343,7 @@ function orderRow(o){
   return h("div",{class:"order"},
     h("div",{class:"top"},h("b",{text:view==="vSite"?md(o.date):shortSite(o.siteName||siteName(o.siteId))}),h("span",{text:hm(o.at)+"　"+nick(o.who)})),
     h("ul",null,lines.map(l=>h("li",{text:l.name+"　"+fmtN(l.qty)+(l.unit||"")}))),
-    o.memo?h("div",{class:"mm",text:"メモ："+o.memo}):null,
-    o.fromStock?h("span",{class:"tag",text:"工場の在庫から出した（"+nick(o.stockBy)+"）"}):
-      editor?h("div",null,h("button",{type:"button",class:"btn ghost small",onclick:b=>fromStock(o,b.currentTarget)},"工場の在庫から出した")):null);
-}
-/* 頼まれた材料を工場の在庫から出したとき：在庫の数を減らし、在庫の履歴に「持ち出し」で残す（西崎・原田だけ） */
-async function fromStock(o,btn){
-  if(btn.dataset.ok!=="1"){btn.dataset.ok="1";btn.textContent="在庫を減らして記録する";btn.className="btn danger small";return;}
-  btn.disabled=true;
-  const site=o.siteName||siteName(o.siteId), done=[], ng=[];
-  for(const l of o.lines||[]){
-    if(!l.itemId){ng.push(l.name+"（一覧にない材料）");continue;}
-    try{
-      let after=0;
-      await runTransaction(fs,async t=>{const ref=doc(fs,"items",l.itemId);const s=await t.get(ref);if(!s.exists())throw new Error("nodoc");
-        const cur=Number(s.data().qty)||0;after=Math.round((cur-l.qty)*100)/100;if(after<0)throw new Error("neg");
-        t.update(ref,{qty:after,updatedAt:Date.now(),updatedBy:me()});});
-      await addDoc(collection(fs,"logs"),{at:Date.now(),kind:"out",itemId:l.itemId,itemName:l.name,unit:l.unit||"",n:l.qty,after,who:me(),memo:"現場の注文から（"+md(o.date)+" "+nick(o.who)+"）",site,part:"s"});
-      done.push(l.name);
-    }catch(e){ng.push(l.name+(e.message==="neg"?"（在庫が足りない）":""));}
-  }
-  if(done.length)try{await updateDoc(doc(fs,"orders",o.id),{fromStock:true,stockAt:Date.now(),stockBy:me(),stockNg:ng});}catch(e){}
-  toast(done.length?"在庫から出しました"+(ng.length?"（できなかったもの "+ng.length+"件）":""):"在庫から出せませんでした："+ng.join("、"));
-  if(!done.length)btn.disabled=false;
+    o.memo?h("div",{class:"mm",text:"メモ："+o.memo}):null);
 }
 
 /* ---------- 注文の記録（日付ごと） ---------- */
