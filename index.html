@@ -193,6 +193,9 @@ details.edit form{padding:12px 0 0}
             <select class="inp" id="aUnit"></select>
           </label>
         </div>
+        <label class="fl" id="aThkBox" hidden>厚み（mm） <em>例：0.27</em>
+          <input class="inp" id="aThk" type="text" inputmode="decimal" maxlength="6" placeholder="例：0.27">
+        </label>
         <label class="fl" id="aWidBox" hidden>幅（mm） <em>分からなければ空でOK</em>
           <input class="inp" id="aWid" type="number" inputmode="decimal" min="0" step="any" placeholder="例：920">
         </label>
@@ -259,10 +262,12 @@ const fixSub=()=>{const l=subBtns(cat);if(l.length&&!l.includes(sub)&&!(sub===NO
 /* 1つの材料に複数の数を持たせる仕組み（今は使っていない。2026/10/28 PF保温筒は2段目で直管・エルボを分ける形に変更） */
 const ELBOW=c=>false;
 /* 1巻の長さ（m）を入れる種類（2026/10/28） */
-const HASLEN=c=>c==="ロール"||c==="遮音シート"||c==="金網";
+const HASLEN=c=>c==="ロール"||c==="遮音シート"||c==="金網"||c==="コイル";
 /* 幅（mm）も入れる種類。一覧に「920×10m」と出す */
-const HASWID=c=>c==="遮音シート"||c==="金網";
-const sizeText=it=>Number(it.len)>0?(HASWID(it.cat)&&Number(it.wid)>0?fmtN(it.wid)+"×"+fmtN(it.len)+"m":"1巻 "+fmtN(it.len)+"m"):"";
+const HASWID=c=>c==="遮音シート"||c==="金網"||c==="コイル";
+/* 厚み（mm）も入れる種類。「0.27×914×20m」と出す（2026/10/28） */
+const HASTHK=c=>c==="コイル";
+const sizeText=it=>Number(it.len)>0?((HASTHK(it.cat)&&Number(it.thk)>0?String(it.thk)+"×":"")+(HASWID(it.cat)&&Number(it.wid)>0?fmtN(it.wid)+"×"+fmtN(it.len)+"m":"1巻 "+fmtN(it.len)+"m")):"";
 /* 一覧の並び：order が小さい順。ロールは ALKロール → ALGCロール → ALKマイティ → ALGCマイティ → その他（2026/10/28） */
 function rank(it){
   if(it.cat==="ロール"){const n=it.name||"";return /^ALKロール/.test(n)?0:/^ALGCロール/.test(n)?1:/^ALKマイティ/.test(n)?2:/^ALGCマイティ/.test(n)?3:4;}
@@ -438,7 +443,9 @@ function openItem(id){
   const eLenBox=h("label",{class:"fl"},"1巻の長さ（m）",eLen);
   const eWid=h("input",{class:"inp",id:"eWid",type:"number",inputmode:"decimal",min:"0",step:"any",value:it.wid?fmtN(it.wid):"",placeholder:"例：920"});
   const eWidBox=h("label",{class:"fl"},"幅（mm）",eWid);
-  const syncLen=()=>{eLenBox.hidden=!HASLEN(eCat.value);eWidBox.hidden=!HASWID(eCat.value);};
+  const eThk=h("input",{class:"inp",id:"eThk",type:"text",inputmode:"decimal",maxlength:"6",value:it.thk||"",placeholder:"例：0.27"});
+  const eThkBox=h("label",{class:"fl"},"厚み（mm）",eThk);
+  const syncLen=()=>{eLenBox.hidden=!HASLEN(eCat.value);eWidBox.hidden=!HASWID(eCat.value);eThkBox.hidden=!HASTHK(eCat.value);};
   const eSub=h("select",{class:"inp",id:"eSub"});const eSubLbl=h("span");const eSubBox=h("label",{class:"fl"},eSubLbl,eSub);
   const syncSub=()=>{const l=SUBS[eCat.value];eSubBox.hidden=!l;eSubLbl.textContent=SUBLABEL(eCat.value);eSub.replaceChildren(...(l||[]).map(c=>h("option",{value:c,selected:c===it.sub},c)));};
   eCat.addEventListener("change",()=>{syncSub();syncLen();});syncSub();syncLen();
@@ -451,12 +458,12 @@ function openItem(id){
     h("button",{class:"btn danger",type:"button",onclick:async e=>{e.target.disabled=true;try{await removeItem(id);close();toast("削除しました");}catch(x){eErr.textContent=errMsg(x);eErr.hidden=false;}}},"本当に削除"),
     h("button",{class:"btn ghost",type:"button",onclick:delAsk},"やめる"));}
   delAsk();
-  const edit=h("details",{class:"edit"},h("summary",{text:SHOW_LOW?"名前・長さ・種類・色・少ない目安を変える／削除":"名前・長さ・種類・色を変える／削除"}),
+  const edit=h("details",{class:"edit"},h("summary",{text:SHOW_LOW?"名前・大きさ・種類・色・少ない目安を変える／削除":"名前・大きさ・種類・色を変える／削除"}),
     h("form",{class:"f",style:"padding:12px 0 0",onsubmit:async e=>{e.preventDefault();
       const nm=eName.value.trim();if(!nm){eErr.textContent="名前を入れてください";eErr.hidden=false;return;}
-      try{await db.doc("items/"+id).update({name:nm,cat:eCat.value,sub:SUBS[eCat.value]?eSub.value:"",len:HASLEN(eCat.value)&&Number(eLen.value)>0?Number(eLen.value):0,wid:HASWID(eCat.value)&&Number(eWid.value)>0?Number(eWid.value):0,unit:eUnit.value,min:Math.max(0,Number(eMin.value)||0),updatedAt:Date.now()});close();toast("変更しました");}
+      try{await db.doc("items/"+id).update({name:nm,cat:eCat.value,sub:SUBS[eCat.value]?eSub.value:"",len:HASLEN(eCat.value)&&Number(eLen.value)>0?Number(eLen.value):0,wid:HASWID(eCat.value)&&Number(eWid.value)>0?Number(eWid.value):0,thk:HASTHK(eCat.value)&&Number(eThk.value)>0?eThk.value.trim():"",unit:eUnit.value,min:Math.max(0,Number(eMin.value)||0),updatedAt:Date.now()});close();toast("変更しました");}
       catch(x){eErr.textContent=errMsg(x);eErr.hidden=false;}}},
-      h("label",{class:"fl"},"名前",eName),eWidBox,eLenBox,
+      h("label",{class:"fl"},"名前",eName),eThkBox,eWidBox,eLenBox,
       h("div",{class:"two"},h("label",{class:"fl"},"種類",eCat),h("label",{class:"fl"},"数え方",eUnit)),eSubBox,
       h("label",{class:"fl lowonly"},"少ないと知らせる数",eMin),eErr,
       h("button",{class:"btn ghost",type:"submit"},"変更を保存"),delZone));
@@ -511,7 +518,7 @@ async function removeItem(id){
 
 /* ---------- 材料を追加 ---------- */
 $("aCat").replaceChildren(...CATS.map(c=>h("option",{value:c},c)));
-function syncAddSub(){const c=$("aCat").value,l=SUBS[c];$("aSubBox").hidden=!l;$("aSubLbl").textContent=SUBLABEL(c);$("aSub").replaceChildren(...(l||[]).map(x=>h("option",{value:x},x)));$("aEBox").hidden=!ELBOW(c);$("aLenBox").hidden=!HASLEN(c);$("aWidBox").hidden=!HASWID(c);if(l)$("aSub").dispatchEvent(new Event("change"));}
+function syncAddSub(){const c=$("aCat").value,l=SUBS[c];$("aSubBox").hidden=!l;$("aSubLbl").textContent=SUBLABEL(c);$("aSub").replaceChildren(...(l||[]).map(x=>h("option",{value:x},x)));$("aEBox").hidden=!ELBOW(c);$("aLenBox").hidden=!HASLEN(c);$("aWidBox").hidden=!HASWID(c);$("aThkBox").hidden=!HASTHK(c);if(l)$("aSub").dispatchEvent(new Event("change"));}
 $("aCat").addEventListener("change",syncAddSub);syncAddSub();
 $("aSub").addEventListener("change",()=>{const v=$("aSub").value;if(/エルボ$/.test(v))$("aUnit").value="個";else if(v==="直管")$("aUnit").value="本";});
 $("aUnit").replaceChildren(...unitOpts("本"));
@@ -524,9 +531,9 @@ $("addForm").addEventListener("submit",async e=>{
   const qty=Math.max(0,Number($("aQty").value)||0),min=Math.max(0,Number($("aMin").value)||0);
   $("aBtn").disabled=true;
   try{const now=Date.now();
-    const ref=await db.collection("items").add({name,cat:$("aCat").value,sub:SUBS[$("aCat").value]?$("aSub").value:"",...(HASLEN($("aCat").value)&&Number($("aLen").value)>0?{len:Number($("aLen").value)}:{}),...(HASWID($("aCat").value)&&Number($("aWid").value)>0?{wid:Number($("aWid").value)}:{}),unit:$("aUnit").value,qty,min,...(ELBOW($("aCat").value)?{wsqty:Math.max(0,Number($("aWsQty").value)||0),wlqty:Math.max(0,Number($("aWlQty").value)||0)}:{}),createdAt:now,updatedAt:now,updatedBy:who});
+    const ref=await db.collection("items").add({name,cat:$("aCat").value,sub:SUBS[$("aCat").value]?$("aSub").value:"",...(HASLEN($("aCat").value)&&Number($("aLen").value)>0?{len:Number($("aLen").value)}:{}),...(HASWID($("aCat").value)&&Number($("aWid").value)>0?{wid:Number($("aWid").value)}:{}),...(HASTHK($("aCat").value)&&Number($("aThk").value)>0?{thk:$("aThk").value.trim()}:{}),unit:$("aUnit").value,qty,min,...(ELBOW($("aCat").value)?{wsqty:Math.max(0,Number($("aWsQty").value)||0),wlqty:Math.max(0,Number($("aWlQty").value)||0)}:{}),createdAt:now,updatedAt:now,updatedBy:who});
     await db.collection("logs").add({at:now,kind:"new",itemId:ref.id,itemName:name,unit:$("aUnit").value,n:qty,after:qty,who,memo:""});
-    $("aName").value="";$("aLen").value="";$("aWid").value="";$("aQty").value="0";$("aMin").value="0";$("aWsQty").value="0";$("aWlQty").value="0";
+    $("aName").value="";$("aLen").value="";$("aWid").value="";$("aThk").value="";$("aQty").value="0";$("aMin").value="0";$("aWsQty").value="0";$("aWlQty").value="0";
     toast("「"+name+"」を登録しました");
     cat=$("aCat").value;store("kouken-cat",cat);sub=SUBS[cat]?$("aSub").value:"すべて";fixSub();store("kouken-sub",sub);renderCats();show("vStock");renderList();
   }catch(x){err.textContent=errMsg(x);err.hidden=false;}
@@ -586,6 +593,14 @@ const EXTRA_ITEMS=[
   // PF保温筒の直管もALKと同じ規格（2026/10/28）
   ...SPECS.flatMap(([t,o,list])=>list.map(a=>({id:"pf"+t.replace("t","")+"-"+a,name:"PF保温筒 "+a+"×"+t,cat:"PF保温筒",sub:"直管",unit:"本",order:o}))),
   {id:"sheet-cz12",name:"CZ-12",cat:"遮音シート",unit:"巻",order:0},
+  // コイル（東京グラスロンの請求書で買ったもの 2026/10/28）。[並び, 名前, 厚み, 幅mm, 長さm]
+  ...[[0,"ガルバリウムコイル","0.27",914,20],[0,"ガルバリウムコイル","0.3",914,20],[0,"ガルバリウムコイル","0.35",914,20],[0,"ガルバリウムコイル","0.27",1000,20],
+      [1,"ステンコイル（鉄砲巻）","0.25",1000,20],[1,"ステンコイル（鉄砲巻）","0.3",1000,20],[1,"ステンコイル（鉄砲巻）","0.35",1000,20],
+      [2,"シルバーコイル","0.27",914,20],[2,"シルバーコイル","0.3",914,20],[2,"ニューシルバーコイル","0.3",914,20],
+      [2,"アイボリーコイル","0.27",914,20],[2,"ニュークリームコイル","0.27",914,20],[2,"ニュークリームコイル","0.3",914,20],
+      [2,"ホワイトコイル","0.27",914,20],[2,"グレーコイル","0.27",914,20],[2,"キャメルコイル","0.27",914,20],
+      [2,"ブルーコイル","0.35",914,20],[2,"ダルエース黒コイル","0.27",914,20]]
+    .map(([o,n,t,w,l],i)=>({id:"coil"+i,name:n+" "+t+"t"+(w!==914&&n.startsWith("ガルバ")?"（幅"+w+"）":""),cat:"コイル",unit:"巻",order:o*100+i,thk:t,wid:w,len:l})),
   // テープ類（東京グラスロンの請求書 2024/12〜2026/10 で買ったもの 2026/10/28）。order で種類ごとにまとめる
   ...[[0,"アルミ粘着テープ セパなし",["50×90m","65×90m"]],[0,"アルミ粘着テープ",["50×90m","65×90m"]],
       [1,"ALGC粘着テープ アクリル",["25×20m","50×20m","65×20m","75×20m","100×20m"]],[2,"ALGC粘着テープ",["25×20m","50×20m","65×20m"]],
@@ -615,7 +630,7 @@ async function ensureItems(){
   const miss=EXTRA_ITEMS.filter(x=>!have.has(x.id));
   for(let k=0;k<miss.length;k+=400){
     const batch=writeBatch(fs),now=Date.now();
-    for(const x of miss.slice(k,k+400))batch.set(doc(fs,"items",x.id),{name:x.name,cat:x.cat,sub:x.sub||"",unit:x.unit,order:x.order||0,...(ROLL_LEN[x.name]?{len:ROLL_LEN[x.name]}:{}),...(SHEET_SIZE[x.name]?{wid:SHEET_SIZE[x.name][0],len:SHEET_SIZE[x.name][1]}:{}),qty:0,min:0,createdAt:now,updatedAt:now,updatedBy:who||"西崎剣"});
+    for(const x of miss.slice(k,k+400))batch.set(doc(fs,"items",x.id),{name:x.name,cat:x.cat,sub:x.sub||"",unit:x.unit,order:x.order||0,...(ROLL_LEN[x.name]?{len:ROLL_LEN[x.name]}:{}),...(SHEET_SIZE[x.name]?{wid:SHEET_SIZE[x.name][0],len:SHEET_SIZE[x.name][1]}:{}),...(x.thk?{thk:x.thk}:{}),...(x.wid?{wid:x.wid}:{}),...(x.len?{len:x.len}:{}),qty:0,min:0,createdAt:now,updatedAt:now,updatedBy:who||"西崎剣"});
     await batch.commit();
   }
 }
