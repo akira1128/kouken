@@ -50,6 +50,15 @@ a.brandrow{color:inherit;text-decoration:none}
 .brand small{display:block;font-size:11px;font-weight:500;opacity:.78;letter-spacing:.14em}
 .who{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);border-radius:999px;padding:5px 12px;font-size:13px;white-space:nowrap}
 .who b{opacity:.78;font-weight:400;font-size:11px}
+button.who{color:inherit;font:inherit;font-size:13px}
+/* お知らせ（自分の予定が変わったとき） */
+.notice{padding:12px 14px;display:grid;gap:8px;border-color:var(--low);background:var(--low-soft)}
+.notice h3{margin:0;font-size:15px;display:flex;align-items:center;gap:8px;color:var(--low)}
+.notice .dot{width:10px;height:10px;border-radius:50%;background:var(--low);flex:none}
+.notice ul{list-style:none;margin:0;padding:0;display:grid}
+.notice li button{border:0;border-top:1px solid var(--line);background:none;padding:8px 0;text-align:left;font-size:14px;width:100%;overflow-wrap:anywhere}
+.notice li:first-child button{border-top:0}
+.notice .btn{justify-self:start;width:auto}
 .banner{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:var(--today);font-size:14px}
 main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
@@ -150,11 +159,12 @@ textarea.inp{min-height:68px;resize:vertical}
 
 <header class="topbar"><div class="topbar-in">
   <a class="brandrow home" href="./" aria-label="メニューにもどる"><span class="back" aria-hidden="true">‹</span><span class="mark"><img src="logo.png" alt=""></span><div class="brand">予定表<small>株式会社コウケン</small></div></a>
-  <span class="who" id="who"><b>見るだけ</b></span>
+  <button class="who" id="who" type="button"><b>見るだけ</b></button>
 </div></header>
 <div class="wrap">
   <p class="banner" id="banner" hidden></p>
   <main>
+    <section class="panel notice" id="notice" aria-live="polite" hidden></section>
     <section class="panel">
       <div class="month">
         <button type="button" id="prev" aria-label="前の月">‹</button>
@@ -184,7 +194,7 @@ textarea.inp{min-height:68px;resize:vertical}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,setDoc,onSnapshot,query,where,orderBy} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,setDoc,onSnapshot,query,where,orderBy,limit} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {FIREBASE_CONFIG} from "./firebase-config.js";
 (function(){
 /* 社員：[正式名, 呼び名]。在庫（zaiko.html）と同じ。予定には正式名を残す（あとで人工の集計に使う） */
@@ -244,6 +254,8 @@ let sel=todayS();
 let ym=sel.slice(0,7);                    // 表示している月 "2026-11"
 let person=store("kouken-yotei-person")||"すべて";
 if(person!=="すべて"&&!NICK[person])person="すべて";
+let me=store("kouken-who")||"";          // この携帯を使う人（在庫で選んだ名前と同じ）
+if(me&&!NICK[me])me="";
 let view=store("kouken-yotei-view")||"month";
 if(!VIEWS.some(v=>v[0]===view))view="month";
 const weekly=()=>view==="week"||view==="member";
@@ -420,7 +432,7 @@ function openEdit(ev,copy,preset){
     if(!date)return fail("日にちを入れてください。");
     if(end&&end<date)return fail("終わりの日が、はじめの日より前になっています。");
     if(!site&&!mIn.value.trim())return fail("現場をえらぶか、メモを書いてください。");
-    const data={date,end,people:STAFF.map(s=>s[0]).filter(n=>picked.has(n)),site,memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
+    const data={date,end,people:STAFF.map(s=>s[0]).filter(n=>picked.has(n)),prevPeople:isNew?[]:(e.people||[]),site,memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
     save.disabled=true;err.hidden=true;
     try{
       if(isNew)await addDoc(collection(fs,"events"),{...data,createdAt:Date.now(),createdBy:editor});
@@ -441,7 +453,7 @@ function openEdit(ev,copy,preset){
         const t=b.currentTarget;
         if(t.dataset.ok!=="1"){t.dataset.ok="1";t.className="btn danger";t.textContent="本当に消す";return;}
         t.disabled=true;
-        try{await deleteDoc(doc(fs,"events",e.id));close();toast("予定を消しました");}
+        try{await updateDoc(doc(fs,"events",e.id),{deleted:true,prevPeople:e.people||[],updatedAt:Date.now(),updatedBy:editor});close();toast("予定を消しました");}
         catch(y){fail("消せませんでした。電波を確認してください。");t.disabled=false;}
       }},"消す")):null);
   close=openSheet(form);
@@ -467,9 +479,46 @@ function askEditPin(){
 }
 $("editLogin").addEventListener("click",askEditPin);
 function applyEditor(){
-  $("who").replaceChildren(editor?h("b",{text:"入力"}):h("b",{text:"見るだけ"}),editor?nick(editor):"");
+  $("who").replaceChildren(editor?h("b",{text:"入力"}):me?h("b",{text:"見る"}):"",editor?nick(editor):me?nick(me):"名前をえらぶ");
   $("addbar").hidden=!editor;$("editLogin").hidden=!!editor||!fs;
-  renderAll();
+  renderAll();listenNotices();
+}
+/* ---------- あなたはだれ（お知らせを出す相手。予定を入れる人は登録した名前） ---------- */
+function pickMe(){
+  const close=openSheet(h("h2",{text:"あなたはだれですか？"}),h("p",{class:"hint",text:"あなたの予定が入ったり変わったりしたとき、ここでお知らせします。この携帯に覚えておきます。"}),
+    h("div",{class:"names"},STAFF.map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===me),onclick:()=>{me=n;store("kouken-who",n);close();applyEditor();}},k))));
+}
+$("who").addEventListener("click",()=>{if(!editor)pickMe();});
+
+/* ---------- お知らせ（前に「確認した」を押したあとに、自分の予定が入った・変わった・消えた・外れたとき） ---------- */
+let unNotice=null;
+const myName=()=>editor||me;
+const seenKey=()=>"kouken-yotei-seen-"+myName();
+function listenNotices(){
+  if(unNotice){unNotice();unNotice=null;}
+  const n=myName();
+  if(!fs||!n){renderNotices([]);return;}
+  let seen=Number(store(seenKey()))||0;
+  if(!seen){seen=Date.now();store(seenKey(),String(seen));}   // はじめての携帯は、今から先の変更だけ知らせる
+  unNotice=onSnapshot(query(collection(fs,"events"),where("updatedAt",">",seen),orderBy("updatedAt","desc"),limit(50)),s=>{
+    renderNotices(s.docs.map(d=>Object.assign({id:d.id},d.data()))
+      .filter(e=>e.updatedBy!==n&&((e.people||[]).includes(n)||(e.prevPeople||[]).includes(n))));
+  },()=>{});
+}
+function noticeKind(e,n){
+  if(e.deleted)return "消えました";
+  if(!(e.people||[]).includes(n))return "外れました";
+  if(!(e.prevPeople||[]).includes(n))return "入りました";
+  return "変わりました";
+}
+function renderNotices(list){
+  const box=$("notice"), n=myName();
+  if(!list.length){box.hidden=true;box.replaceChildren();return;}
+  box.hidden=false;
+  box.replaceChildren(h("h3",null,h("span",{class:"dot"}),nick(n)+"さんの予定が"+list.length+"件変わりました"),
+    h("ul",null,list.map(e=>h("li",null,h("button",{type:"button",onclick:()=>select(e.date)},
+      h("b",{text:md(e.date)+(e.end&&e.end!==e.date?"〜"+md(e.end):"")}),"　"+(shortSite(e.site)||e.memo||"予定")+" が"+noticeKind(e,n))))),
+    h("button",{class:"btn ghost",type:"button",onclick:()=>{store(seenKey(),String(Date.now()));listenNotices();}},"確認した"));
 }
 
 /* ---------- 会社の暗証番号（在庫と同じ。もう入れた携帯は聞かない） ---------- */
@@ -495,7 +544,7 @@ function listen(){
   if(unsub)unsub();
   const [a,b]=range();
   unsub=onSnapshot(query(collection(fs,"events"),where("date",">=",addDays(a,-62)),where("date","<=",b),orderBy("date")),s=>{
-    events=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(e=>(e.end||e.date)>=a);
+    events=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(e=>!e.deleted&&(e.end||e.date)>=a);
     setBanner("");renderAll();
   },()=>setBanner("予定を読み込めませんでした。ページを開き直してください。"));
 }
@@ -515,6 +564,7 @@ renderPeople();renderAll();
   try{const ed=await getDoc(doc(fs,"editors",uid));if(ed.exists())editor=ed.data().name||"";}catch(e){}
   applyEditor();
   listen();
+  if(!editor&&!me)setTimeout(()=>{if(!me&&$("scrim").hidden)pickMe();},400);
   // 現場の一覧（在庫と同じ。施工中・これからの現場）
   onSnapshot(collection(fs,"sites"),s=>{sites=s.docs.map(d=>d.data()).filter(x=>x&&x.name&&x.active!==false).sort((a,b)=>(a.order||0)-(b.order||0));},()=>{});
 })();
