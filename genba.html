@@ -364,16 +364,18 @@ function renderOrders(){
 }
 
 /* ---------- 集計（材料ごとの合計） ---------- */
-let sumSite="", sumMonth="this";
+/* 期間は「2026年10月」のように西暦と月でえらぶ（注文のある月と今月）。"all" はぜんぶ（2026/10/28 ユーザー） */
+let sumSite="", sumMonth=ymd(new Date()).slice(0,7);
+const ymLabel=m=>{const [y,mm]=m.split("-");return y+"年"+Number(mm)+"月";};
 function renderSum(){
-  const box=$("vSum"), now=new Date();
-  const ym=d=>d.slice(0,7), thisM=ymd(now).slice(0,7), lastM=ymd(new Date(now.getFullYear(),now.getMonth()-1,1)).slice(0,7);
-  const list=orders.filter(o=>(!sumSite||o.siteId===sumSite)&&(sumMonth==="all"||ym(o.date)===(sumMonth==="this"?thisM:lastM)));
+  const box=$("vSum"), ym=d=>d.slice(0,7);
+  const months=[...new Set([ymd(new Date()).slice(0,7),...orders.map(o=>ym(o.date))])].sort().reverse();
+  const list=orders.filter(o=>(!sumSite||o.siteId===sumSite)&&(sumMonth==="all"||ym(o.date)===sumMonth));
   const tot={};
   for(const o of list)for(const l of o.lines||[]){const k=l.name+"|"+(l.unit||"");tot[k]=(tot[k]||0)+(Number(l.qty)||0);}
   const rows=Object.entries(tot).sort((a,b)=>a[0].localeCompare(b[0],"ja",{numeric:true}));
   const mSel=h("select",{class:"inp","aria-label":"期間",onchange:e=>{sumMonth=e.target.value;renderSum();}},
-    [["this","今月"],["last","先月"],["all","ぜんぶ"]].map(([v,t])=>h("option",{value:v,selected:v===sumMonth},t)));
+    [...months.map(m=>[m,ymLabel(m)]),["all","ぜんぶ"]].map(([v,t])=>h("option",{value:v,selected:v===sumMonth},t)));
   box.replaceChildren(h("section",{class:"panel"},
     h("div",{class:"tools"},siteFilter(sumSite,v=>{sumSite=v;renderSum();}),mSel),
     h("p",{class:"hint",style:{padding:"0 14px 8px"},text:"注文 "+list.length+"回　材料 "+rows.length+"種類"}),
