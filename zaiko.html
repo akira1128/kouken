@@ -123,7 +123,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
 .sheet h2{margin:0;font-size:19px;overflow-wrap:anywhere;text-wrap:balance}
 .now{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:12px 14px;border-radius:10px;background:var(--bg)}
 .now b{font-size:30px}
-.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .seg button{border:2px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 4px;font-weight:700;font-size:15px}
 .seg.two-seg{grid-template-columns:1fr 1fr}
 .seg.three-seg{grid-template-columns:1fr 1fr 1fr}.seg.three-seg button{font-size:13px;line-height:1.3}
@@ -456,7 +456,8 @@ function openItem(id){
   const partSeg=hasE?h("div",{class:"seg three-seg",role:"group","aria-label":"どれを数えるか"},
     [["s","直管（"+(it.unit||"本")+"）"],...EPARTS.map(([k,l])=>[k,l+"（個）"])].map(([k,l])=>h("button",{type:"button","data-p":k,"aria-pressed":String(k===part),onclick:()=>{part=k;store("kouken-part",k);if(kind==="set")num.value=fmtN(nowQty());upd();}},l))):null;
   const seg=h("div",{class:"seg",role:"group","aria-label":"何をするか"},
-    [["out","持ち出し"],["back","戻し"],["in","入庫"],["set","数を直す"]].map(([k,l])=>h("button",{type:"button","data-k":k,"aria-pressed":String(k===kind),onclick:()=>{const was=kind;kind=k;if(k==="set")num.value=fmtN(nowQty());else if(was==="set"||num.value==="")num.value="1";upd();}},l)));
+    // 入庫ボタンは外した（2026/10/28 ユーザー）。買った材料は「数を直す」で合わせる。前の入庫の履歴はそのまま出る
+    [["out","持ち出し"],["back","戻し"],["set","数を直す"]].map(([k,l])=>h("button",{type:"button","data-k":k,"aria-pressed":String(k===kind),onclick:()=>{const was=kind;kind=k;if(k==="set")num.value=fmtN(nowQty());else if(was==="set"||num.value==="")num.value="1";upd();}},l)));
   function upd(){
     seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.k===kind)));
     if(partSeg)partSeg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.p===part)));
