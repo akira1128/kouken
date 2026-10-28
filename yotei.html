@@ -218,6 +218,9 @@ const PEOPLE=STAFF.filter(([n])=>n!=="原田弓子");
 const nick=n=>NICK[n]||n||"";
 /* 予定を入れられる人 */
 const EDITORS=["西崎剣","原田弓子"];
+/* だれもえらばない予定は西崎さんのメモ。memos に分けて置き、西崎さんだけが読める（2026/10/28 ユーザー） */
+const BOSS="西崎剣";
+const isBoss=()=>editor===BOSS;
 const FACTORY="工場（加工）", OFF="休み", OTHER="その他（下に書く）";
 /* 祝日（2026・2027年。振替休日・国民の休日を含む）。2028年からは足す */
 const HOLI={"2026-01-01":"元日","2026-01-12":"成人の日","2026-02-11":"建国記念の日","2026-02-23":"天皇誕生日","2026-03-20":"春分の日","2026-04-29":"昭和の日",
@@ -408,7 +411,7 @@ function renderMem(){
     }
   };
   for(const [n,k] of PEOPLE)if(person==="すべて"||person===n)row(k,pcolor(n),l=>l.filter(e=>(e.people||[]).includes(n)),n);
-  if(person==="すべて")row("ほか",NOONE,l=>l.filter(e=>!(e.people||[]).length),"");
+  if(person==="すべて"&&isBoss())row("メモ",NOONE,l=>l.filter(e=>!(e.people||[]).length),"");
   $("mem").replaceChildren(...cells);
 }
 
@@ -521,18 +524,26 @@ function openEdit(ev,copy,preset){
     if(!date)return fail("日にちを入れてください。");
     if(end&&end<date)return fail("終わりの日が、はじめの日より前になっています。");
     if(!site&&!mIn.value.trim())return fail("現場をえらぶか、メモを書いてください。");
-    const data={date,end,people:PEOPLE.map(s=>s[0]).filter(n=>picked.has(n)),prevPeople:isNew?[]:(e.people||[]),site,memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
+    const people=PEOPLE.map(s=>s[0]).filter(n=>picked.has(n));
+    if(!people.length&&!isBoss())return fail("「だれが」をえらんでください。");
+    const col=people.length?"events":"memos", was=isNew?"":(e.col||"events");
+    const data={date,end,people,prevPeople:isNew?[]:(e.people||[]),site,memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
     save.disabled=true;err.hidden=true;
     try{
-      if(isNew)await addDoc(collection(fs,"events"),{...data,createdAt:Date.now(),createdBy:editor});
-      else await updateDoc(doc(fs,"events",e.id),data);
+      if(isNew)await addDoc(collection(fs,col),{...data,createdAt:Date.now(),createdBy:editor});
+      else if(was===col)await updateDoc(doc(fs,col,e.id),data);
+      else{   // 予定 ⇔ メモ を移す
+        await addDoc(collection(fs,col),{...data,createdAt:e.createdAt||Date.now(),createdBy:e.createdBy||editor});
+        if(was==="memos")await deleteDoc(doc(fs,"memos",e.id));
+        else await updateDoc(doc(fs,"events",e.id),{deleted:true,prevPeople:e.people||[],updatedAt:Date.now(),updatedBy:editor});
+      }
       close();select(date);
       toast(isNew?"予定を入れました":"予定を直しました");
     }catch(y){fail(y&&y.code==="permission-denied"?"入れる権限がありません。":"保存できませんでした。電波を確認してください。");save.disabled=false;}
   }},
     h("h2",{text:isNew?(copy?"予定をコピー":"予定を入れる"):"予定を直す"}),
     h("div",{class:"two"},h("label",{class:"fl"},"日にち",dIn),h("label",{class:"fl"},h("span",null,"終わりの日 ",h("em",{text:"何日か続くとき"})),eIn)),
-    h("div",{class:"fl"},h("span",null,"だれが ",h("em",{text:"何人でもえらべます"})),names),
+    h("div",{class:"fl"},h("span",null,"だれが ",h("em",{text:isBoss()?"だれもえらばないと、西崎さんだけが見られるメモになります":"何人でもえらべます"})),names),
     h("label",{class:"fl"},"現場",sSel,oIn),
     h("label",{class:"fl"},h("span",null,"メモ ",h("em",{text:"なくてもよい"})),mIn),
     err,save,
@@ -542,7 +553,10 @@ function openEdit(ev,copy,preset){
         const t=b.currentTarget;
         if(t.dataset.ok!=="1"){t.dataset.ok="1";t.className="btn danger";t.textContent="本当に消す";return;}
         t.disabled=true;
-        try{await updateDoc(doc(fs,"events",e.id),{deleted:true,prevPeople:e.people||[],updatedAt:Date.now(),updatedBy:editor});close();toast("予定を消しました");}
+        try{
+          if(e.col==="memos")await deleteDoc(doc(fs,"memos",e.id));
+          else await updateDoc(doc(fs,"events",e.id),{deleted:true,prevPeople:e.people||[],updatedAt:Date.now(),updatedBy:editor});
+          close();toast(e.col==="memos"?"メモを消しました":"予定を消しました");}
         catch(y){fail("消せませんでした。電波を確認してください。");t.disabled=false;}
       }},"消す")):null);
   close=openSheet(form);
@@ -570,7 +584,7 @@ $("editLogin").addEventListener("click",askEditPin);
 function applyEditor(){
   $("who").replaceChildren(editor?h("b",{text:"入力"}):me?h("b",{text:"見る"}):"",editor?nick(editor):me?nick(me):"名前をえらぶ");
   $("addbar").hidden=!editor;$("editLogin").hidden=!!editor||!fs;
-  renderAll();listenNotices();
+  listen();renderAll();listenNotices();
 }
 /* ---------- あなたはだれ（お知らせを出す相手。予定を入れる人は登録した名前） ---------- */
 function pickMe(){
@@ -628,14 +642,20 @@ function askPin(){
 }
 
 /* ---------- 予定を読む（表示している月のぶんだけ。何日も続く予定のため、2か月前から始まるものも読む） ---------- */
+let evList=[], memoList=[], unsubMemo=null;
 function listen(){
   if(!fs)return;
   if(unsub)unsub();
+  if(unsubMemo){unsubMemo();unsubMemo=null;}
   const [a,b]=range();
-  unsub=onSnapshot(query(collection(fs,"events"),where("date",">=",addDays(a,-62)),where("date","<=",b),orderBy("date")),s=>{
-    events=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(e=>!e.deleted&&(e.end||e.date)>=a);
-    setBanner("");renderAll();
+  const q=c=>query(collection(fs,c),where("date",">=",addDays(a,-62)),where("date","<=",b),orderBy("date"));
+  const merge=()=>{events=[...evList,...memoList].filter(e=>!e.deleted&&(e.end||e.date)>=a);renderAll();};
+  unsub=onSnapshot(q("events"),s=>{
+    evList=s.docs.map(d=>Object.assign({id:d.id,col:"events"},d.data()));
+    setBanner("");merge();
   },()=>setBanner("予定を読み込めませんでした。ページを開き直してください。"));
+  memoList=[];
+  if(isBoss())unsubMemo=onSnapshot(q("memos"),s=>{memoList=s.docs.map(d=>Object.assign({id:d.id,col:"memos"},d.data()));merge();},()=>{});
 }
 
 /* ---------- 起動 ---------- */
@@ -651,8 +671,7 @@ renderPeople();renderAll();
     if(!m.exists())await askPin();
   }catch(e){fs=null;setBanner("予定表につながりません。電波を確認して、ページを開き直してください。");return;}
   try{const ed=await getDoc(doc(fs,"editors",uid));if(ed.exists())editor=ed.data().name||"";}catch(e){}
-  applyEditor();
-  listen();
+  applyEditor();                         // ここで予定（西崎さんはメモも）を読みはじめる
   if(!editor&&!me)setTimeout(()=>{if(!me&&$("scrim").hidden)pickMe();},400);
   // 現場の一覧（在庫と同じ。施工中・これからの現場）
   onSnapshot(collection(fs,"sites"),s=>{sites=s.docs.map(d=>d.data()).filter(x=>x&&x.name&&x.active!==false).sort((a,b)=>(a.order||0)-(b.order||0));},()=>{});

@@ -25,6 +25,12 @@ service cloud.firestore {
         && request.resource.data.pin == get(/databases/$(database)/documents/secret/pin).data.editpin;
       allow update, delete: if false;
     }
+    // 西崎さんの携帯（editors に西崎剣として登録）
+    function boss() {
+      return editor() && get(/databases/$(database)/documents/editors/$(request.auth.uid)).data.name == "西崎剣";
+    }
+    // 西崎さんだけのメモ（だれもえらばない予定）：西崎さんだけが読み書きできる
+    match /memos/{id} { allow read, write: if boss(); }
     // 予定表：社員は見るだけ。入れる・直す・消すのは編集する人だけ
     match /events/{id} { allow read: if member(); allow write: if editor(); }
     match /items/{id} { allow read, write: if member(); }
