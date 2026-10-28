@@ -311,7 +311,7 @@ function show(v){
   render();window.scrollTo(0,0);
 }
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.v==="vSites")siteId="";show(b.dataset.v);}));
-function openSite(id){for(const k in meterW)if(k.startsWith(id+"/"))delete meterW[k];siteId=id;history.replaceState(null,"","?site="+encodeURIComponent(id));show("vSite");}
+function openSite(id){rollRunFace();for(const k in meterW)if(k.startsWith(id+"/"))delete meterW[k];siteId=id;history.replaceState(null,"","?site="+encodeURIComponent(id));show("vSite");}
 function render(){
   if(view==="vSites")renderSites();else if(view==="vSite")renderSite();else if(view==="vOrders")renderOrders();else renderSum();
   renderNotice();
@@ -349,14 +349,18 @@ const runnerSVG=face=>'<svg viewBox="0 0 30 32"><g class="lim">'+
      '<circle cx="18" cy="2" r="10.6" fill="#fff"/><image href="'+face+'" x="8" y="-8" width="20" height="20" clip-path="url(#rface)" preserveAspectRatio="xMidYMid slice"/>'
     :'<circle cx="18.3" cy="6.6" r="3.5" fill="#f2c9a0"/>'+
      '<path d="M14.4 6.3A3.9 3.9 0 0 1 22.2 6.3Z" fill="#f5b301" stroke="#b07f00" stroke-width=".6"/><path d="M21.8 6.3h2.2" stroke="#b07f00" stroke-width="1.3" stroke-linecap="round"/>')+'</svg>';
-/* サプライズ：ページを開いたとき、西崎さん 20%・ヒエウ 10%・ズオン 10% でその人の顔が走る（写真が何枚かあればランダム）
-   顔写真は faces/{名前} の imgs（暗証番号を入れた携帯だけ読める）。ふだん（残り）は顔写真を読み込まない */
+/* サプライズ：現場の画面を開くたびにくじを引く。西崎さん 20%・ヒエウ 10%・ズオン 10% でその人の顔が走る（写真が何枚かあればランダム）
+   顔写真は faces/{名前} の imgs（暗証番号を入れた携帯だけ読める）。当たった人の写真だけ、1回読んだら覚えておく */
 const FACE_LUCK=[["西崎",.2],["ヒエウ",.1],["ズオン",.1]];
 let runFace="";
-const runWho=(()=>{let r=Math.random();for(const [n,p] of FACE_LUCK){if(r<p)return n;r-=p;}return "";})();
-async function loadRunFace(){
+const faceImgs={};
+async function rollRunFace(){
+  let r=Math.random(),who="";
+  for(const [n,p] of FACE_LUCK){if(r<p){who=n;break;}r-=p;}
+  runFace="";if(!who||!fs)return;
   try{
-    const d=await getDoc(doc(fs,"faces",runWho));const imgs=d.exists()?d.data().imgs||[]:[];
+    if(!faceImgs[who]){const d=await getDoc(doc(fs,"faces",who));faceImgs[who]=d.exists()?d.data().imgs||[]:[];}
+    const imgs=faceImgs[who];
     if(imgs.length){runFace=imgs[Math.floor(Math.random()*imgs.length)];if(view==="vSite")renderSite();}
   }catch(e){}
 }
@@ -542,7 +546,7 @@ if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みまし
   }catch(e){fs=null;setBanner("つながりません。電波を確認して、ページを開き直してください。");return;}
   try{const ed=await getDoc(doc(fs,"editors",uid));if(ed.exists())editor=ed.data().name||"";}catch(e){}
   renderWho();
-  if(runWho)loadRunFace();
+  if(siteId)rollRunFace();
   // 現場（在庫・予定表と同じ一覧。施工中→これから→そのほか）
   onSnapshot(collection(fs,"sites"),s=>{
     sites=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(x=>x&&x.name&&x.active!==false)
