@@ -253,6 +253,11 @@ const NOSUB="分けていない";
 const ELBOW=c=>false;
 /* 1巻の長さ（m）を入れる種類（2026/10/28） */
 const HASLEN=c=>c==="ロール";
+/* 一覧の並び：order が小さい順。ロールは ALKロール → ALGCロール → ALKマイティ → ALGCマイティ → その他（2026/10/28） */
+function rank(it){
+  if(it.cat==="ロール"){const n=it.name||"";return /^ALKロール/.test(n)?0:/^ALGCロール/.test(n)?1:/^ALKマイティ/.test(n)?2:/^ALGCマイティ/.test(n)?3:4;}
+  return Number(it.order)||0;
+}
 /* ロールの1巻の長さ（m）。長さが空のときだけ入れる（2026/10/28 ユーザー） */
 const ROLL_LEN={"ALKロール 24K×25t":22,"ALKロール 24K×50t":16,"ALKロール 32K×25t":16,"ALGCロール 32K×25t":16,
   "ALKマイティロール 40K×25t":11,"ALKマイティロール 40K×50t":5.5,"ALGCマイティロール 40K×25t":11,"ALGCマイティロール 40K×50t":5.5};
@@ -634,7 +639,7 @@ renderWho();renderCats();renderList();renderLog();show(view);
   try{await migrateCats();}catch(e){}
   try{await ensureItems();}catch(e){}
   onSnapshot(collection(fs,"items"),s=>{
-    items=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(x=>!x.deleted).sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0)||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
+    items=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(x=>!x.deleted).sort((a,b)=>rank(a)-rank(b)||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
     loaded=true;renderList();
   },e=>{setBanner("在庫を読み込めませんでした。ページを開き直してください。");});
   onSnapshot(query(collection(fs,"logs"),orderBy("at","desc"),limit(300)),s=>{logs=s.docs.map(d=>d.data());renderLog();},()=>{});
