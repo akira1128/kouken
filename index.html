@@ -658,8 +658,8 @@ async function migrateCats(){
   const q=await getDocs(collection(fs,"items"));
   for(const d of q.docs){const x=d.data(),c=newCat(x);if(c)await updateDoc(d.ref,{cat:c});
     // PF保温筒の前の「エルボ」（eqty）は溶接ショートエルボ（wsqty）へ（2026/10/28）
-    // 最初に入れた「アルミテープ」は、請求書から足したアルミ粘着テープと重なるので消す（2026/10/28 ユーザー）
-    if(x.name==="アルミテープ"&&x.cat==="テープ・副資材"){await deleteDoc(d.ref);await addDoc(collection(fs,"logs"),{at:Date.now(),kind:"del",itemId:d.id,itemName:x.name,unit:x.unit||"",n:0,after:0,who:who||"西崎剣",memo:"重なっていたので削除",site:""});continue;}
+    // 最初に入れた「アルミテープ」「ガルバコイル」「SUSコイル」は、請求書から足した材料と重なるので消す（2026/10/28 ユーザー）
+    if((x.name==="アルミテープ"&&x.cat==="テープ・副資材")||(["ガルバコイル","SUSコイル"].includes(x.name)&&x.cat==="コイル")){await deleteDoc(d.ref);await addDoc(collection(fs,"logs"),{at:Date.now(),kind:"del",itemId:d.id,itemName:x.name,unit:x.unit||"",n:0,after:0,who:who||"西崎剣",memo:"重なっていたので削除",site:""});continue;}
     if(ROLL_LEN[x.name]&&!x.len)await updateDoc(d.ref,{len:ROLL_LEN[x.name]});
     if(SHEET_SIZE[x.name]&&!x.len)await updateDoc(d.ref,{wid:SHEET_SIZE[x.name][0],len:SHEET_SIZE[x.name][1]});
     // 30t以上は「ALKP保温筒」「ALGCP保温筒」と書く（2026/10/28）
