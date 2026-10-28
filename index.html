@@ -252,6 +252,10 @@ const COLORS=["ガルバリウム","ステン","アイボリー","ニューク�
 const SUBS={"ジャケット・エルボ":COLORS,"フランジカバー":COLORS,"PF保温筒":["直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
 const SUBLABEL=c=>c==="PF保温筒"?"直管・エルボ":"色・材質";
 const NOSUB="分けていない";
+/* 2段目に「すべて」を出さない種類（2026/10/28 ユーザー） */
+const SUB_NOALL=new Set(["ジャケット・エルボ","フランジカバー"]);
+const subBtns=c=>SUBS[c]?(SUB_NOALL.has(c)?SUBS[c]:["すべて",...SUBS[c]]):[];
+const fixSub=()=>{const l=subBtns(cat);if(l.length&&!l.includes(sub)&&!(sub===NOSUB&&SUBS[cat]))sub=l[0];if(!l.length)sub="すべて";};
 /* 1つの材料に複数の数を持たせる仕組み（今は使っていない。2026/10/28 PF保温筒は2段目で直管・エルボを分ける形に変更） */
 const ELBOW=c=>false;
 /* 1巻の長さ（m）を入れる種類（2026/10/28） */
@@ -301,7 +305,7 @@ const SHOW_ALL=false;
 const CAT_BTNS=SHOW_ALL?["すべて",...CATS]:CATS;
 if(!CAT_BTNS.includes(cat))cat=CAT_BTNS[0];
 let sub=store("kouken-sub")||"すべて";
-if(!SUBS[cat]||!["すべて",...SUBS[cat],NOSUB].includes(sub))sub="すべて";
+fixSub();
 
 function setBanner(msg){$("banner").textContent=msg||"";$("banner").hidden=!msg;}
 /* 「少ないもの」の表示（上の知らせ・赤字・少ない目安の欄）。false で消す、true で戻す（2026/10/28 ユーザー：いったん消す） */
@@ -339,9 +343,9 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("clic
 
 /* ---------- 在庫一覧 ---------- */
 function renderCats(){
-  $("cats").replaceChildren(...CAT_BTNS.map(c=>h("button",{type:"button","aria-pressed":String(c===cat),onclick:()=>{cat=c;store("kouken-cat",c);sub="すべて";store("kouken-sub",sub);renderCats();renderList();}},c)));
-  const list=SUBS[cat];$("subs").hidden=!list;
-  $("subs").replaceChildren(...(list?["すべて",...list]:[]).map(c=>h("button",{type:"button","aria-pressed":String(c===sub),onclick:()=>{sub=c;store("kouken-sub",c);renderCats();renderList();}},c)));
+  $("cats").replaceChildren(...CAT_BTNS.map(c=>h("button",{type:"button","aria-pressed":String(c===cat),onclick:()=>{cat=c;store("kouken-cat",c);sub="すべて";fixSub();store("kouken-sub",sub);renderCats();renderList();}},c)));
+  const list=subBtns(cat);$("subs").hidden=!list.length;
+  $("subs").replaceChildren(...list.map(c=>h("button",{type:"button","aria-pressed":String(c===sub),onclick:()=>{sub=c;store("kouken-sub",c);renderCats();renderList();}},c)));
 }
 $("q").addEventListener("input",()=>renderList());
 
@@ -524,7 +528,7 @@ $("addForm").addEventListener("submit",async e=>{
     await db.collection("logs").add({at:now,kind:"new",itemId:ref.id,itemName:name,unit:$("aUnit").value,n:qty,after:qty,who,memo:""});
     $("aName").value="";$("aLen").value="";$("aWid").value="";$("aQty").value="0";$("aMin").value="0";$("aWsQty").value="0";$("aWlQty").value="0";
     toast("「"+name+"」を登録しました");
-    cat=$("aCat").value;store("kouken-cat",cat);sub=SUBS[cat]?$("aSub").value:"すべて";store("kouken-sub",sub);renderCats();show("vStock");renderList();
+    cat=$("aCat").value;store("kouken-cat",cat);sub=SUBS[cat]?$("aSub").value:"すべて";fixSub();store("kouken-sub",sub);renderCats();show("vStock");renderList();
   }catch(x){err.textContent=errMsg(x);err.hidden=false;}
   $("aBtn").disabled=readOnly;
 });
