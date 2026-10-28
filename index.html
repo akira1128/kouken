@@ -253,6 +253,9 @@ const NOSUB="分けていない";
 const ELBOW=c=>false;
 /* 1巻の長さ（m）を入れる種類（2026/10/28） */
 const HASLEN=c=>c==="ロール";
+/* ロールの1巻の長さ（m）。長さが空のときだけ入れる（2026/10/28 ユーザー） */
+const ROLL_LEN={"ALKロール 24K×25t":22,"ALKロール 24K×50t":16,"ALKロール 32K×25t":16,"ALGCロール 32K×25t":16,
+  "ALKマイティロール 40K×25t":11,"ALKマイティロール 40K×50t":5.5,"ALGCマイティロール 40K×25t":11,"ALGCマイティロール 40K×50t":5.5};
 const EPARTS=[["ws","溶接ショートエルボ","wsqty"],["wl","溶接ロングエルボ","wlqty"]];
 const partField=p=>p==="s"?"qty":(EPARTS.find(x=>x[0]===p)||[])[2]||"qty";
 const partName=p=>p==="s"?"直管":(EPARTS.find(x=>x[0]===p)||[])[1]||"直管";
@@ -577,7 +580,7 @@ async function ensureItems(){
   const miss=EXTRA_ITEMS.filter(x=>!have.has(x.id));
   for(let k=0;k<miss.length;k+=400){
     const batch=writeBatch(fs),now=Date.now();
-    for(const x of miss.slice(k,k+400))batch.set(doc(fs,"items",x.id),{name:x.name,cat:x.cat,sub:x.sub||"",unit:x.unit,order:x.order||0,...(x.len?{len:x.len}:{}),qty:0,min:0,createdAt:now,updatedAt:now,updatedBy:who||"西崎剣"});
+    for(const x of miss.slice(k,k+400))batch.set(doc(fs,"items",x.id),{name:x.name,cat:x.cat,sub:x.sub||"",unit:x.unit,order:x.order||0,...(ROLL_LEN[x.name]?{len:ROLL_LEN[x.name]}:{}),qty:0,min:0,createdAt:now,updatedAt:now,updatedBy:who||"西崎剣"});
     await batch.commit();
   }
 }
@@ -605,7 +608,7 @@ async function migrateCats(){
   const q=await getDocs(collection(fs,"items"));
   for(const d of q.docs){const x=d.data(),c=newCat(x);if(c)await updateDoc(d.ref,{cat:c});
     // PF保温筒の前の「エルボ」（eqty）は溶接ショートエルボ（wsqty）へ（2026/10/28）
-    if(x.name==="ALKロール 32K×25t"&&!x.len)await updateDoc(d.ref,{len:16});
+    if(ROLL_LEN[x.name]&&!x.len)await updateDoc(d.ref,{len:ROLL_LEN[x.name]});
     // 30t以上は「ALKP保温筒」「ALGCP保温筒」と書く（2026/10/28）
     if(/^ALK保温筒 .*×(30|40|50)t$/.test(x.name||""))await updateDoc(d.ref,{name:x.name.replace(/^ALK保温筒/,"ALKP保温筒")});
     if(/^ALGC保温筒 .*×(30|40|50)t$/.test(x.name||""))await updateDoc(d.ref,{name:x.name.replace(/^ALGC保温筒/,"ALGCP保温筒")});
