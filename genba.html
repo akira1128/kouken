@@ -645,8 +645,26 @@ function renderOrders(){
 /* 期間は「2026年10月」のように西暦と月でえらぶ（注文のある月と今月）。"all" はぜんぶ（2026/10/28 ユーザー） */
 let sumSite="", sumMonth=ymd(new Date()).slice(0,7);
 const ymLabel=m=>{const [y,mm]=m.split("-");return y+"年"+Number(mm)+"月";};
+/* 集計：「届いた材料（材料屋さんの請求書）」と「アプリで頼んだ材料」を分けて出す。金額は出さない（2026/10/29 ユーザー）
+   請求書の材料は deliveries（請求書1枚＝1件、lines：d 日付・t 納入先・n 品名・s 規格・q 数量・u 単位） */
+let sumKind=store("kouken-sum-kind")||"inv", sumDest="", sumSup="";
+let deliv=null, unDeliv=null;
+function watchDeliv(){
+  if(unDeliv||!fs)return;
+  unDeliv=onSnapshot(collection(fs,"deliveries"),s=>{
+    const a=[];s.docs.forEach(d=>{const x=d.data();(x.lines||[]).forEach(l=>a.push(Object.assign({sup:x.supplier||""},l)));});
+    deliv=a;if(view==="vSum")renderSum();
+  },()=>{deliv=deliv||[];if(view==="vSum")renderSum();});
+}
+// 請求書の納入先がアプリの現場か（呼び名の芯・予定表での呼び方・正式名で合わせる）
+function destOf(x){const k=siteKeys(x), nz=t=>(t||"").replace(/[\s　]/g,"");
+  return t=>{t=nz(t);return (k.core&&t.includes(nz(k.core)))||k.alias.some(a=>t.includes(nz(a)))||k.full.some(f=>f&&t.includes(nz(shortSite(f))));};}
 function renderSum(){
-  const box=$("vSum"), ym=d=>d.slice(0,7);
+  const box=$("vSum"), ym=d=>(d||"").slice(0,7);
+  const seg=h("div",{class:"stseg",style:{padding:"12px 14px 2px"}},
+    [["inv","届いた材料（請求書）"],["app","アプリで頼んだ材料"]].map(([k,t])=>h("button",{type:"button","aria-pressed":String(sumKind===k),
+      onclick:()=>{sumKind=k;store("kouken-sum-kind",k);renderSum();}},t)));
+  if(sumKind==="inv"){renderSumInv(box,seg);return;}
   const months=[...new Set([ymd(new Date()).slice(0,7),...orders.map(o=>ym(o.date))])].sort().reverse();
   const list=orders.filter(o=>(!sumSite||o.siteId===sumSite)&&(sumMonth==="all"||ym(o.date)===sumMonth));
   const tot={};
@@ -654,12 +672,46 @@ function renderSum(){
   const rows=Object.entries(tot).sort((a,b)=>a[0].localeCompare(b[0],"ja",{numeric:true}));
   const mSel=h("select",{class:"inp","aria-label":"期間",onchange:e=>{sumMonth=e.target.value;renderSum();}},
     [...months.map(m=>[m,ymLabel(m)]),["all","ぜんぶ"]].map(([v,t])=>h("option",{value:v,selected:v===sumMonth},t)));
-  box.replaceChildren(h("section",{class:"panel"},
+  box.replaceChildren(h("section",{class:"panel"},seg,
     h("div",{class:"tools"},siteFilter(sumSite,v=>{sumSite=v;renderSum();}),mSel),
-    h("p",{class:"hint",style:{padding:"0 14px 8px"},text:"注文 "+list.length+"回　材料 "+rows.length+"種類"}),
+    h("p",{class:"hint",style:{padding:"0 14px 8px"},text:"注文 "+list.length+"回　材料 "+rows.length+"種類（アプリで頼んだ数。実際に届いた数とちがうことがあります）"}),
     rows.length?h("table",{class:"sum"},h("thead",null,h("tr",null,h("th",{text:"材料"}),h("th",{text:"合計",style:{textAlign:"right"}}))),
       h("tbody",null,rows.map(([k,n])=>{const [name,unit]=k.split("|");return h("tr",null,h("td",{text:name}),h("td",{class:"n",text:fmtN(n)+unit}));}))):
       h("p",{class:"empty",text:"この期間の注文はありません"})));
+}
+function renderSumInv(box,seg){
+  watchDeliv();
+  if(!deliv){box.replaceChildren(h("section",{class:"panel"},seg,h("p",{class:"empty",text:"読み込んでいます…"})));return;}
+  const ym=d=>(d||"").slice(0,7);
+  // 現場：アプリの現場（請求書に出てくるものだけ）と、請求書の納入先
+  const dests=[...deliv.reduce((m,l)=>m.set(l.t,(m.get(l.t)||"")<l.d?l.d:m.get(l.t)),new Map())].sort((a,b)=>b[1].localeCompare(a[1])).map(([t])=>t);
+  const siteMatch=sites.map(x=>[x,destOf(x)]).filter(([,f])=>dests.some(f));
+  let pick=()=>true;
+  if(sumDest.startsWith("s:")){const e=siteMatch.find(([x])=>"s:"+x.id===sumDest);pick=e?l=>e[1](l.t):()=>false;}
+  else if(sumDest.startsWith("t:")){const t=sumDest.slice(2);pick=l=>l.t===t;}
+  const sups=[...new Set(deliv.map(l=>l.sup))].filter(Boolean);
+  const months=[...new Set(deliv.map(l=>ym(l.d)))].filter(Boolean).sort().reverse();
+  if(sumMonth!=="all"&&!months.includes(sumMonth))sumMonth=months[0]||"all";
+  const list=deliv.filter(l=>pick(l)&&(!sumSup||l.sup===sumSup)&&(sumMonth==="all"||ym(l.d)===sumMonth));
+  const tot=new Map();
+  for(const l of list){const k=l.n+"|"+l.s+"|"+l.u;tot.set(k,(tot.get(k)||0)+(Number(l.q)||0));}
+  const rows=[...tot].filter(([,n])=>n!==0).sort((a,b)=>a[0].localeCompare(b[0],"ja",{numeric:true}));
+  const dSel=h("select",{class:"inp","aria-label":"現場でしぼる",onchange:e=>{sumDest=e.target.value;renderSum();}},
+    h("option",{value:""},"すべての現場"),
+    siteMatch.length?h("optgroup",{label:"いまの現場"},siteMatch.map(([x])=>h("option",{value:"s:"+x.id,selected:"s:"+x.id===sumDest},shortSite(x.name)))):null,
+    h("optgroup",{label:"請求書の納入先（新しい順）"},dests.map(t=>h("option",{value:"t:"+t,selected:"t:"+t===sumDest},t))));
+  const mSel=h("select",{class:"inp","aria-label":"期間",onchange:e=>{sumMonth=e.target.value;renderSum();}},
+    [...months.map(m=>[m,ymLabel(m)]),["all","ぜんぶ"]].map(([v,t])=>h("option",{value:v,selected:v===sumMonth},t)));
+  const sSel=sups.length>1?h("select",{class:"inp","aria-label":"材料屋さん",style:{gridColumn:"1 / -1"},onchange:e=>{sumSup=e.target.value;renderSum();}},
+    h("option",{value:""},"すべての材料屋さん"),sups.map(v=>h("option",{value:v,selected:v===sumSup},v))):null;
+  const days=new Set(list.map(l=>l.d)).size;
+  box.replaceChildren(h("section",{class:"panel"},seg,
+    h("div",{class:"tools"},dSel,mSel,sSel),
+    h("p",{class:"hint",style:{padding:"0 14px 8px"},text:"納品 "+days+"日　材料 "+rows.length+"種類（"+(sups.join("・")||"材料屋さん")+"の請求書から。金額は出していません）"}),
+    rows.length?h("table",{class:"sum"},h("thead",null,h("tr",null,h("th",{text:"材料"}),h("th",{text:"合計",style:{textAlign:"right"}}))),
+      h("tbody",null,rows.map(([k,n])=>{const [name,size,unit]=k.split("|");
+        return h("tr",null,h("td",null,name,size?h("small",{style:{display:"block",color:"var(--muted)"},text:size}):null),h("td",{class:"n",text:fmtN(n)+unit}));}))):
+      h("p",{class:"empty",text:"この期間に届いた材料はありません"})));
 }
 
 /* ---------- お知らせ：新しい注文（西崎・原田の携帯だけ） ---------- */

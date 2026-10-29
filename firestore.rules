@@ -43,6 +43,8 @@ service cloud.firestore {
     // 現場の写真（材料置き場など）：社員だれでも足す・書きかえる・取り替える・消すができる（2026/10/29 ユーザー）
     match /photos/{id} { allow read, write: if member(); }
     match /photoFull/{id} { allow read, write: if member(); }
+    // 材料屋さんの請求書から取った納品（金額は入れない）：見るのは社員。足すのは暗証番号を入れた携帯（請求書を読み込むとき）、直す・消すのは編集する人だけ
+    match /deliveries/{id} { allow read, create: if member(); allow update, delete: if editor(); }
     // 履歴は足すだけ（直したり消したりはできない）
     match /logs/{id} { allow read, create: if member(); allow update, delete: if false; }
   }
