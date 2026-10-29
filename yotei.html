@@ -734,7 +734,8 @@ function openChange(e){
 /* ---------- 編集する人の登録（西崎・原田が最初に1回だけ。編集用の暗証番号をデータベース側で確かめる） ---------- */
 function askEditPin(){
   let name=EDITORS[0];
-  const names=h("div",{class:"names",style:{gridTemplateColumns:"1fr 1fr"}},EDITORS.map(n=>h("button",{type:"button","aria-pressed":String(n===name),
+  // 名前は社員全員を並べる。ただし登録できるのは西崎・原田だけ（ほかの人は番号が合っていても「番号がちがいます」）2026/10/29 ユーザー
+  const names=h("div",{class:"names",style:{gridTemplateColumns:"1fr 1fr"}},STAFF.map(([n])=>n).map(n=>h("button",{type:"button","aria-pressed":String(n===name),
     onclick:x=>{name=n;names.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.textContent===nick(n))));}},nick(n))));
   const inp=h("input",{class:"inp",type:"password",inputmode:"numeric",autocomplete:"off",maxlength:"12","aria-label":"編集用の暗証番号",style:{fontSize:"28px",textAlign:"center",letterSpacing:".3em"}});
   const err=h("p",{class:"err",hidden:true});
@@ -743,9 +744,10 @@ function askEditPin(){
   const form=h("form",{class:"f",onsubmit:async e=>{e.preventDefault();
     const v=inp.value.trim();if(!v)return;
     go.disabled=true;err.hidden=true;
+    if(!EDITORS.includes(name)){err.textContent="番号がちがいます。";err.hidden=false;go.disabled=false;inp.select();return;}
     try{await setDoc(doc(fs,"editors",uid),{pin:v,name,at:Date.now()});editor=name;close();applyEditor();toast(nick(name)+"さん、予定を入れられます");}
     catch(x){err.textContent=x&&x.code==="permission-denied"?"番号がちがいます。":"確認できませんでした。電波を確認してください。";err.hidden=false;go.disabled=false;inp.select();}
-  }},h("h2",{text:"予定を入れる人の登録"}),h("p",{class:"hint",text:"西崎・原田だけ。この携帯で最初に1回だけ入れてください。"}),names,inp,err,go);
+  }},h("h2",{text:"予定を入れる人の登録"}),h("p",{class:"hint",text:"この携帯で最初に1回だけ入れてください。"}),names,inp,err,go);
   close=openSheet(form);
 }
 $("editLogin").addEventListener("click",askEditPin);

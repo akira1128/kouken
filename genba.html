@@ -174,6 +174,15 @@ h4.vh{margin:14px 0 6px;font-size:13px;color:var(--muted)}
 .vwho{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
 .vwho li{display:flex;gap:6px;align-items:baseline;border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:var(--surface);font-size:13.5px}
 .vwho small{color:var(--muted);font-size:11.5px}
+/* 現場の写真（材料置き場など）：小さく並べて、タップで大きく */
+.phgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:4px 0 10px}
+.phgrid button{position:relative;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;aspect-ratio:1;background:var(--bg)}
+.phgrid img{display:block;width:100%;height:100%;object-fit:cover}
+.phgrid span{position:absolute;left:0;right:0;bottom:0;padding:2px 5px;font-size:11px;line-height:1.35;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.65));
+  text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phbig{display:block;width:100%;max-height:60vh;object-fit:contain;border-radius:8px;background:#000}
+.phrow{display:flex;gap:8px}.phrow .btn{flex:1}
+.btn.warn{background:#b42318}
 .notes{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .notes li{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--bg);display:grid;gap:4px}
 .notes .tx{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px}
@@ -250,7 +259,7 @@ label.fl em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,getDoc,setDoc,onSnapshot,query,orderBy,limit,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,getDoc,setDoc,onSnapshot,query,where,orderBy,limit,arrayUnion,arrayRemove,writeBatch} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {FIREBASE_CONFIG} from "./firebase-config.js";
 (function(){
 /* 社員：[正式名, 呼び名]。在庫・予定表と同じ。「使う人」は在庫で選んだ名前（kouken-who）と同じものを使う */
@@ -434,6 +443,70 @@ function meter(x){
 }
 
 /* ---------- 現場の詳しい画面 ---------- */
+/* ---------- 現場の写真（材料置き場など）。社員だれでも足す・書きかえる・取り替える・消すができる（2026/10/29 ユーザー）
+   photos/{id}：小さい写真＋説明（一覧用）、photoFull/{id}：大きい写真（タップしたときだけ読む） ---------- */
+let photos=[], photosFor="", unPhotos=null;
+function watchPhotos(x){
+  if(photosFor===x.id||!fs)return;
+  if(unPhotos)unPhotos();photosFor=x.id;photos=[];
+  unPhotos=onSnapshot(query(collection(fs,"photos"),where("siteId","==",x.id)),s=>{
+    photos=s.docs.map(d=>Object.assign({id:d.id},d.data())).sort((a,b)=>(b.at||0)-(a.at||0));
+    const g=$("photoGrid");if(g&&view==="vSite"&&siteId===x.id)fillPhotos(g,x);
+  },()=>{});
+}
+// 写真を縮める（長い辺 max px の JPEG）。大きすぎたら画質を下げる
+async function shrinkPhoto(file,max,q){
+  const url=URL.createObjectURL(file);
+  try{
+    const im=await new Promise((ok,ng)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ng;i.src=url;});
+    const sc=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)), c=document.createElement("canvas");
+    c.width=Math.round(im.naturalWidth*sc);c.height=Math.round(im.naturalHeight*sc);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+    let out=c.toDataURL("image/jpeg",q);for(let qq=q-.1;out.length>850000&&qq>.3;qq-=.1)out=c.toDataURL("image/jpeg",qq);
+    return out;
+  }finally{URL.revokeObjectURL(url);}
+}
+const pickFile=()=>new Promise(ok=>{const f=h("input",{type:"file",accept:"image/*",style:{display:"none"}});
+  f.addEventListener("change",()=>{ok(f.files&&f.files[0]||null);f.remove();});document.body.append(f);f.click();});
+function fillPhotos(g,x){
+  g.replaceChildren(...photos.map(p=>h("button",{type:"button","aria-label":"写真を見る "+(p.caption||""),onclick:()=>openPhoto(x,p)},
+    h("img",{src:p.thumb,alt:p.caption||"現場の写真",loading:"lazy"}),p.caption?h("span",{text:p.caption}):null)));
+  g.hidden=!photos.length;const t=$("photoHint");if(t)t.hidden=!!photos.length;
+}
+// 写真を足す・見る・書きかえる・取り替える・消す（1つの画面で）
+async function openPhoto(x,p){
+  const isNew=!p;let file=null, newImg="", newThumb="";
+  if(isNew){file=await pickFile();if(!file)return;}
+  const big=h("img",{class:"phbig",alt:"現場の写真",src:p?p.thumb:""});
+  const cap=h("textarea",{class:"inp",placeholder:"例：材料置き場。1階の駐車場の奥、ブルーシートの下"});cap.value=p&&p.caption||"";
+  const err=h("p",{class:"err",hidden:true}), save=h("button",{class:"btn",type:"submit"},isNew?"写真を入れる":"書きかえを保存");
+  const swap=h("button",{type:"button",class:"btn ghost"},"写真を取り替える");
+  const del=p?h("button",{type:"button",class:"btn warn"},"この写真を消す"):null;
+  const meta=p?h("p",{class:"hint",text:"入れた人："+nick(p.who)+"（"+md(ymd(new Date(p.at)))+"）"+(p.updatedAt?"　直した人："+nick(p.updatedBy)+"（"+md(ymd(new Date(p.updatedAt)))+"）":"")}):null;
+  const prep=async f=>{save.disabled=true;err.hidden=true;
+    try{newImg=await shrinkPhoto(f,1400,.72);newThumb=await shrinkPhoto(f,320,.6);big.src=newImg;}
+    catch(e){err.textContent="この写真は読めませんでした。別の写真をえらんでください。";err.hidden=false;}
+    save.disabled=false;};
+  swap.onclick=async()=>{const f=await pickFile();if(f)await prep(f);};
+  let close;
+  const form=h("form",{class:"f",onsubmit:e=>{e.preventDefault();needWho(async()=>{
+    if(isNew&&!newImg)return;save.disabled=true;
+    try{
+      const now=Date.now(), b=writeBatch(fs), ref=p?doc(fs,"photos",p.id):doc(collection(fs,"photos"));
+      if(isNew)b.set(ref,{siteId:x.id,thumb:newThumb,caption:cap.value.trim(),who:me(),at:now});
+      else b.update(ref,Object.assign({caption:cap.value.trim(),updatedBy:me(),updatedAt:now},newThumb?{thumb:newThumb}:{}));
+      if(newImg)b.set(doc(fs,"photoFull",ref.id),{siteId:x.id,img:newImg});
+      await b.commit();close();toast(isNew?"写真を入れました":"写真を直しました");
+    }catch(y){err.textContent=y&&y.code==="permission-denied"?"保存する権限がありません":"保存できませんでした。電波を確認してください";err.hidden=false;save.disabled=false;}
+  });}},h("h2",{text:isNew?"写真を入れる":"現場の写真"}),big,h("label",{class:"fl"},"説明（なくてもよい）",cap),meta,err,save,swap,del);
+  if(del)del.onclick=()=>{if(del.dataset.ok!=="1"){del.dataset.ok="1";del.textContent="本当に消す";return;}
+    needWho(async()=>{del.disabled=true;
+      try{const b=writeBatch(fs);b.delete(doc(fs,"photos",p.id));b.delete(doc(fs,"photoFull",p.id));await b.commit();close();toast("写真を消しました");}
+      catch(y){err.textContent="消せませんでした。電波を確認してください";err.hidden=false;del.disabled=false;}});};
+  close=openSheet(form);
+  if(isNew)await prep(file);
+  else getDoc(doc(fs,"photoFull",p.id)).then(d=>{if(d.exists()&&!newImg)big.src=d.data().img;}).catch(()=>{});
+}
 /* ---------- この現場に行った人（予定表 events から）。予定表の現場名は正式名と短い呼び方が混ざるので、呼び名でも合わせる ---------- */
 const FACTORY="工場（加工）";
 let events=[];
@@ -485,6 +558,7 @@ function fillVisits(box,x){
 function renderSite(){
   const box=$("vSite"), x=sites.find(s=>s.id===siteId);
   if(!x){box.replaceChildren(h("div",{class:"panel empty",text:fs?"この現場は見つかりません":"読み込んでいます…"}));return;}
+  watchPhotos(x);
   const inf=x.info||{};
   const val=(k,v)=>{
     if(!v)return h("dd",{class:"none",text:"―"});
@@ -518,7 +592,11 @@ function renderSite(){
       noteIn,
       h("button",{type:"button",class:"btn",onclick:()=>needWho(async()=>{const t=noteIn.value.trim();if(!t)return;
         try{await updateDoc(doc(fs,"sites",x.id),{notes:arrayUnion({text:t,who:me(),at:Date.now()})});noteIn.value="";toast("メモを書きました");}
-        catch(e){toast(e&&e.code==="permission-denied"?"書く権限がありません":"書けませんでした。電波を確認してください");}})},"メモを書く")),
+        catch(e){toast(e&&e.code==="permission-denied"?"書く権限がありません":"書けませんでした。電波を確認してください");}})},"メモを書く"),
+      h("h4",{class:"vh",text:"写真（材料置き場など）"}),
+      h("p",{class:"hint",id:"photoHint",style:{marginBottom:"8px"},text:"材料置き場・搬入口など、次に行く人が助かる写真を入れておけます。状況が変わったら、だれでも取り替え・消しができます。"}),
+      (()=>{const g=h("div",{class:"phgrid",id:"photoGrid"});fillPhotos(g,x);return g;})(),
+      h("button",{type:"button",class:"btn ghost",onclick:()=>openPhoto(x,null)},"＋ 写真を入れる")),
     (()=>{const vb=h("section",{class:"panel",id:"visitBox"});fillVisits(vb,x);return vb;})(),
     h("section",{class:"panel"},h("div",{class:"sec"},h("h3",{text:"この現場の注文履歴（新しい順）"})),
       siteOrders.length?siteOrders.slice(0,20).map(orderRow):h("p",{class:"empty",text:"まだ注文はありません"})));

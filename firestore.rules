@@ -22,7 +22,8 @@ service cloud.firestore {
     match /editors/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow create: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.pin == get(/databases/$(database)/documents/secret/pin).data.editpin;
+        && request.resource.data.pin == get(/databases/$(database)/documents/secret/pin).data.editpin
+        && request.resource.data.name in ["西崎剣", "原田弓子"];
       allow update, delete: if false;
     }
     // 西崎さんの携帯（editors に西崎剣として登録）
@@ -39,6 +40,9 @@ service cloud.firestore {
     match /orders/{id} { allow read, create: if member(); allow update, delete: if editor(); }
     // 社員の顔写真（現場一覧のメーターを走るサプライズ用）：見るのは社員、入れる・消すのは編集する人だけ
     match /faces/{name} { allow read: if member(); allow write: if editor(); }
+    // 現場の写真（材料置き場など）：社員だれでも足す・書きかえる・取り替える・消すができる（2026/10/29 ユーザー）
+    match /photos/{id} { allow read, write: if member(); }
+    match /photoFull/{id} { allow read, write: if member(); }
     // 履歴は足すだけ（直したり消したりはできない）
     match /logs/{id} { allow read, create: if member(); allow update, delete: if false; }
   }
