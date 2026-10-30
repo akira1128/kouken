@@ -161,6 +161,11 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 @media (prefers-reduced-motion:reduce){.runner svg,.runner .la,.runner .lb,.runner .aa,.runner .ab,.runner .rface{animation:none}.runner{transition:none}}
 .mstep{display:flex;gap:6px;align-items:center;justify-content:flex-end;font-size:12px;color:var(--muted)}
 .mstep .mby{margin-right:auto;font-size:11.5px}
+/* ウレタン前・後の札とウレタン後のメーターの色 */
+.meter .mh .ka{font-size:12px;font-weight:700;border-radius:6px;padding:0 7px;background:#dcfce7;color:#166534}
+.meter .mh .ka.a{background:#e0e7ff;color:#3730a3}
+.mone.after .mfill{background:linear-gradient(90deg,#3730a3,#6366f1 60%,#a5b4fc)}
+.mtog{display:flex;justify-content:flex-end;margin-top:2px}.mtog .btn{font-size:12.5px;padding:6px 10px;width:auto}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
 /* 現場の詳しい画面 */
 .dhead{padding:14px;display:grid;gap:10px}
@@ -446,35 +451,56 @@ function meter(x){
         try{await updateDoc(doc(fs,"sites",x.id),{floors:n,floor:0});toast("最上階を入れました");}catch(e){toast("保存できませんでした");}}},"入れる")):null);
   }
   // つぎの階は社員だれでも変えられる。変えた人と日時を残す（2026/10/30 ユーザー）
-  const save=(k,n)=>needWho(async()=>{
+  // ウレタン後の施工がある現場（x.after）は、棟ごとに「ウレタン前」「ウレタン後」の2本。ウレタン後の階は floorAfter（棟は t.floorAfter）
+  const multi=!!(x.towers&&x.towers.length), aft=!!x.after;
+  const save=(k,n,ka)=>needWho(async()=>{
     const by=me(), at=Date.now();
-    try{if(x.towers&&x.towers.length)await updateDoc(doc(fs,"sites",x.id),{towers:x.towers.map((t,i)=>i===k?{...t,floor:n,by,at}:t)});
-      else await updateDoc(doc(fs,"sites",x.id),{floor:n,floorBy:by,floorAt:at});}
-    catch(e){toast(e&&e.code==="permission-denied"?"変える権限がありません":"保存できませんでした。電波を確認してください");}});
+    try{
+      if(multi)await updateDoc(doc(fs,"sites",x.id),{towers:x.towers.map((t,i)=>i!==k?t:(ka?{...t,floorAfter:n,byA:by,atA:at}:{...t,floor:n,by,at}))});
+      else await updateDoc(doc(fs,"sites",x.id),ka?{floorAfter:n,floorAfterBy:by,floorAfterAt:at}:{floor:n,floorBy:by,floorAt:at});
+    }catch(e){toast(e&&e.code==="permission-denied"?"変える権限がありません":"保存できませんでした。電波を確認してください");}});
   const fk=Math.floor(runFacePick*tw.length);
-  return h("div",{class:"meter"},h("div",{class:"mh"},"進行状況"),tw.map((t,k)=>{
+  const one=(t,k,ka)=>{
     const top=+t.floors||0;if(!top)return null;
-    const now=Math.max(0,Math.min(top,+t.floor||0)), key=x.id+"/"+k;
+    const raw=ka?(multi?t.floorAfter:x.floorAfter):t.floor;
+    const now=Math.max(0,Math.min(top,+raw||0)), key=x.id+"/"+k+(ka?"a":"");
+    const tb=ka?(multi?(t.byA?{by:t.byA,at:t.atA}:null):(x.floorAfterBy?{by:x.floorAfterBy,at:x.floorAfterAt}:null))
+               :(multi?(t.by?{by:t.by,at:t.at}:null):(x.floorBy?{by:x.floorBy,at:x.floorAt}:null));
     // 開いたときは0から伸ばす。階を変えたときは前の長さから伸び縮みさせる
     const w0=meterW[key]??0, w=now/top*100, fill=h("div",{class:"mfill",style:{width:w0+"%"}});meterW[key]=w;
-    const run=h("span",{class:"runner","data-w":w,"aria-hidden":"true"});run.innerHTML=runnerSVG(k===fk?runFace:"");
+    const face=!ka&&k===fk?runFace:"";
+    const run=h("span",{class:"runner","data-w":w,"aria-hidden":"true"});run.innerHTML=runnerSVG(face);
     // 画面に出てからメーターの幅を測り、前の位置（w0）に置いてから、いまの位置（w）まで走らせる
     requestAnimationFrame(()=>{placeRunner(run,w0,true);requestAnimationFrame(()=>{fill.style.width=w+"%";placeRunner(run,w);});});
-    const set=n=>{n=Math.max(0,Math.min(top,n));if(n!==now)save(k,n);};
-    const wrap=h("div",{class:runFace&&k===fk?"mwrap fc":"mwrap"},run,
-        h("div",{class:"mtrack",role:"img","aria-label":(t.name||"")+"つぎ"+now+"階、"+top+"階まで"},fill,h("div",{class:"mticks"},Array.from({length:top},()=>h("i")))));
-    const el=h("div",{class:"mone"},
-      h("div",{class:"mh"},t.name?h("span",{class:"tw",text:t.name}):null,h("span",{class:"fl"},"つぎ",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
+    const set=n=>{n=Math.max(0,Math.min(top,n));if(n!==now)save(k,n,ka);};
+    const lab=aft?(ka?"ウレタン後":"ウレタン前"):"";
+    const wrap=h("div",{class:face?"mwrap fc":"mwrap"},run,
+        h("div",{class:"mtrack",role:"img","aria-label":(t.name||"")+lab+"つぎ"+now+"階、"+top+"階まで"},fill,h("div",{class:"mticks"},Array.from({length:top},()=>h("i")))));
+    const el=h("div",{class:"mone"+(ka?" after":"")},
+      h("div",{class:"mh"},t.name?h("span",{class:"tw",text:t.name}):null,lab?h("span",{class:"ka"+(ka?" a":""),text:lab}):null,
+        h("span",{class:"fl"},"つぎ",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
       wrap,
-      h("div",{class:"mstep"},(tb=>tb?h("span",{class:"mby",text:"直した人："+nick(tb.by)+"（"+md(ymd(new Date(tb.at)))+"）"}):null)(t.by?{by:t.by,at:t.at}:(x.floorBy&&!(x.towers&&x.towers.length)?{by:x.floorBy,at:x.floorAt}:null)),(t.name||"")+"のつぎの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")));
+      h("div",{class:"mstep"},tb?h("span",{class:"mby",text:"直した人："+nick(tb.by)+"（"+md(ymd(new Date(tb.at)))+"）"}):null,
+        (t.name||"")+(lab?lab+"の":"の")+"つぎの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")));
     // 最上階まで終わったら満タン。走ってきたときは着いてから紙ふぶきとジャンプ、描き直しのときは金色だけ
     if(now>=top){
       const ran=w0!==w;
       setTimeout(()=>{el.classList.add("done");if(ran)celebrate(wrap,run);},ran?1450:0);
     }
     return el;
-  }));
+  };
+  // ウレタン後の施工がある・なしは社員も切りかえられる（なしにするときは2回押し）
+  const tog=h("button",{type:"button",class:"btn ghost small"},aft?"ウレタン後の施工をなくす":"＋ ウレタン後の施工がある");
+  tog.onclick=()=>{
+    if(aft&&tog.dataset.ok!=="1"){tog.dataset.ok="1";tog.textContent="本当になくす（ウレタン後のメーターを消す）";return;}
+    needWho(async()=>{try{await updateDoc(doc(fs,"sites",x.id),{after:!aft,afterBy:me(),afterAt:Date.now()});toast(aft?"ウレタン後をなくしました":"ウレタン後のメーターを足しました");}
+      catch(e){toast("保存できませんでした。電波を確認してください");}});
+  };
+  return h("div",{class:"meter"},h("div",{class:"mh"},"進行状況"),
+    tw.flatMap((t,k)=>aft?[one(t,k,false),one(t,k,true)]:[one(t,k,false)]),
+    h("div",{class:"mtog"},tog));
 }
+
 
 /* ---------- 現場の詳しい画面 ---------- */
 /* ---------- 現場の写真（材料置き場など）。社員だれでも足す・書きかえる・取り替える・消すができる（2026/10/29 ユーザー）
