@@ -169,6 +169,12 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .mone.part .mfill{background:linear-gradient(90deg,#0e7490,#06b6d4 60%,#67e8f9)}
 .ptot{display:inline-flex;gap:6px;align-items:center}
 .mone.part.done .mfill{background:linear-gradient(90deg,#b45309,#f59e0b 55%,#fde047)}
+/* ウレタン後のメーターの出し入れ（高さを伸ばしながらふわっと出す・しまう） */
+.mone.appear{animation:mappear .45s cubic-bezier(.2,.8,.2,1) both;overflow:hidden}
+@keyframes mappear{from{max-height:0;opacity:0;transform:translateY(-6px)}to{max-height:220px;opacity:1;transform:none}}
+.mone.vanish{animation:mvanish .32s ease-in both;overflow:hidden}
+@keyframes mvanish{from{max-height:220px;opacity:1}to{max-height:0;opacity:0;margin:0;padding:0}}
+@media (prefers-reduced-motion:reduce){.mone.appear,.mone.vanish{animation:none}}
 .mone.after .mfill{background:linear-gradient(90deg,#3730a3,#6366f1 60%,#a5b4fc)}
 .mtog{display:flex;justify-content:flex-end;margin-top:2px}.mtog .btn{font-size:12.5px;padding:6px 10px;width:auto}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
@@ -389,6 +395,8 @@ function renderSites(){
 
 /* ---------- 進行状況のメーター（floors＝最上階、floor＝いまの階）。階を変えるのは編集する人だけ ---------- */
 const meterW={};
+// ウレタン後のメーターを足した・消したときに、なめらかに出し入れするための印
+const meterAppear=new Set();
 // 走る人をメーターの w％ の位置へ（px で transform）。jump のときはアニメーションなしで置く
 // 満タンのお祝い：メーターの右はしから紙ふぶき、職人がジャンプ
 function celebrate(wrap,run){
@@ -517,7 +525,8 @@ function meter(x){
     const lab=aftOf(t)?(ka?"ウレタン後":"ウレタン前"):"";
     const wrap=h("div",{class:face?"mwrap fc":"mwrap"},run,
         h("div",{class:"mtrack",role:"img","aria-label":(t.name||"")+lab+"つぎ"+now+"階、"+top+"階まで"},fill,h("div",{class:"mticks"},Array.from({length:top},()=>h("i")))));
-    const el=h("div",{class:"mone"+(ka?" after":"")},
+    const appear=ka&&meterAppear.delete(key);
+    const el=h("div",{class:"mone"+(ka?" after":"")+(appear?" appear":""),"data-key":key},
       h("div",{class:"mh"},t.name?h("span",{class:"tw",text:t.name}):null,lab?h("span",{class:"ka"+(ka?" a":""),text:lab}):null,
         h("span",{class:"fl"},"つぎ",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
       wrap,
@@ -538,6 +547,9 @@ function meter(x){
     b.onclick=()=>{
       if(on&&b.dataset.ok!=="1"){b.dataset.ok="1";b.textContent="本当になくす（"+(t.name||"")+"ウレタン後のメーターを消す）";return;}
       needWho(async()=>{try{
+        const ak=x.id+"/"+k+"a";
+        if(!on){meterAppear.add(ak);delete meterW[ak];}
+        else{const old=document.querySelector('.mone.after[data-key="'+ak+'"]');if(old){old.classList.add("vanish");await new Promise(r=>setTimeout(r,320));}}
         if(multi)await updateDoc(doc(fs,"sites",x.id),{towers:x.towers.map((u,i)=>i===k?{...u,after:!on,afterBy:me(),afterAt:Date.now()}:u)});
         else await updateDoc(doc(fs,"sites",x.id),{after:!on,afterBy:me(),afterAt:Date.now()});
         toast(on?"ウレタン後をなくしました":"ウレタン後のメーターを足しました");}
