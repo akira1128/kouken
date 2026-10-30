@@ -10,7 +10,7 @@ self.addEventListener("push",e=>{
 self.addEventListener("notificationclick",e=>{
   e.notification.close();
   const url=new URL((e.notification.data&&e.notification.data.url)||"genba.html",self.registration.scope).href;
-  e.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(async ws=>{
+  e.waitUntil(caches.open("kouken-open").then(c=>c.put("pending",new Response(JSON.stringify({url,at:Date.now()})))).then(()=>self.clients.matchAll({type:"window",includeUncontrolled:true})).then(async ws=>{
     const w=ws[0];
     if(w){w.postMessage({type:"open",url});try{await w.focus();}catch(x){}return;}
     return self.clients.openWindow(url);

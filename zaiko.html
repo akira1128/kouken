@@ -288,7 +288,10 @@ details.edit form{padding:12px 0 0}
 
 <script type="module">
 // 通知を押したとき、開いている画面を注文の画面に切り替える（2026/10/30）
-if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="open"&&e.data.url)location.href=e.data.url;});
+// iPhone は外から画面を切り替えられないので、通知を押した印（kouken-open）を見て、アプリ自身が切り替える
+async function chkOpen(){try{const c=await caches.open("kouken-open");const r=await c.match("pending");if(!r)return;const t=await r.json();await c.delete("pending");if(Date.now()-t.at<300000)location.href=t.url;}catch(e){}}
+chkOpen();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chkOpen();});
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="open")chkOpen();});
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,getDocs,setDoc,onSnapshot,query,orderBy,limit,runTransaction,writeBatch,deleteField} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
