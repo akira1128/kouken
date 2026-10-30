@@ -179,7 +179,8 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .lastv{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin:2px 0 8px;font-size:14px}
 .lastv .lvl{font-size:12px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 7px}
 .lastv:empty{display:none}
-.mtog{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:2px}.mtog .btn{font-size:12.5px;padding:6px 10px;width:auto}
+.mtog{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:2px}
+.pask{display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:700;color:var(--ink)}.pask .btn{min-width:56px}.mtog .btn{font-size:12.5px;padding:6px 10px;width:auto}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
 /* 現場の詳しい画面 */
 .dhead{padding:14px;display:grid;gap:10px}
@@ -464,9 +465,14 @@ function partMeters(x){
   return PART_KINDS.flatMap(([base,name,cf])=>{
     const n=Math.max(1,+x[cf]||1), out=[];
     for(let i=1;i<=n;i++)out.push(onePart(x,i===1?base:base+i,i===1?name:name+i));
-    // 最後のメーターの下に「＋ ○○が複数ある」、2つ目からは最後の分を「消す」（2回押し）
-    const add=h("button",{type:"button",class:"btn ghost small",onclick:()=>needWho(async()=>{
-      try{const u={};u[cf]=n+1;await updateDoc(doc(fs,"sites",x.id),u);toast(name+(n+1)+"を足しました");}catch(e){toast("保存できませんでした。電波を確認してください");}})},"＋ "+name+"が複数ある");
+    // 最後のメーターの下に「○○は複数ありますか？ はい／いいえ」（2026/10/30 ユーザー）。はい＝1つ足す、いいえ＝聞くのをやめる（あとで足すときは小さい「○○を足す」）
+    const dn=cf+"Done", done=!!x[dn];
+    const sv=u=>needWho(async()=>{try{await updateDoc(doc(fs,"sites",x.id),u);}catch(e){toast("保存できませんでした。電波を確認してください");}});
+    const yes=()=>{const u={};u[cf]=n+1;u[dn]=false;sv(u);toast(name+(n+1)+"を足しました");};
+    const add=done?h("button",{type:"button",class:"btn ghost small",style:{opacity:.75},onclick:yes},"＋ "+name+"を足す")
+      :h("span",{class:"pask"},h("span",{text:(n>1?"ほかにも"+name+"はありますか？":name+"は複数ありますか？")}),
+        h("button",{type:"button",class:"btn small",onclick:yes},"はい"),
+        h("button",{type:"button",class:"btn ghost small",onclick:()=>{const u={};u[dn]=true;sv(u);}},"いいえ"));
     let del=null;
     if(n>1){del=h("button",{type:"button",class:"btn ghost small"},name+n+"を消す");
       del.onclick=()=>{if(del.dataset.ok!=="1"){del.dataset.ok="1";del.textContent="本当に消す（"+name+n+"の記録も消える）";return;}
