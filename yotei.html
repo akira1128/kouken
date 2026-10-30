@@ -851,7 +851,7 @@ renderPeople();renderAll();
   applyEditor();                         // ここで予定（西崎さんはメモも）を読みはじめる
   if(!editor&&!me)setTimeout(()=>{if(!me&&$("scrim").hidden)pickMe();},400);
   // 現場の一覧（在庫と同じ。施工中・これからの現場）
-  onSnapshot(collection(fs,"sites"),s=>{sites=s.docs.map(d=>d.data()).filter(x=>x&&x.name&&x.active!==false).sort((a,b)=>(a.order||0)-(b.order||0));
+  onSnapshot(collection(fs,"sites"),s=>{sites=s.docs.map(d=>d.data()).filter(x=>x&&x.name&&x.active!==false&&x.status!=="見積もり")  /* 見積もり中の現場は出さない */.sort((a,b)=>(a.order||0)-(b.order||0));
     const r=s.docs.find(d=>d.id==="_yotei");loadRemembered(r?r.data():null);},()=>{});
 })();
 })();

@@ -112,6 +112,10 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* これから：アプリの青と分けるため紫 */
 .grp-next{border-left:5px solid var(--nx)} .grp-next .grouph{color:var(--nx);background:var(--nx-soft)}
 .grp-plan{border-left:5px dashed var(--out)} .grp-plan .grouph{color:var(--out);background:var(--out-soft)}
+/* 見積もり中の現場（2026/10/30） */
+.st.est{background:var(--surface);color:var(--nx);border:1.5px dotted var(--nx);padding:0 7px}
+.grp-est{border-left:5px dotted var(--nx)} .grp-est .grouph{color:var(--nx);background:var(--nx-soft)}
+.grp-est .addest{margin:10px 14px 12px;width:auto}
 .grp-plan .grouph::before{background:none;border:2px dashed currentColor;width:9px;height:9px}
 .grp-other{border-left:5px solid var(--line)} .grp-other .grouph{color:var(--muted);background:var(--bg)}
 .grp-plan .sitecard b{color:var(--muted)}
@@ -239,6 +243,8 @@ h4.vh{margin:14px 0 6px;font-size:13px;color:var(--muted)}
 .order.done .donechk{background:var(--low);color:#fff}
 .order.done .donechk .bx{border-color:#fff}
 .donemark{color:var(--low);font-weight:700;font-size:13.5px}
+.makebox{border:1.5px solid var(--nx);background:var(--nx-soft);border-radius:10px;padding:6px 10px}
+.makebox b{color:var(--nx);font-size:13px}
 .tag{font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--in-soft);color:var(--in);white-space:nowrap}
 .dayh{margin:0;padding:10px 14px 2px;font-size:13px;font-weight:700;color:var(--muted);border-top:1px solid var(--line)}
 .dayh:first-child{border-top:0}
@@ -332,8 +338,8 @@ const FIELDS=[["address","住所","例：東京都八王子市明神町4-1"],
   ["yotei","予定表での呼び方","例：大和田、大和田町（、で区切る）"]];
 const LONG=new Set(["route","parking","rules","caution","building","spec","progress"]);
 /* 現場の状態。「予定」はまだ決まっていない現場（どれにするかは西崎さんが決める 2026/10/28） */
-const STATUSES=["施工中","これから","予定","終わった"];
-const STATUS_ORDER={"施工中":0,"これから":1,"予定":2};
+const STATUSES=["施工中","これから","予定","見積もり","終わった"];
+const STATUS_ORDER={"施工中":0,"これから":1,"予定":2,"見積もり":3};
 const MK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.6h18"/><path d="M15.9 20.6V3.4h3.7v17.2"/><path d="M4.7 5.8v14.8"/>'+
   '<path d="M4.2 4.6h11.7v1.3H4.2zM4.2 8.1h11.7v1.3H4.2zM4.2 11.6h11.7v1.3H4.2zM4.2 15.1h11.7v1.3H4.2z"/>'+
   '<g fill="currentColor" stroke="none"><rect x="6.9" y="6.5" width="1.5" height="1"/><rect x="9.9" y="6.5" width="1.5" height="1"/><rect x="12.9" y="6.5" width="1.5" height="1"/>'+
@@ -343,7 +349,7 @@ const MK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.6h18"/><pat
   '<path d="M9.8 20.6v-3.3h4.5v3.3M12.05 17.3v3.3"/></svg>';
 const mark=x=>{if(!x.mansion)return null;const e=h("span",{class:"mk",title:"マンション","aria-label":"マンション"+(x.units?" "+x.units+"戸":"")});
   e.innerHTML=MK;if(x.units)e.append(x.units+"戸");return e;};
-const stClass=st=>st==="施工中"?"now":st==="これから"?"next":st==="予定"?"plan":"other";
+const stClass=st=>st==="施工中"?"now":st==="これから"?"next":st==="予定"?"plan":st==="見積もり"?"est":"other";
 const shortSite=s=>(s||"").replace(/[（(]仮称[）)]\s*/g,"").replace(/\s*新築工事$/,"").trim();
 
 const $=id=>document.getElementById(id);
@@ -405,11 +411,13 @@ const siteName=id=>{const s=sites.find(x=>x.id===id);return s?s.name:"";};
 function renderSites(){
   const box=$("vSites");
   if(!sites.length){box.replaceChildren(h("div",{class:"panel empty",text:fs?"現場がまだありません":"読み込んでいます…"}));return;}
-  const groups=[["施工中","",x=>x.status==="施工中","now"],["これから","",x=>x.status==="これから","next"],["予定","まだ決まっていない",x=>x.status==="予定","plan"],["そのほか","",x=>!(x.status in STATUS_ORDER),"other"]];
+  const groups=[["施工中","",x=>x.status==="施工中","now"],["これから","",x=>x.status==="これから","next"],["予定","まだ決まっていない",x=>x.status==="予定","plan"],["見積もり","見積を出している",x=>x.status==="見積もり","est"],["そのほか","",x=>!(x.status in STATUS_ORDER),"other"]];
   // 外注が施工している現場は、まとまりのいちばん下に出す（2026/10/28 ユーザー）
   const outs=x=>!!(x.info&&x.info.outsource);
-  box.replaceChildren(...groups.filter(([,,f])=>sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>outs(a)-outs(b));
-    return h("section",{class:"panel grp-"+k,style:{marginBottom:"14px"}},h("h3",{class:"grouph"},t+"　"+arr.length+"件",sub?h("small",{text:"（"+sub+"）"}):null),arr.map(x=>{
+  box.replaceChildren(...groups.filter(([,,f,k])=>k==="est"||sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>outs(a)-outs(b));
+    return h("section",{class:"panel grp-"+k,style:{marginBottom:"14px"}},h("h3",{class:"grouph"},t+"　"+arr.length+"件",sub?h("small",{text:"（"+sub+"）"}):null),
+      k==="est"&&!arr.length?h("p",{class:"empty",text:"見積もり中の現場はまだありません"}):null,
+      k==="est"&&editor?h("button",{type:"button",class:"btn ghost small addest",onclick:addEstSite},"＋ 見積もりの現場を足す"):null,arr.map(x=>{
       const inf=x.info||{}, nOrd=orders.filter(o=>o.siteId===x.id).length, nNote=(x.notes||[]).length;
       return h("button",{type:"button",class:"sitecard",onclick:()=>openSite(x.id)},
         h("b",null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),shortSite(x.name)),
@@ -788,12 +796,30 @@ function editInfo(x){
   const ins=Object.fromEntries(FIELDS.map(([k,,ph])=>[k,LONG.has(k)?h("textarea",{class:"inp",placeholder:ph},inf[k]||""):h("input",{class:"inp",placeholder:ph,value:inf[k]||""})]));
   const err=h("p",{class:"err",hidden:true});
   const save=h("button",{class:"btn",type:"submit"},"保存する");
+  // 状態（施工中・これから・予定・見積もり・終わった）は編集する人だけ変えられる（2026/10/30）
+  const stSel=editor?h("select",{class:"inp"},STATUSES.map(v=>h("option",{value:v,selected:v===x.status},v))):null;
   let close;
   const form=h("form",{class:"f",onsubmit:async e=>{e.preventDefault();save.disabled=true;
     const info=Object.fromEntries(FIELDS.map(([k])=>[k,ins[k].value.trim()]));
-    try{await updateDoc(doc(fs,"sites",x.id),{info,infoAt:Date.now(),infoBy:me()});close();toast("現場の情報を保存しました");}
+    try{await updateDoc(doc(fs,"sites",x.id),{info,infoAt:Date.now(),infoBy:me(),...(stSel&&stSel.value!==x.status?{status:stSel.value}:{})});close();toast("現場の情報を保存しました");}
     catch(y){err.textContent=y&&y.code==="permission-denied"?"書く権限がありません。":"保存できませんでした。電波を確認してください。";err.hidden=false;save.disabled=false;}
-  }},h("h2",{text:shortSite(x.name)+"の情報"}),FIELDS.map(([k,l])=>h("label",{class:"fl"},l,ins[k])),err,save);
+  }},h("h2",{text:shortSite(x.name)+"の情報"}),stSel?h("label",{class:"fl"},"状態",stSel):null,FIELDS.map(([k,l])=>h("label",{class:"fl"},l,ins[k])),err,save);
+  close=openSheet(form);
+}
+/* 見積もりの現場を足す（編集する人だけ。金額は入れない 2026/10/30） */
+function addEstSite(){
+  const nm=h("input",{class:"inp",maxlength:"80",placeholder:"例：（仮称）南品川5丁目計画"});
+  const err=h("p",{class:"err",hidden:true});
+  const save=h("button",{class:"btn",type:"submit"},"足す");
+  let close;
+  const form=h("form",{class:"f",onsubmit:async e=>{e.preventDefault();const name=nm.value.trim();
+    if(!name){err.textContent="現場名を書いてください。";err.hidden=false;return;}
+    if(sites.some(s=>s.name===name)){err.textContent="同じ名前の現場がもうあります。";err.hidden=false;return;}
+    save.disabled=true;
+    try{await addDoc(collection(fs,"sites"),{name,status:"見積もり",order:Date.now(),active:true,createdAt:Date.now(),createdBy:me()});close();toast("「"+name+"」を見積もりに足しました");}
+    catch(y){err.textContent=y&&y.code==="permission-denied"?"書く権限がありません。":"足せませんでした。電波を確認してください。";err.hidden=false;save.disabled=false;}
+  }},h("h2",{text:"見積もりの現場を足す"}),h("label",{class:"fl"},"現場名",nm),
+    h("p",{class:"hint",text:"受注したら、現場の画面の「現場の情報」→「書きかえる」で状態を「これから」などに変えてください。金額はここには入れません。"}),err,save);
   close=openSheet(form);
 }
 
@@ -802,7 +828,9 @@ function orderRow(o){
   const lines=o.lines||[];
   return h("div",{class:"order"+(o.done?" done":"")},
     h("div",{class:"top"},h("b",{text:view==="vSite"?md(o.date):(o.spot?"単発：":"")+shortSite(o.siteName||siteName(o.siteId))}),h("span",{text:hm(o.at)+"　"+nick(o.who)})),
-    h("ul",null,lines.map(l=>h("li",{text:l.name+"　"+fmtN(l.qty)+(l.unit||"")}))),
+    h("ul",null,lines.filter(l=>!l.make).map(l=>h("li",{text:l.name+"　"+fmtN(l.qty)+(l.unit||"")}))),
+    // 工場で作るもの（フランジカバー）は「製作もの」として分けて出す（2026/10/30）
+    lines.some(l=>l.make)?h("div",{class:"makebox"},h("b",{text:"製作もの"}),h("ul",null,lines.filter(l=>l.make).map(l=>h("li",{text:l.name+"　"+fmtN(l.qty)+(l.unit||"")})))):null,
     o.memo?h("div",{class:"mm",text:"メモ："+o.memo}):null,
     editor==="西崎剣"?doneBtn(o):(o.done?h("div",{class:"donemark",text:"✓ 注文済み"}):null),
     editor==="西崎剣"?ecBtn(o):null);
@@ -869,7 +897,7 @@ function ecKeys(name, sub){
 // ジャケット・エルボの色は材料のID（jk色-番号・el色-番号）から
 const ecSub=l=>{const m=(l.itemId||"").match(/^(?:jk|el)(\d)-/);return m?(["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"][m[1]]||""):"";};
 function ecBtn(o){
-  const lines=(o.lines||[]).map(l=>({n:l.name,q:Number(l.qty)||0,u:l.unit||"",k:ecKeys((l.name||"").trim(),ecSub(l))})).filter(l=>l.q>0);
+  const lines=(o.lines||[]).filter(l=>!l.make).map(l=>({n:l.name,q:Number(l.qty)||0,u:l.unit||"",k:ecKeys((l.name||"").trim(),ecSub(l))})).filter(l=>l.q>0);
   const miss=lines.filter(l=>!l.k.length).length;
   const url="https://ec-tokyog.com/aec/user/cart#kouken="+encodeURIComponent(JSON.stringify({site:o.siteName||siteName(o.siteId),lines}));
   return h("div",{class:"ecrow"},
