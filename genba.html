@@ -654,7 +654,7 @@ function watchDeliv(){
   unDeliv=onSnapshot(collection(fs,"deliveries"),s=>{
     const a=[];s.docs.forEach(d=>{const x=d.data();(x.lines||[]).forEach(l=>a.push(Object.assign({sup:x.supplier||""},l)));});
     deliv=a;if(view==="vSum")renderSum();
-  },()=>{deliv=deliv||[];if(view==="vSum")renderSum();});
+  },()=>{unDeliv=null;deliv=deliv||[];if(view==="vSum")renderSum();});  // 読めなかったときは、次に集計を開いたときに読み直す
 }
 // 請求書の納入先がアプリの現場か（呼び名の芯・予定表での呼び方・正式名で合わせる）
 function destOf(x){const k=siteKeys(x), nz=t=>(t||"").replace(/[\s　]/g,"");
