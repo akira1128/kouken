@@ -176,6 +176,9 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 @keyframes mvanish{from{max-height:220px;opacity:1}to{max-height:0;opacity:0;margin:0;padding:0}}
 @media (prefers-reduced-motion:reduce){.mone.appear,.mone.vanish{animation:none}}
 .mone.after .mfill{background:linear-gradient(90deg,#3730a3,#6366f1 60%,#a5b4fc)}
+.lastv{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin:2px 0 8px;font-size:14px}
+.lastv .lvl{font-size:12px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 7px}
+.lastv:empty{display:none}
 .mtog{display:flex;justify-content:flex-end;margin-top:2px}.mtog .btn{font-size:12.5px;padding:6px 10px;width:auto}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
 /* 現場の詳しい画面 */
@@ -659,6 +662,13 @@ function siteVisits(x){
   }
   return Object.values(days);
 }
+// メーターの下に「最後に行った日と人」（予定表から。今日までの日だけ）2026/10/30 ユーザー
+function fillLastVisit(el,x){
+  const today=ymd(new Date()), past=siteVisits(x).filter(r=>r.date<=today).sort((a,b)=>b.date.localeCompare(a.date));
+  if(!past.length){el.replaceChildren(h("span",{text:events.length?"予定表にこの現場の日はまだありません":""}));return;}
+  const r=past[0];
+  el.replaceChildren(h("span",{class:"lvl",text:"最後に行った人"}),h("b",{text:md(r.date)}),h("span",{text:r.people.map(nick).join("・")||"―"}));
+}
 function fillVisits(box,x){
   const today=ymd(new Date()), all=siteVisits(x);
   const past=all.filter(r=>r.date<=today).sort((a,b)=>b.date.localeCompare(a.date));
@@ -697,6 +707,7 @@ function renderSite(){
       h("button",{type:"button",class:"backlink",onclick:()=>{siteId="";history.replaceState(null,"",location.pathname);show("vSites");}},h("b",{text:"‹"}),"現場一覧"),
       h("h2",null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),x.name),
       meter(x),
+      (()=>{const lv=h("p",{class:"lastv",id:"lastVisit"});fillLastVisit(lv,x);return lv;})(),
       h("a",{class:"btn",href:"zaiko.html?order="+encodeURIComponent(x.id),style:{textAlign:"center",textDecoration:"none"}},"この現場の材料を頼む")),
     h("section",{class:"panel sec"},
       h("h3",null,"現場の情報",h("button",{type:"button",class:"btn ghost small",onclick:()=>needWho(()=>editInfo(x))},"書きかえる")),
@@ -903,6 +914,7 @@ if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みまし
   onSnapshot(collection(fs,"events"),s=>{
     events=s.docs.map(d=>d.data());
     const vb=$("visitBox"), x=sites.find(t=>t.id===siteId);if(view==="vSite"&&vb&&x)fillVisits(vb,x);
+    const lv=$("lastVisit");if(view==="vSite"&&lv&&x)fillLastVisit(lv,x);
   },()=>{});
   if(!editor&&!who)setTimeout(()=>{if(!who&&$("scrim").hidden)pickWho();},400);
 })();
