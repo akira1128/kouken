@@ -70,8 +70,8 @@ h1{font-size:15px;color:var(--muted);font-weight:700;letter-spacing:.08em;margin
   <button type="button" id="ok">閉じる</button>
 </div></div>
 <script>
-// 西崎さん以外のメンバー（呼び名）。押すと「西崎専用」と出して開かない
-const MEMBERS=["原田","福島","嗣穏","ヒエウ","ズオン","ロン"];
+// メンバー（呼び名）。いまはダミーで、押すと「西崎専用」と出して開かない
+const MEMBERS=["西崎","原田","福島","嗣穏","ヒエウ","ズオン","ロン"];
 const box=document.getElementById("names"),sc=document.getElementById("scrim");
 MEMBERS.forEach(n=>{const b=document.createElement("button");b.type="button";b.className="nm";b.textContent=n;
   b.onclick=()=>{document.getElementById("dlgP").textContent=n+"さんの集計は、西崎さんだけが見られます。";sc.hidden=false;};box.appendChild(b);});
