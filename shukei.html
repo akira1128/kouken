@@ -51,6 +51,7 @@ h1{font-size:15px;color:var(--muted);font-weight:700;letter-spacing:.08em;margin
 .dlg{background:var(--surface);border-radius:14px;padding:22px 18px 18px;max-width:320px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)}
 .dlg b{display:block;font-size:17px;margin-bottom:14px}
 .dlg button{font:inherit;font-weight:700;width:100%;padding:12px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink)}
+.sec{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.06em;margin:18px 2px 8px}
 .back{display:inline-block;margin:0 0 14px;color:var(--accent);font-weight:700;text-decoration:none}
 </style>
 </head>
@@ -62,7 +63,10 @@ h1{font-size:15px;color:var(--muted);font-weight:700;letter-spacing:.08em;margin
 <main>
   <a class="back" href="index.html">‹ メニュー</a>
   <h1>集計</h1>
+  <h2 class="sec">社員</h2>
   <div class="names" id="names"></div>
+  <h2 class="sec">外注</h2>
+  <div class="names" id="outs"></div>
 </main>
 <div class="scrim" id="scrim" hidden><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT">
   <b id="dlgT">西崎さんだけが見れます</b>
@@ -71,9 +75,11 @@ h1{font-size:15px;color:var(--muted);font-weight:700;letter-spacing:.08em;margin
 <script>
 // メンバー（呼び名）。いまはダミーで、押すと「西崎さんだけが見れます」と出して開かない（2026/10/30 ユーザー）
 const MEMBERS=["西崎","原田","福島","嗣穏","ヒエウ","ズオン","ロン"];
-const box=document.getElementById("names"),sc=document.getElementById("scrim");
-MEMBERS.forEach(n=>{const b=document.createElement("button");b.type="button";b.className="nm";b.textContent=n;
-  b.onclick=()=>{sc.hidden=false;};box.appendChild(b);});
+// 外注（2026/10/30 ユーザー）
+const OUTS=["コウケン板金","竹内工業","小原興業","高橋断熱","その他"];
+const sc=document.getElementById("scrim");
+[["names",MEMBERS],["outs",OUTS]].forEach(([bid,list])=>{const box=document.getElementById(bid);list.forEach(n=>{const b=document.createElement("button");b.type="button";b.className="nm";b.textContent=n;
+  b.onclick=()=>{sc.hidden=false;};box.appendChild(b);});});
 document.getElementById("ok").onclick=()=>{sc.hidden=true;};
 sc.onclick=e=>{if(e.target===sc)sc.hidden=true;};
 </script>
