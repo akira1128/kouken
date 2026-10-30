@@ -5,7 +5,7 @@
 <meta name="google" content="notranslate">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>集計｜株式会社コウケン</title>
+<title>現場ごとの集計｜株式会社コウケン</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
@@ -42,7 +42,7 @@ header.topbar{position:sticky;top:0;z-index:5;background:var(--accent);color:var
 .brand small{display:block;font-size:11px;font-weight:500;opacity:.78;letter-spacing:.14em}
 main{max-width:640px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right,0px)) 32px max(16px,env(safe-area-inset-left,0px))}
 h1{font-size:15px;color:var(--muted);font-weight:700;letter-spacing:.08em;margin:4px 0 12px}
-/* 集計（社員ごと）。いまはダミー：名前を押しても開かない（2026/10/30 ユーザー） */
+/* 現場ごとの集計（メンバーの名前から開く）。いまはダミー：名前を押しても開かない（2026/10/30 ユーザー） */
 .names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .nm{font:inherit;font-size:18px;font-weight:700;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:20px 12px;cursor:pointer}
 .nm:active{transform:scale(.98)}
@@ -62,7 +62,7 @@ h1{font-size:15px;color:var(--muted);font-weight:700;letter-spacing:.08em;margin
 </div></header>
 <main>
   <a class="back" href="index.html">‹ メニュー</a>
-  <h1>集計</h1>
+  <h1>現場ごとの集計</h1>
   <div class="names" id="names"></div>
 </main>
 <div class="scrim" id="scrim" hidden><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT">
@@ -71,7 +71,7 @@ h1{font-size:15px;color:var(--muted);font-weight:700;letter-spacing:.08em;margin
 </div></div>
 <script>
 // メンバー（呼び名）。いまはダミーで、押すと「西崎専用」と出して開かない
-const MEMBERS=["西崎","原田","福島","嗣穏","ヒエウ","ズオン","ロン"];
+const MEMBERS=["西崎","福島","嗣穏","ヒエウ","ズオン","ロン"];
 const box=document.getElementById("names"),sc=document.getElementById("scrim");
 MEMBERS.forEach(n=>{const b=document.createElement("button");b.type="button";b.className="nm";b.textContent=n;
   b.onclick=()=>{document.getElementById("dlgP").textContent=n+"さんの集計は、西崎さんだけが見られます。";sc.hidden=false;};box.appendChild(b);});
