@@ -310,7 +310,7 @@ const NICK=Object.fromEntries(STAFF);
 const nick=n=>NICK[n]||n||"";
 const FACTORY="工場（加工）", OTHER="その他（メモに書く）";
 // 画面には「工場」と出す（記録の中身は前と同じ「工場（加工）」のまま 2026/10/30 ユーザー）
-const siteLbl=n=>n===FACTORY?"工場":n;
+const facLbl=n=>n===FACTORY?"工場":n;
 /* 種類の中をさらに分ける（色・材質）。ジャケット・エルボとフランジカバー */
 const COLORS=["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"];
 const SUBS={"ジャケット・エルボ":COLORS,"フランジカバー":COLORS,"PF保温筒":["直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
@@ -617,7 +617,7 @@ function openItem(id){
   const lastSite=store("kouken-site")||"";
   const siteSel=h("select",{class:"inp",id:"mvSite"},
     h("option",{value:""},"えらんでください"),
-    h("option",{value:FACTORY,selected:lastSite===FACTORY},siteLbl(FACTORY)),
+    h("option",{value:FACTORY,selected:lastSite===FACTORY},facLbl(FACTORY)),
     sites.map(s=>h("option",{value:s.name,selected:lastSite===s.name},s.name)),
     h("option",{value:OTHER,selected:lastSite===OTHER},OTHER));
   const siteLbl=h("span",{text:"どの現場へ "});
@@ -766,7 +766,7 @@ function renderLogSites(){
   const used=[...new Set(logs.map(l=>l.site).filter(Boolean))];
   const names=[...new Set([FACTORY,...sites.map(s=>s.name),...used])];
   if(logSite!=="すべて"&&!names.includes(logSite))logSite="すべて";
-  $("logSite").replaceChildren(h("option",{value:"すべて",selected:logSite==="すべて"},"すべて"),...names.map(n=>h("option",{value:n,selected:n===logSite},siteLbl(n))));
+  $("logSite").replaceChildren(h("option",{value:"すべて",selected:logSite==="すべて"},"すべて"),...names.map(n=>h("option",{value:n,selected:n===logSite},facLbl(n))));
 }
 $("logSite").addEventListener("change",e=>{logSite=e.target.value;renderLog();});
 function renderLog(){
@@ -778,7 +778,7 @@ function renderLog(){
     const sign=l.kind==="in"||l.kind==="back"?"＋":l.kind==="out"?"−":"";
     const num=l.kind==="del"?"":l.kind==="set"?("→ "+fmtN(l.after)+(l.unit||"")):(sign+fmtN(l.n)+(l.unit||""));
     return h("li",null,h("span",{class:"tag "+l.kind,text:KIND[l.kind]||l.kind}),h("span",{class:"what",text:l.itemName||""}),h("span",{class:"n",text:num}),
-      h("span",{class:"meta"},l.site?h("span",{class:"site",text:(l.kind==="back"?"← ":"→ ")+siteLbl(l.site)}):null,fmtT(l.at)+"　"+nick(l.who)+(l.kind==="in"||l.kind==="out"||l.kind==="back"?"　残り "+fmtN(l.after)+(l.unit||""):"")+(l.memo?"　"+l.memo:"")));}));
+      h("span",{class:"meta"},l.site?h("span",{class:"site",text:(l.kind==="back"?"← ":"→ ")+facLbl(l.site)}):null,fmtT(l.at)+"　"+nick(l.who)+(l.kind==="in"||l.kind==="out"||l.kind==="back"?"　残り "+fmtN(l.after)+(l.unit||""):"")+(l.memo?"　"+l.memo:"")));}));
 }
 
 function applyReadOnly(){}
