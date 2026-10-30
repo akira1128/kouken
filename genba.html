@@ -1168,7 +1168,7 @@ if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みまし
   }catch(e){fs=null;setBanner("つながりません。電波を確認して、ページを開き直してください。");return;}
   try{const ed=await getDoc(doc(fs,"editors",uid));if(ed.exists())editor=ed.data().name||"";}catch(e){}
   renderWho();renderPush();
-  if(editor==="西崎剣")importEstSites().catch(()=>{});  // 見積もりの現場を1回だけ入れる
+  if(me()==="西崎剣")importEstSites().catch(()=>{});  // 見積もりの現場を1回だけ入れる（使う人が西崎でも）
   const facesP=loadFaces();
   if(siteId){await facesP;rollRunFace();}
   // 現場（在庫・予定表と同じ一覧。施工中→これから→そのほか）
