@@ -34,7 +34,7 @@
     const form_list=ok.map(({l,hit},i)=>({row_num:i,order_quantity:String(l.q),order_case_quantity:"0",cart_id:"",item_cd:hit.item_cd,case_div:"0",unit_div:"1",cs1_cd:"",cs2_cd:"",quantity_per_case:""}));
     const res=await fetch("/aec/user/cart_in_async",{method:"POST",credentials:"include",headers:{"Content-Type":"application/x-www-form-urlencoded; charset=UTF-8","X-Requested-With":"XMLHttpRequest"},
       body:new URLSearchParams({_csrf:csrf,form_list:JSON.stringify(form_list)})}).then(r=>r.text());
-    let msgs=[];try{const j=JSON.parse(res);for(const v of Object.values(j.messages||{}))(Array.isArray(v)?v:[]).forEach(m=>m&&m.message&&msgs.push(m.message));}catch(e){msgs=["カートの返事が読めませんでした"];}
+    let msgs=[];try{const j=JSON.parse(res);for(const [k,v] of Object.entries(j.messages||{}))if(/error/i.test(k))(Array.isArray(v)?v:[]).forEach(m=>m&&m.message&&msgs.push(m.message));  // エラーだけ出す}catch(e){msgs=["カートの返事が読めませんでした"];}
     try{localStorage.removeItem("kouken-ec");}catch(e){}
     history.replaceState(null,"",location.pathname+location.search);
     say("<b>"+ord.site+"</b><br>カートに入れました："+ok.length+"品<br>"+ok.map(({l,hit})=>"・"+nz(hit.item_name1)+" "+nz(hit.item_name2)+"　"+l.q+l.u).join("<br>")+
