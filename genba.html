@@ -318,7 +318,7 @@ if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("messag
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getMessaging,getToken,isSupported} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,getDoc,setDoc,onSnapshot,query,where,orderBy,limit,arrayUnion,arrayRemove,writeBatch,deleteField} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,getDoc,setDoc,onSnapshot,query,where,orderBy,limit,arrayUnion,arrayRemove,writeBatch,deleteField,getDocsFromServer} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {FIREBASE_CONFIG} from "./firebase-config.js";
 (function(){
 /* 社員：[正式名, 呼び名]。在庫・予定表と同じ。「使う人」は在庫で選んだ名前（kouken-who）と同じものを使う */
@@ -371,6 +371,73 @@ const hm=t=>{const d=new Date(t);return p2(d.getHours())+":"+p2(d.getMinutes());
 let fs=null, uid="", editor="", sites=[], orders=[], view="vSites", siteId=new URLSearchParams(location.search).get("site")||"";
 let who=store("kouken-who")||"";
 if(who&&!NICK[who])who="";
+
+/* ---------- 見積もりの現場を入れる（akira2 の見積書から、重ならない現場だけ 2026/10/31 ユーザー） ----------
+   [現場名, 元請, 見積書の日付, ほかの呼び方（すでにある現場と同じか見る）]。西崎さんの携帯で開いたときに1回だけ入れる */
+const EST_SITES=[
+  ["鹿島技術研究所","三洋機械工業株式会社","2023-03-20"],
+  ["大阪アーマ","","2025-05-16"],
+  ["某所 保温ラッキング工事（三洋機械工業）","三洋機械工業株式会社","2025-07-17"],
+  ["サンフレッセ","三洋機械工業株式会社","2025-09-01"],
+  ["ライフコーポレーション","三洋機械工業株式会社","2025-09-26"],
+  ["神戸アーマ","有限会社メイ","2025-10-03",["神戸"]],
+  ["（仮称）市川市加藤新田Ⅱ冷凍冷蔵新築PJ","","2025-11-15"],
+  ["大日精化東京工場","三洋機械工業株式会社","2026-02-07"],
+  ["（仮称）ガーラレジデンス花月総持寺","株式会社エステック","2026-03-12",["花月総持寺"]],
+  ["（仮称）横浜市神奈川区大口仲町マンション 新築工事","株式会社エステック","2026-03-12",["大口仲町"]],
+  ["角ダクト（三洋機械工業）","三洋機械工業株式会社","2026-03-27"],
+  ["都内某所（ノーラエンジニアリング）","ノーラエンジニアリング株式会社","2026-04-15",["都内某所"]],
+  ["（仮称）マキシヴ東向島 新築工事","株式会社エステック","2026-05-09",["東向島"]],
+  ["（仮称）足立区谷中5丁目計画 新築工事","株式会社エステック","2026-05-12",["谷中"]],
+  ["大日精化坂東工場","三洋機械工業株式会社","2026-05-21",["坂東"]],
+  ["（仮称）馬込プロジェクト 新築工事","株式会社エステック","2026-06-04",["馬込"]],
+  ["（仮称）清澄白河Ⅱプロジェクト 新築工事","RY住設","2026-06-10",["清澄白河"]],
+  ["（仮称）ガーラ保土ヶ谷 新築工事","株式会社エステック","2026-06-25",["保土ヶ谷"]],
+  ["（仮称）港区西麻布４丁目計画","株式会社エステック","2026-06-25",["西麻布4丁目","西麻布四丁目"]],
+  ["晴海トリトンスクエア","株式会社武蔵","2026-08-06",["晴海"]],
+  ["マクドナルド茅ヶ崎","株式会社良空","2026-08-08",["茅ヶ崎"]],
+  ["鎌倉","株式会社良空","2026-08-08"],
+  ["（仮称）横浜市港北区大豆戸町PJ","株式会社エステック","2026-08-10",["大豆戸"]],
+  ["トヨタ葛飾四ツ木店","有限会社ハクビ","2026-08-19",["四ツ木"]],
+  ["保温工事（東総設備工業）","有限会社東総設備工業","2026-08-27"],
+  ["浦安市川医療センター","株式会社アクシス","2026-08-27"],
+  ["テイケン東京ビル","株式会社小林空調設備","2026-08-27",["テイケン"]],
+  ["DIC千葉","三洋機械工業株式会社","2026-08-28",["DIC"]],
+  ["大井学生寮","常廣設備工業株式会社","2026-09-03",["大井"]],
+  ["（仮称）品川区南品川４丁目（E棟）計画 新築工事","株式会社エステック","2026-09-09",["南品川4丁目","南品川四丁目"]],
+  ["（仮称）品川区北品川6丁目プロジェクト","株式会社エステック","2026-09-21",["北品川"]],
+  ["浮間合成","三洋機械工業株式会社","2026-10-06",["浮間"]],
+  ["杉並区立大宮中学校改修","有限会社ハクビ","2026-10-07",["大宮中学校"]],
+  ["（仮称）梅田２丁目マンション","株式会社エステック","2026-10-07",["梅田"]],
+  ["エアロ松戸","有限会社メイ","2026-10-08",["松戸"]],
+  ["ラウンドワン入間店","株式会社アネシス","2026-10-08",["ラウンドワン"]],
+  ["（仮称）神山町賃貸事業プロジェクト 新築工事","株式会社エステック","2026-10-14",["神山町"]],
+  ["ENEOS中央研究所","高尚エンジニアリング","2026-10-15",["ENEOS"]],
+  ["稲田小学校","株式会社リムノテック","2026-10-16"],
+  ["（仮称）クリオ石神井公園","株式会社東京建築技術","2026-10-17",["石神井"]],
+  ["（仮称）文京区春日1丁目計画","株式会社エステック","2026-10-21",["春日1丁目","春日一丁目"]],
+  ["マクドナルド氷川台店 新築工事","","2026-10-21",["氷川台"]],
+  ["冷媒管保温・ラッキング工事（三洋機械工業）","三洋機械工業株式会社","2026-10-22",["冷媒管"]],
+  ["桐朋学園仙川キャンパス","江南工業","2026-10-28",["桐朋"]]
+];
+// 名前をくらべやすくする（全角半角・空白・（仮称）・新築工事などを外す）
+const estKey=s=>(s||"").normalize("NFKC").replace(/\(仮称\)|仮\)/g,"").replace(/\s|新築工事|保温工事|計画|プロジェクト|PJ/g,"");
+async function importEstSites(){
+  const mark=doc(fs,"sites","_est20261031");
+  if((await getDoc(mark)).exists())return;
+  const all=(await getDocsFromServer(collection(fs,"sites"))).docs.map(d=>d.data()).filter(x=>x&&x.name).map(x=>estKey(x.name));
+  const same=k=>k&&all.some(a=>a.includes(k)||(a.length>=4&&k.includes(a)));
+  const batch=writeBatch(fs),added=[];
+  EST_SITES.forEach(([name,gc,day,alias],i)=>{
+    if([name,...(alias||[])].some(n=>same(estKey(n))))return;
+    batch.set(doc(fs,"sites","est"+String(i+1).padStart(3,"0")),{name,status:"見積もり",order:new Date(day+"T09:00").getTime(),active:true,
+      info:gc?{gc}:{},estDate:day,createdAt:Date.now(),createdBy:"見積書から"});
+    added.push(name);
+  });
+  batch.set(mark,{added,at:Date.now()});
+  await batch.commit();
+  if(added.length)toast("見積もりの現場を"+added.length+"件入れました");
+}
 
 /* ---------- 下から出るパネル ---------- */
 function openSheet(...kids){
@@ -1101,6 +1168,7 @@ if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みまし
   }catch(e){fs=null;setBanner("つながりません。電波を確認して、ページを開き直してください。");return;}
   try{const ed=await getDoc(doc(fs,"editors",uid));if(ed.exists())editor=ed.data().name||"";}catch(e){}
   renderWho();renderPush();
+  if(editor==="西崎剣")importEstSites().catch(()=>{});  // 見積もりの現場を1回だけ入れる
   const facesP=loadFaces();
   if(siteId){await facesP;rollRunFace();}
   // 現場（在庫・予定表と同じ一覧。施工中→これから→そのほか）
