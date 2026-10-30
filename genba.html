@@ -160,6 +160,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .runner svg.over{position:absolute;left:0;top:0;pointer-events:none}
 @media (prefers-reduced-motion:reduce){.runner svg,.runner .la,.runner .lb,.runner .aa,.runner .ab,.runner .rface{animation:none}.runner{transition:none}}
 .mstep{display:flex;gap:6px;align-items:center;justify-content:flex-end;font-size:12px;color:var(--muted)}
+.mstep .mby{margin-right:auto;font-size:11.5px}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
 /* 現場の詳しい画面 */
 .dhead{padding:14px;display:grid;gap:10px}
@@ -444,9 +445,12 @@ function meter(x){
         const n=parseInt(inp.value,10);if(!(n>0&&n<=80)){toast("階数を入れてください");return;}
         try{await updateDoc(doc(fs,"sites",x.id),{floors:n,floor:0});toast("最上階を入れました");}catch(e){toast("保存できませんでした");}}},"入れる")):null);
   }
-  const save=async(k,n)=>{
-    try{if(x.towers&&x.towers.length)await updateDoc(doc(fs,"sites",x.id),{towers:x.towers.map((t,i)=>i===k?{...t,floor:n}:t)});
-      else await updateDoc(doc(fs,"sites",x.id),{floor:n});}catch(e){toast("保存できませんでした");}};
+  // つぎの階は社員だれでも変えられる。変えた人と日時を残す（2026/10/30 ユーザー）
+  const save=(k,n)=>needWho(async()=>{
+    const by=me(), at=Date.now();
+    try{if(x.towers&&x.towers.length)await updateDoc(doc(fs,"sites",x.id),{towers:x.towers.map((t,i)=>i===k?{...t,floor:n,by,at}:t)});
+      else await updateDoc(doc(fs,"sites",x.id),{floor:n,floorBy:by,floorAt:at});}
+    catch(e){toast(e&&e.code==="permission-denied"?"変える権限がありません":"保存できませんでした。電波を確認してください");}});
   const fk=Math.floor(runFacePick*tw.length);
   return h("div",{class:"meter"},h("div",{class:"mh"},"進行状況"),tw.map((t,k)=>{
     const top=+t.floors||0;if(!top)return null;
@@ -462,7 +466,7 @@ function meter(x){
     const el=h("div",{class:"mone"},
       h("div",{class:"mh"},t.name?h("span",{class:"tw",text:t.name}):null,h("span",{class:"fl"},"つぎ",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
       wrap,
-      editor?h("div",{class:"mstep"},(t.name||"")+"のつぎの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")):null);
+      h("div",{class:"mstep"},(tb=>tb?h("span",{class:"mby",text:"直した人："+nick(tb.by)+"（"+md(ymd(new Date(tb.at)))+"）"}):null)(t.by?{by:t.by,at:t.at}:(x.floorBy&&!(x.towers&&x.towers.length)?{by:x.floorBy,at:x.floorAt}:null)),(t.name||"")+"のつぎの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")));
     // 最上階まで終わったら満タン。走ってきたときは着いてから紙ふぶきとジャンプ、描き直しのときは金色だけ
     if(now>=top){
       const ran=w0!==w;
