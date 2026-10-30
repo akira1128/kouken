@@ -463,7 +463,7 @@ function matchQ(it,q){
   return true;
 }
 function renderList(){
-  if(ORDER&&$("handbox"))$("handbox").hidden=cat!=="その他";
+  if($("handbox"))$("handbox").hidden=cat!=="その他";
   renderAlert();
   const q=$("q").value.trim().toLowerCase();
   const list=$("list");
@@ -478,7 +478,7 @@ function renderList(){
   const qs2=/エルボ/.test(q)&&!/ジャケット/.test(q)?"エルボ":/ジャケット/.test(q)&&!/エルボ/.test(q)?"ジャケット":sub2;  // 言葉に「エルボ」があればエルボの中を探す
   const shown=items.filter(it=>(q&&!inSub2||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q&&!inSub2||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===(q?qs2:sub2))&&(!q||matchQ(it,q)));
   // 材料を頼むときの「その他」は手書きの欄だけ出すので、「見つかりません」は出さない
-  if(!shown.length&&ORDER&&cat==="その他"&&!q){list.replaceChildren();return;}
+  if(!shown.length&&cat==="その他"&&!q){list.replaceChildren();return;}
   if(!shown.length){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"見つかりません"}),h("span",{text:"ことばや種類を変えてさがしてください。"})));return;}
   const groups=[];
   for(const c of CATS){
@@ -872,6 +872,28 @@ if(ORDER){document.documentElement.classList.add("ordermode");
         if(!nm||!(n>0)){xErr.textContent="名前と数を入れてください。";xErr.hidden=false;return;}
         xErr.hidden=true;cart["x"+Date.now()]={n,name:nm,unit:xU.value,cat:""};xName.value="";xN.value="";saveCart();toast("「"+nm+"」を"+fmtN(n)+xU.value+" 入れました");}},"入れる")),xErr));
   renderCartBar();}
+else{
+  // 工場在庫：「その他」をえらんだとき、一覧にない材料を手書きで登録できる欄（2026/10/30 ユーザー）
+  const xName=h("input",{class:"inp",maxlength:"60",placeholder:"材料の名前（例：アルミテープ 50mm）"}),
+    xN=h("input",{class:"inp",type:"number",inputmode:"decimal",min:"0",step:"any",placeholder:"数",style:"width:84px;flex:none"}),
+    xU=h("select",{class:"inp",style:"width:84px;flex:none","aria-label":"数え方"},UNITS.map(u=>h("option",{value:u},u))),
+    xErr=h("p",{class:"err",hidden:true});
+  const xGo=h("button",{class:"btn",type:"button",onclick:async()=>{
+    const nm=xName.value.trim(),n=xN.value===""?0:Number(xN.value);
+    if(!nm||!(n>=0)){xErr.textContent="材料の名前を入れてください。";xErr.hidden=false;return;}
+    if(!db){xErr.textContent="データにつながっていません。";xErr.hidden=false;return;}
+    if(!who){pickWho();return;}
+    if(items.some(it=>it.name===nm)){xErr.textContent="同じ名前の材料がもうあります。一覧から選んでください。";xErr.hidden=false;return;}
+    xErr.hidden=true;xGo.disabled=true;
+    try{const now=Date.now();
+      const ref=await db.collection("items").add({name:nm,cat:"その他",sub:"",unit:xU.value,qty:n,min:0,createdAt:now,updatedAt:now,updatedBy:who});
+      await db.collection("logs").add({at:now,kind:"new",itemId:ref.id,itemName:nm,unit:xU.value,n,after:n,who,memo:"手書きで登録"});
+      xName.value="";xN.value="";toast("「"+nm+"」を登録しました（"+fmtN(n)+xU.value+"）");
+    }catch(x){xErr.textContent=errMsg(x);xErr.hidden=false;}
+    xGo.disabled=readOnly;}},"登録する");
+  $("list").insertAdjacentElement("beforebegin",h("section",{class:"panel handbox",id:"handbox",hidden:cat!=="その他"},
+    h("h3",{text:"一覧にない材料を書く"}),xName,h("div",{class:"handrow"},xN,xU,xGo),
+    h("p",{class:"hint",style:"margin:0",text:"登録すると下の一覧に入ります。そのあと押して、持ち出し・戻しを記録できます。"}),xErr));}
 renderWho();renderCats();renderList();renderLog();show(view);
 (async()=>{
   if(!FIREBASE_CONFIG||!FIREBASE_CONFIG.apiKey){setBanner("まだ設定がすんでいません（firebase-config.js に Firebase の設定を入れてください）。");renderList();return;}
