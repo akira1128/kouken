@@ -534,7 +534,7 @@ function meter(x){
         h("span",{class:"fl"},"つぎ",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
       wrap,
       h("div",{class:"mstep"},tb?h("span",{class:"mby",text:"直した人："+nick(tb.by)+"（"+md(ymd(new Date(tb.at)))+"）"}):null,
-        (t.name||"")+(lab?lab+"の":"の")+"つぎの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")),
+        ((t.name||"")+lab?(t.name||"")+lab+"の":"")+"つぎの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")),
       ka?null:togBtn(t,k));
     // 最上階まで終わったら満タン。走ってきたときは着いてから紙ふぶきとジャンプ、描き直しのときは金色だけ
     if(now>=top){
