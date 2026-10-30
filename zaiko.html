@@ -492,9 +492,11 @@ function renderList(){
   // ジャケット・エルボを開いているときは、さがす欄に文字を入れても、選んでいる「ジャケット」か「エルボ」の中だけで探す（色は全部）（2026/10/28）
   const inSub2=!!SUB2[cat];
   const qs2=/エルボ/.test(q)&&!/ジャケット/.test(q)?"エルボ":/ジャケット/.test(q)&&!/エルボ/.test(q)?"ジャケット":sub2;  // 言葉に「エルボ」があればエルボの中を探す
-  const shown=items.filter(it=>(q&&!inSub2||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q&&!inSub2||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===(q?qs2:sub2))&&(!q||matchQ(it,q)));
+  let shown=items.filter(it=>(q&&!inSub2||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q&&!inSub2||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===(q?qs2:sub2))&&(!q||matchQ(it,q)));
   // フランジカバーは色をえらんだあと、φとLをえらんで開く（2026/10/30 ユーザー）
   const flp=cat==="フランジカバー"&&!q?flPanel():null;
+  // フランジカバーの一覧には、在庫が0個の寸法は出さない（寸法は上の欄からひらく 2026/10/30 ユーザー）
+  if(flp)shown=shown.filter(it=>it.cat!=="フランジカバー"||Number(it.qty)>0);
   // 材料を頼むときの「その他」は手書きの欄だけ出すので、「見つかりません」は出さない
   if(!shown.length&&(cat==="その他"||flp)&&!q){list.replaceChildren(...(flp?[flp]:[]));return;}
   if(!shown.length){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"見つかりません"}),h("span",{text:"ことばや種類を変えてさがしてください。"})));return;}
