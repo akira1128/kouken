@@ -84,5 +84,9 @@ a.card:active{transform:scale(.98)}
   </div>
   <p class="note">株式会社コウケン 社内用。リンクと暗証番号とアプリ内の情報は、社外の人に教えないでください。</p>
 </main>
+<script>
+// 通知を押したとき、開いている画面を注文の画面に切り替える（2026/10/30）
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="open"&&e.data.url)location.href=e.data.url;});
+</script>
 </body>
 </html>

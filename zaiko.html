@@ -287,6 +287,8 @@ details.edit form{padding:12px 0 0}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script type="module">
+// 通知を押したとき、開いている画面を注文の画面に切り替える（2026/10/30）
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="open"&&e.data.url)location.href=e.data.url;});
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,getDocs,setDoc,onSnapshot,query,orderBy,limit,runTransaction,writeBatch,deleteField} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";

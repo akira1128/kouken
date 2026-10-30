@@ -295,6 +295,8 @@ label.fl em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script type="module">
+// 通知を押したとき、開いている画面を注文の画面に切り替える（2026/10/30）
+if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="open"&&e.data.url)location.href=e.data.url;});
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getMessaging,getToken,isSupported} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -967,7 +969,10 @@ function askPin(){
 }
 
 /* ---------- 起動 ---------- */
-renderWho();show(siteId?"vSite":"vSites");
+// 通知を押したとき（?ord=現場）：その現場の「注文の記録」を開く（2026/10/30）
+const ordParam=new URLSearchParams(location.search).get("ord");
+if(ordParam!==null){ordSite=ordParam;store("kouken-ord-site",ordSite);store("kouken-ord-seen",String(Date.now()));}
+renderWho();show(ordParam!==null?"vOrders":siteId?"vSite":"vSites");
 if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みました");
 (async()=>{
   if(!FIREBASE_CONFIG||!FIREBASE_CONFIG.apiKey){setBanner("まだ設定がすんでいません（firebase-config.js）。");return;}
