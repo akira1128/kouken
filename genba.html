@@ -8,6 +8,7 @@
 <title>現場一覧｜株式会社コウケン</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-title" content="コウケン">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
@@ -75,6 +76,9 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .notice{padding:12px 14px;display:grid;gap:8px;border-color:var(--low);background:var(--low-soft)}
 .notice h3{margin:0;font-size:15px;color:var(--low)}
 .notice .btn{justify-self:start;width:auto}
+.pushbox{padding:12px 14px;display:grid;gap:8px}
+.pushbox h3{margin:0;font-size:15px}
+.pushbox .btn{justify-self:start;width:auto}
 /* 現場の一覧 */
 .sitecard{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:13px 14px}
 .sitecard:first-of-type{border-top:0}
@@ -275,6 +279,7 @@ label.fl em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
   <p class="banner" id="banner" hidden></p>
   <main>
     <section class="panel notice" id="notice" aria-live="polite" hidden></section>
+    <section class="panel pushbox" id="pushbox" hidden></section>
     <div id="vSites"></div>
     <div id="vSite" hidden></div>
     <div id="vOrders" hidden></div>
@@ -291,6 +296,7 @@ label.fl em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
 
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getMessaging,getToken,isSupported} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,getDoc,setDoc,onSnapshot,query,where,orderBy,limit,arrayUnion,arrayRemove,writeBatch,deleteField} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {FIREBASE_CONFIG} from "./firebase-config.js";
@@ -911,6 +917,37 @@ function renderNotice(){
       h("button",{type:"button",class:"btn ghost small",onclick:()=>{store("kouken-ord-seen",String(Date.now()));renderNotice();}},"確認した")));
 }
 
+/* ---------- 携帯への通知（西崎さんの携帯だけ。注文が来たらすぐ届く 2026/10/30） ---------- */
+const VAPID_KEY="BIgE1nu5kfTRSKcNKpx7qwDm28Sk7_BrNUotCE2QK3Lc71ai3kB6CsHDJt-XXlJ3nlkqE2PP1lwNgm7wgRF5Y1g";
+let fbApp=null;
+async function pushToken(ask){
+  if(ask&&Notification.permission!=="granted"&&await Notification.requestPermission()!=="granted")return "";
+  if(Notification.permission!=="granted")return "";
+  const reg=await navigator.serviceWorker.register("sw.js");await navigator.serviceWorker.ready;
+  const t=await getToken(getMessaging(fbApp),{vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
+  if(t)await setDoc(doc(fs,"pushTokens",t.slice(-40).replace(/[^A-Za-z0-9_-]/g,"_")),{token:t,who:editor,at:Date.now(),ua:navigator.userAgent.slice(0,120)});
+  return t;
+}
+async function renderPush(){
+  const box=$("pushbox");
+  if(editor!=="西崎剣"||!fs){box.hidden=true;return;}
+  const ok="serviceWorker" in navigator&&"Notification" in window&&"PushManager" in window&&await isSupported().catch(()=>false);
+  const home=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  // もう受け取っている携帯は、開くたびに登録を新しくするだけ（欄は出さない）
+  if(ok&&Notification.permission==="granted"){box.hidden=true;pushToken(false).catch(()=>{});return;}
+  box.hidden=false;
+  if(!ok){box.replaceChildren(h("h3",{text:"注文の通知をこの携帯で受け取る"}),
+    h("p",{class:"hint",text:home?"この携帯は通知に対応していません。iPhoneの「設定」→「一般」→「ソフトウェアアップデート」でiOSを新しくしてください。":"Safariの共有ボタン（□に↑）→「ホーム画面に追加」をして、ホーム画面のコウケンのアイコンから開いてください。そこで通知を受け取れるようになります。"}));return;}
+  if(Notification.permission==="denied"){box.replaceChildren(h("h3",{text:"通知が止められています"}),
+    h("p",{class:"hint",text:"iPhoneの「設定」→「通知」→「コウケン」で通知を許可してください。"}));return;}
+  const err=h("p",{class:"err",hidden:true});
+  const go=h("button",{type:"button",class:"btn small",onclick:async()=>{go.disabled=true;err.hidden=true;
+    try{const t=await pushToken(true);if(t){toast("通知を受け取れるようにしました");renderPush();}else{err.textContent="通知が許可されませんでした。";err.hidden=false;}}
+    catch(x){err.textContent="うまく登録できませんでした（"+(x&&x.code||x&&x.message||"")+"）";err.hidden=false;}
+    go.disabled=false;}},"通知を受け取る");
+  box.replaceChildren(h("h3",{text:"注文の通知をこの携帯で受け取る"}),h("p",{class:"hint",text:"社員や西崎さんが材料を頼んだら、すぐこの携帯に通知が届きます。"}),go,err);
+}
+
 /* ---------- 会社の暗証番号（在庫・予定表と同じ。もう入れた携帯は聞かない） ---------- */
 function askPin(){
   return new Promise(resolve=>{
@@ -936,6 +973,7 @@ if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みまし
   if(!FIREBASE_CONFIG||!FIREBASE_CONFIG.apiKey){setBanner("まだ設定がすんでいません（firebase-config.js）。");return;}
   try{
     const app=initializeApp(FIREBASE_CONFIG);
+    fbApp=app;
     try{fs=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});}catch(e){fs=getFirestore(app);}
     const auth=getAuth(app);
     await signInAnonymously(auth);uid=auth.currentUser.uid;
@@ -943,7 +981,7 @@ if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みまし
     if(!m.exists())await askPin();
   }catch(e){fs=null;setBanner("つながりません。電波を確認して、ページを開き直してください。");return;}
   try{const ed=await getDoc(doc(fs,"editors",uid));if(ed.exists())editor=ed.data().name||"";}catch(e){}
-  renderWho();
+  renderWho();renderPush();
   const facesP=loadFaces();
   if(siteId){await facesP;rollRunFace();}
   // 現場（在庫・予定表と同じ一覧。施工中→これから→そのほか）

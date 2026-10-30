@@ -1,0 +1,10 @@
+{
+  "name": "株式会社コウケン",
+  "short_name": "コウケン",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2b5aa8",
+  "icons": [{"src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png"}]
+}

@@ -45,6 +45,8 @@ service cloud.firestore {
     match /photoFull/{id} { allow read, write: if member(); }
     // 材料屋さんの請求書から取った納品（金額は入れない）：見るのは社員。足すのは暗証番号を入れた携帯（請求書を読み込むとき）、直す・消すのは編集する人だけ
     match /deliveries/{id} { allow read, create: if member(); allow update, delete: if editor(); }
+    // 注文の通知を受け取る携帯の登録：西崎さんの携帯だけが入れられる（読むのは通知を送る仕組みだけ）
+    match /pushTokens/{id} { allow create, update, delete: if boss(); allow read: if false; }
     // 履歴は足すだけ（直したり消したりはできない）
     match /logs/{id} { allow read, create: if member(); allow update, delete: if false; }
   }
