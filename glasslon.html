@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>グラスロン注文の準備｜株式会社コウケン</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+:root{--ink:#1a2233;--muted:#5b6577;--line:#d9dee7;--bg:#f4f6fa;--pri:#1f3a8a}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 -apple-system,"Hiragino Sans",sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:8px 0 12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+ol{padding-left:1.4em;margin:6px 0}li{margin:6px 0}
+textarea{width:100%;box-sizing:border-box;height:96px;font:13px/1.4 ui-monospace,monospace;border:1px solid var(--line);border-radius:8px;padding:8px}
+button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--pri);color:#fff;font-size:16px;font-weight:bold;margin-top:8px}
+.muted{color:var(--muted);font-size:14px}
+</style>
+</head>
+<body><div class="wrap">
+<h1>グラスロン注文の準備（最初の1回だけ）</h1>
+<div class="card">
+<p>iPhone の Safari に「コウケン→カート」というブックマークを1つ作ります。アプリの「グラスロンに注文」でグラスロンのサイトを開いたあと、このブックマークを押すと、品物と数がカートに入ります。</p>
+</div>
+<div class="card">
+<b>① 下の文字をコピー</b>
+<textarea id="code" readonly></textarea>
+<button type="button" id="copy">コピーする</button>
+<p class="muted" id="done" hidden>コピーしました</p>
+</div>
+<div class="card">
+<b>② ブックマークを作る（Safari）</b>
+<ol>
+<li>このページのまま、下の共有ボタン（□に↑）→「ブックマークを追加」→ 名前を <b>コウケン→カート</b> にして「保存」。</li>
+<li>下のブックマークのボタン（本のマーク）→ 右下の「編集」→ いま作った「コウケン→カート」を押す。</li>
+<li>名前の下のアドレスを全部消して、①でコピーした文字を貼り付けて「完了」。</li>
+</ol>
+</div>
+<div class="card">
+<b>③ 使い方</b>
+<ol>
+<li>アプリの「注文の記録」で、注文の下の「グラスロンに注文」を押す（Safari でグラスロンが開きます）。</li>
+<li>ログインの画面が出たらログインして、お届け先を選ぶ。</li>
+<li>上のアドレス欄に「コウケン」と打つと出てくる「コウケン→カート」を押す（ブックマークから押してもOK）。</li>
+<li>カートに入った品物が出るので、「カートを見る」で中身を確かめて、注文を確定する。</li>
+</ol>
+<p class="muted">グラスロンにない材料（手書きの材料など）は「入らなかった」と出ます。そのときは自分で探して入れてください。</p>
+</div>
+</div>
+<script>
+const code="javascript:(function(){var s=document.createElement('script');s.src='https://akira1128.github.io/kouken/glasslon-cart.js?'+Date.now();document.body.appendChild(s);})();";
+document.getElementById("code").value=code;
+document.getElementById("copy").onclick=async()=>{const t=document.getElementById("code");try{await navigator.clipboard.writeText(code);}catch(e){t.select();document.execCommand("copy");}document.getElementById("done").hidden=false;};
+</script>
+</body>
+</html>

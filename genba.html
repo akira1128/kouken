@@ -79,6 +79,8 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .pushbox{padding:12px 14px;display:grid;gap:8px}
 .pushbox h3{margin:0;font-size:15px}
 .pushbox .btn{justify-self:start;width:auto}
+.ecrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+.ecrow .btn{width:auto;text-decoration:none;display:inline-block}
 /* 現場の一覧 */
 .sitecard{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:13px 14px}
 .sitecard:first-of-type{border-top:0}
@@ -794,7 +796,71 @@ function orderRow(o){
   return h("div",{class:"order"},
     h("div",{class:"top"},h("b",{text:view==="vSite"?md(o.date):shortSite(o.siteName||siteName(o.siteId))}),h("span",{text:hm(o.at)+"　"+nick(o.who)})),
     h("ul",null,lines.map(l=>h("li",{text:l.name+"　"+fmtN(l.qty)+(l.unit||"")}))),
-    o.memo?h("div",{class:"mm",text:"メモ："+o.memo}):null);
+    o.memo?h("div",{class:"mm",text:"メモ："+o.memo}):null,
+    editor==="西崎剣"?ecBtn(o):null);
+}
+
+/* ---------- グラスロンに注文（西崎さんだけ。ECサイトを開いて、ブックマーク「コウケン→カート」でカートに入れる 2026/10/30） ---------- */
+// アプリの材料名 → グラスロンECの商品名（item_name1|item_name2）。アプリの材料名は請求書の書き方に合わせてある
+function ecKeys(name, sub){
+  const m=(re)=>name.match(re);
+  let r;
+  const COL={"ガルバリウム":"ｶﾞﾙﾊﾞﾘｳﾑ","ステン":"ｽﾃﾝ","アイボリー":"ｱｲﾎﾞﾘｰ","ニュークリーム":"ﾆｭｰｸﾘｰﾑ","シルバー":"ｼﾙﾊﾞｰ","ホワイト":"ﾎﾜｲﾄ"};
+  // 保温筒
+  if(r=m(/^(ALK|ALGC|ALKP|ALGCP)保温筒 (\d+)A×(\d+)t$/)){
+    const a={ALK:"GWP ALK",ALGC:"GWP ALGC",ALKP:"GWP ALKP",ALGCP:"GWP ALGC-P"}[r[1]];
+    return [[a,r[2]+"x"+r[3]]].concat(r[1]==="ALKP"?[["GWP ALK",r[2]+"x"+r[3]]]:[]);}
+  // PF保温筒（スチロール）
+  if(r=m(/^PF保温筒 (?:(鉄管エルボ|溶接Sエルボ|溶接Lエルボ|塩ビエルボ|Susエルボ) )?(\d+)A×(\d+)t$/)){
+    const a={"":"ｽﾁﾛｰﾙｶﾊﾞｰ FP-CL (ｱﾃﾞｨｱ)","鉄管エルボ":"ｽﾁﾛｰﾙｴﾙﾎﾞ(N) (ｱﾃﾞｨｱ)","溶接Sエルボ":"ｽﾁﾛｰﾙ溶接ｼｮｰﾄｴﾙﾎﾞ FP-YES (ｱﾃﾞｨｱ)","溶接Lエルボ":"ｽﾁﾛｰﾙ溶接ﾛﾝｸﾞｴﾙﾎﾞ FP-YEL (ｱﾃﾞｨｱ)"}[r[1]||""];
+    return a?[[a,r[2]+"x"+r[3]]]:[];}
+  // ロール
+  if(r=m(/^(ALK|ALGC)ロール (\d+)K×(\d+)t$/))return [["GW "+r[1]+" "+r[2]+"K",r[3]+"x910x*"]];
+  if(r=m(/^(ALK|ALGC)マイティロール 40K×(\d+)t$/))return [["MGﾏｲﾃｨﾛｰﾙ "+r[1],r[2]+"x910x*"]];
+  // セラカバー
+  if(r=m(/^セラカバー (\d+)φ$/))return [["ｾﾗｶﾊﾞｰ S",r[1]+"φx20x1000"]];
+  // テープ
+  if(r=m(/^アルミ粘着テープ セパなし (\d+)×90m$/))return [["ｱﾙﾐ粘着ﾃｰﾌﾟ ｾﾊﾟﾅｼ (王子)",r[1]+"x90m"]];
+  if(r=m(/^アルミ粘着テープ (\d+)×90m$/))return [["ｱﾙﾐ粘着ﾃｰﾌﾟ (王子)",r[1]+"x90m"]];
+  if(r=m(/^ALGC粘着テープ アクリル (\d+)×20m$/))return [["ALGC粘着ﾃｰﾌﾟ ｱｸﾘﾙ (王子)",r[1]+"x20m"]];
+  if(r=m(/^ALGC粘着テープ 黒艶消し (\d+)×20m$/))return [["ALGC粘着ﾃｰﾌﾟ 黒艶消しｱｸﾘﾙ (ｻﾝﾖｰ)",r[1]+"x20m"]];
+  if(r=m(/^ALGC粘着テープ (\d+)×20m$/))return [["ALGC粘着ﾃｰﾌﾟ (王子)",r[1]+"x20m"]];
+  if(r=m(/^ALGC粘着テープ (\d+)mm$/))return [["ALGC粘着ﾃｰﾌﾟ (王子)",r[1]+"x20m"]];
+  if(r=m(/^ALKセパなし粘着テープ (\d+)mm$/))return [["ｱﾙﾐ粘着ﾃｰﾌﾟ ｾﾊﾟﾅｼ (王子)",r[1]+"x90m"]];
+  if(r=m(/^ポリテープ (\d+)mm×50m$/))return [["ﾎﾟﾘﾃｰﾌﾟ (ﾖｼﾀﾞ)",r[1]+"mmx50m"]];
+  if(r=m(/^粘着ビニールテープ (グレー|茶|透明) (\d+)×10m$/))return [["粘着ﾋﾞﾆｰﾙﾃｰﾌﾟ "+{"グレー":"ｸﾞﾚｰ","茶":"茶","透明":"透明"}[r[1]]+" (ﾐﾘｵﾝ)",r[2]+"x10"]];
+  if(r=m(/^エアロテープ (3×\d+×[\d.]+m)$/))return [["ｴｱﾛﾃｰﾌﾟ",r[1].replace(/×/g,"x")]];
+  if(r=m(/^非粘着テープ アイボリー (HN-\d+-I)$/))return [["非粘着ﾃｰﾌﾟ ｱｲﾎﾞﾘｰ",r[1]]];
+  // 金網
+  if(r=m(/^亀甲金網（亜鉛・(\d)分目）$/))return [["亀甲金網 亜鉛（石橋）","#25x"+r[1]+"分x910x25"]];
+  if(r=m(/^ビニール亀甲（白・(\d)分目）$/))return [["ﾋﾞﾆｰﾙ亀甲金網 白（石橋）"+(r[1]==="5"?"5分目":""),"#25x"+r[1]+"分x910x25"]];
+  if(r=m(/^ビニール亀甲（紫・(\d)分目）$/))return [["ﾋﾞﾆｰﾙ亀甲金網 紫（石橋TGK）"+(r[1]==="5"?"5分目":""),"#25x"+r[1]+"分x910x25"]];
+  if(name==="亀甲金網")return [["亀甲金網 亜鉛（石橋）","#25x5分x910x25"]];
+  // 遮音シート
+  if(name==="サンダム S-10")return [["ｻﾝﾀﾞﾑ S-10 粘着付き","*"]];
+  if(name==="CZ-12"||name==="遮音シート CZ-12")return [["ｻﾝﾀﾞﾑ CZ-12","*"]];
+  // コイル
+  if(r=m(/^(ガルバリウム|シルバー|ニュークリーム)コイル ([\d.]+)t$/))return [[COL[r[1]]+"ｺｲﾙ （旭）",r[2]+"x914x20m"]];
+  if(r=m(/^ステンコイル（鉄砲巻） ([\d.]+)t$/))return [["ｽﾃﾝｺｲﾙ(鉄砲巻)",r[1]+"x1000x20m"]];
+  // 板
+  if(r=m(/^MGボード(080-P|080-ALGC) (\d+)t$/))return [["MGﾎﾞｰﾄﾞ "+r[1],r[2]+"x605x910"]];
+  if(r=m(/^GW ALGC平貼40K (\d+)t$/))return [["GW ALGC平貼 40K",r[1]+"x605x910"]];
+  if(r=m(/^GW32K ALK\(S\) (\d+)t$/))return [["GW 32K ALK (T)",r[1]+"x605x910"]];
+  // ジャケット・らくえる（色は sub）
+  if(r=m(/^ジャケット No\.(.+)$/))return COL[sub]?[[COL[sub]+"ｼﾞｬｹｯﾄ (旭)",r[1]]]:[];
+  if(r=m(/^エルボ No\.(.+)$/))return COL[sub]?[[COL[sub]+"らくえる (旭)",r[1]]]:[];
+  return [];
+}
+// ジャケット・エルボの色は材料のID（jk色-番号・el色-番号）から
+const ecSub=l=>{const m=(l.itemId||"").match(/^(?:jk|el)(\d)-/);return m?(["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"][m[1]]||""):"";};
+function ecBtn(o){
+  const lines=(o.lines||[]).map(l=>({n:l.name,q:Number(l.qty)||0,u:l.unit||"",k:ecKeys((l.name||"").trim(),ecSub(l))})).filter(l=>l.q>0);
+  const miss=lines.filter(l=>!l.k.length).length;
+  const url="https://ec-tokyog.com/aec/user/cart#kouken="+encodeURIComponent(JSON.stringify({site:o.siteName||siteName(o.siteId),lines}));
+  return h("div",{class:"ecrow"},
+    h("a",{class:"btn small",href:url,target:"_blank",rel:"noopener",onclick:()=>{updateDoc(doc(fs,"orders",o.id),{ecAt:Date.now(),ecBy:editor}).catch(()=>{});}},"グラスロンに注文"),
+    h("a",{class:"hint",href:"glasslon.html",target:"_blank",text:"準備のしかた"}),
+    h("span",{class:"hint",text:(o.ecAt?"グラスロンに出した "+(new Date(o.ecAt).getMonth()+1)+"/"+new Date(o.ecAt).getDate()+" "+hm(o.ecAt):"")+(miss?(o.ecAt?"　":"")+"グラスロンにない材料 "+miss+"品":"")}));
 }
 
 /* ---------- 注文の記録（日付ごと） ---------- */
