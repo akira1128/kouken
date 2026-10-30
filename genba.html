@@ -442,7 +442,7 @@ function rollRunFace(){
   // 棟が分かれてメーターが何本かあっても、顔写真は1人だけ（どの棟で走るかもくじで決める）
   runFacePick=Math.random();
 }
-/* マンションの共用部・外部屋上のメーター（2026/10/30 ユーザー）。見込み人工はだれでも入れられ、あとで変えられる。入れた人の名前を出す
+/* マンションの共用部・外部屋上のメーター（2026/10/30 ユーザー）。見込み人工はだれでも入れられ、あとで変えられる。入れた人の名前を出す。人工は1人工きざみ
    データ：x.parts.kyo／x.parts.okujo＝{total:見込み人工, totalBy, totalAt, done:済み人工, by, at} */
 const PARTS=[["kyo","共用部"],["okujo","外部屋上"]];
 function partMeters(x){
@@ -453,9 +453,9 @@ function partMeters(x){
       const u={};for(const k in obj)u["parts."+id+"."+k]=obj[k];
       try{await updateDoc(doc(fs,"sites",x.id),u);if(msg)toast(msg);}catch(e){toast("保存できませんでした。電波を確認してください");}});
     // 見込み人工を入れる・変える
-    const inp=h("input",{class:"units",style:{fontSize:"16px",width:"5em"},type:"number",inputmode:"decimal",min:"0",step:"0.5",placeholder:"例 6"});
+    const inp=h("input",{class:"units",style:{fontSize:"16px",width:"5em"},type:"number",inputmode:"numeric",min:"1",step:"1",placeholder:"例 6"});
     const setTotal=h("span",{class:"ptot",hidden:!!top},"見込み",inp,"人工",h("button",{type:"button",onclick:()=>{
-      const n=parseFloat(inp.value);if(!(n>0&&n<=999)){toast("見込みの人工を入れてください");return;}
+      const n=parseInt(inp.value,10);if(!(n>0&&n<=999)){toast("見込みの人工を入れてください（1人工きざみ）");return;}
       sv({total:n,totalBy:me()||"",totalAt:Date.now()},"見込み人工を入れました");}},"入れる"));
     const head=h("div",{class:"mh"},h("span",{class:"ka p",text:lab}),
       h("span",{class:"fl"},top?["済み",h("b",{text:fmtN(now)}),"人工　／　見込み"+fmtN(top)+"人工"]:"見込み人工はまだ"));
@@ -470,7 +470,7 @@ function partMeters(x){
     const set=n=>{n=Math.max(0,Math.min(top,n));if(n!==now)sv({done:n,by:me()||"",at:Date.now()});};
     const el=h("div",{class:"mone part"},head,wrap,
       h("div",{class:"mstep"},p.by?h("span",{class:"mby",text:"直した人："+nick(p.by)+"（"+md(ymd(new Date(p.at)))+"）"}):null,
-        lab+"の済み人工を",h("button",{type:"button","aria-label":"0.5人工へらす",onclick:()=>set(now-.5)},"−"),h("button",{type:"button","aria-label":"0.5人工ふやす",onclick:()=>set(now+.5)},"＋")),
+        lab+"の済み人工を",h("button",{type:"button","aria-label":"1人工へらす",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1人工ふやす",onclick:()=>set(now+1)},"＋")),
       info,h("div",{class:"mstep"},setTotal));
     if(now>=top){const ran=w0!==w;setTimeout(()=>{el.classList.add("done");if(ran)celebrate(wrap,run);},ran?1450:0);}
     return el;
