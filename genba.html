@@ -653,6 +653,10 @@ function watchDeliv(){
   if(unDeliv||!fs)return;
   unDeliv=onSnapshot(collection(fs,"deliveries"),s=>{
     const a=[];s.docs.forEach(d=>{const x=d.data();(x.lines||[]).forEach(l=>a.push(Object.assign({sup:x.supplier||""},l)));});
+    // 古い請求書と新しい請求書で書き方がちがう（規格の末尾m・テープの本／巻）ので、同じ材料は新しい請求書の書き方にそろえる
+    const kn=l=>(l.n||"").replace(/[\s　]/g,"")+"|"+(l.s||"").replace(/[\s　]/g,"").replace(/[mMｍ]$/,"");
+    const best={};for(const l of a){const k=kn(l);if(!best[k]||(l.d||"")>(best[k].d||""))best[k]=l;}
+    for(const l of a){const b=best[kn(l)];l.n=b.n;l.s=b.s;l.u=b.u;}
     deliv=a;if(view==="vSum")renderSum();
   },()=>{unDeliv=null;deliv=deliv||[];if(view==="vSum")renderSum();});  // 読めなかったときは、次に集計を開いたときに読み直す
 }
