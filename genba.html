@@ -235,6 +235,8 @@ table.sum{width:100%;border-collapse:collapse;font-size:14.5px}
 table.sum th,table.sum td{padding:8px 14px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
 table.sum td.n{text-align:right;white-space:nowrap;font-weight:700}
 table.sum th{font-size:12px;color:var(--muted);font-weight:700;background:var(--bg)}
+table.sum tr.dayh th{font-size:14px;color:var(--ink);background:var(--accent-soft)}
+table.sum tr.dayh .dest{margin-left:10px;font-size:12px;font-weight:500;color:var(--muted)}
 /* 下のタブ */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);
   padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);
@@ -779,7 +781,7 @@ let sumSite="", sumMonth=ymd(new Date()).slice(0,7);
 const ymLabel=m=>{const [y,mm]=m.split("-");return y+"年"+Number(mm)+"月";};
 /* 集計：「届いた材料（材料屋さんの請求書）」と「アプリで頼んだ材料」を分けて出す。金額は出さない（2026/10/29 ユーザー）
    請求書の材料は deliveries（請求書1枚＝1件、lines：d 日付・t 納入先・n 品名・s 規格・q 数量・u 単位） */
-let sumKind=store("kouken-sum-kind")||"inv", sumDest="", sumSup="";
+let sumKind=store("kouken-sum-kind")||"inv", sumDest="", sumSup="", sumBy=store("kouken-sum-by")||"day";
 let deliv=null, unDeliv=null;
 function watchDeliv(){
   if(unDeliv||!fs)return;
@@ -844,10 +846,25 @@ function renderSumInv(box,seg){
   box.replaceChildren(h("section",{class:"panel"},seg,
     h("div",{class:"tools"},dSel,mSel,sSel),
     h("p",{class:"hint",style:{padding:"0 14px 8px"},text:"納品 "+days+"日　材料 "+rows.length+"種類（"+(sups.join("・")||"材料屋さん")+"の請求書から）"}),
-    rows.length?h("table",{class:"sum"},h("thead",null,h("tr",null,h("th",{text:"材料"}),h("th",{text:"合計",style:{textAlign:"right"}}))),
+    // 「日にちごと」（届いた日に分ける）と「材料ごとの合計」を切りかえ（2026/10/30 ユーザー）
+    h("div",{class:"stseg",style:{padding:"0 14px 8px"}},[["day","日にちごと"],["item","材料ごとの合計"]].map(([k,t])=>h("button",{type:"button","aria-pressed":String(sumBy===k),
+      onclick:()=>{sumBy=k;store("kouken-sum-by",k);renderSum();}},t))),
+    !list.length?h("p",{class:"empty",text:"この期間に届いた材料はありません"}):
+    sumBy==="day"?dayTable(list,!sumDest.startsWith("t:")&&!sumDest.startsWith("s:")):
+    h("table",{class:"sum"},h("thead",null,h("tr",null,h("th",{text:"材料"}),h("th",{text:"合計",style:{textAlign:"right"}}))),
       h("tbody",null,rows.map(([k,n])=>{const [name,size,unit]=k.split("|");
-        return h("tr",null,h("td",null,name,size?h("small",{style:{display:"block",color:"var(--muted)"},text:size}):null),h("td",{class:"n",text:fmtN(n)+unit}));}))):
-      h("p",{class:"empty",text:"この期間に届いた材料はありません"})));
+        return h("tr",null,h("td",null,name,size?h("small",{style:{display:"block",color:"var(--muted)"},text:size}):null),h("td",{class:"n",text:fmtN(n)+unit}));})))));
+}
+// 届いた日ごとに分けた表（新しい日が上）。すべての現場のときは納入先も出す
+function dayTable(list,showDest){
+  const g=new Map();
+  for(const l of list){const k=(l.d||"")+"|"+(showDest?l.t:"");if(!g.has(k))g.set(k,new Map());const m=g.get(k), ik=l.n+"|"+l.s+"|"+l.u;m.set(ik,(m.get(ik)||0)+(Number(l.q)||0));}
+  const keys=[...g.keys()].sort((a,b)=>b.localeCompare(a));
+  return h("table",{class:"sum"},h("thead",null,h("tr",null,h("th",{text:"材料"}),h("th",{text:"数",style:{textAlign:"right"}}))),
+    h("tbody",null,keys.flatMap(k=>{const [d,t]=k.split("|");
+      const items=[...g.get(k)].filter(([,n])=>n!==0).sort((a,b)=>a[0].localeCompare(b[0],"ja",{numeric:true}));
+      return [h("tr",{class:"dayh"},h("th",{colspan:"2"},d?md(d):"日付なし",t?h("span",{class:"dest",text:t}):null))].concat(items.map(([ik,n])=>{const [name,size,unit]=ik.split("|");
+        return h("tr",null,h("td",null,name,size?h("small",{style:{display:"block",color:"var(--muted)"},text:size}):null),h("td",{class:"n",text:fmtN(n)+unit}));}));})));
 }
 
 /* ---------- お知らせ：新しい注文（西崎・原田の携帯だけ） ---------- */
