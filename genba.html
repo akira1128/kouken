@@ -468,7 +468,7 @@ function partMeters(x){
     // 最後のメーターの下に「○○は複数ありますか？ はい／いいえ」（2026/10/30 ユーザー）。はい＝1つ足す、いいえ＝聞くのをやめる（あとで足すときは小さい「○○を足す」）
     const dn=cf+"Done", done=!!x[dn];
     const sv=u=>needWho(async()=>{try{await updateDoc(doc(fs,"sites",x.id),u);}catch(e){toast("保存できませんでした。電波を確認してください");}});
-    const yes=()=>{const u={};u[cf]=n+1;u[dn]=false;sv(u);toast(name+(n+1)+"を足しました");};
+    const yes=()=>{const u={};u[cf]=n+1;u[dn]=false;const nk=x.id+"/p"+base+(n+1);meterAppear.add(nk);delete meterW[nk];sv(u);toast(name+(n+1)+"を足しました");};
     const add=done?h("button",{type:"button",class:"btn ghost small",style:{opacity:.75},onclick:yes},"＋ "+name+"を足す")
       :h("span",{class:"pask"},h("span",{text:(n>1?"ほかにも"+name+"はありますか？":name+"は複数ありますか？")}),
         h("button",{type:"button",class:"btn small",onclick:yes},"はい"),
@@ -476,7 +476,9 @@ function partMeters(x){
     let del=null;
     if(n>1){del=h("button",{type:"button",class:"btn ghost small"},name+n+"を消す");
       del.onclick=()=>{if(del.dataset.ok!=="1"){del.dataset.ok="1";del.textContent="本当に消す（"+name+n+"の記録も消える）";return;}
-        needWho(async()=>{try{const u={};u[cf]=n-1;u["parts."+base+n]=deleteField();await updateDoc(doc(fs,"sites",x.id),u);toast(name+n+"を消しました");}
+        needWho(async()=>{try{const u={};u[cf]=n-1;u["parts."+base+n]=deleteField();
+            const old=document.querySelector('.mone.part[data-key="'+x.id+"/p"+base+n+'"]');if(old){old.classList.add("vanish");await new Promise(r=>setTimeout(r,320));}
+            await updateDoc(doc(fs,"sites",x.id),u);toast(name+n+"を消しました");}
           catch(e){toast("保存できませんでした。電波を確認してください");}});};}
     out.push(h("div",{class:"mtog"},del,add));
     return out;
@@ -497,14 +499,15 @@ function onePart(x,id,lab){
       h("span",{class:"fl"},top?["済み",h("b",{text:fmtN(now)}),"人工　／　見込み"+fmtN(top)+"人工"]:"見込み人工はまだ"));
     const info=top?h("div",{class:"mstep"},h("span",{class:"mby",text:"見込みを入れた人："+nick(p.totalBy)+"（"+md(ymd(new Date(p.totalAt||Date.now())))+" "+hm(p.totalAt||Date.now())+"）"}),
       h("button",{type:"button",style:{fontSize:"12px"},onclick:e=>{e.currentTarget.hidden=true;inp.value=top;setTotal.hidden=false;inp.focus();}},"見込みを変える")):null;
-    if(!top)return h("div",{class:"mone part"},head,h("div",{class:"mtrack"}),h("div",{class:"mstep"},setTotal));
+    const appear=meterAppear.delete(key)?" appear":"";
+    if(!top)return h("div",{class:"mone part"+appear,"data-key":key},head,h("div",{class:"mtrack"}),h("div",{class:"mstep"},setTotal));
     const w0=meterW[key]??0, w=now/top*100, fill=h("div",{class:"mfill",style:{width:w0+"%"}});meterW[key]=w;
     const run=h("span",{class:"runner","data-w":w,"aria-hidden":"true"});run.innerHTML=runnerSVG("");
     requestAnimationFrame(()=>{placeRunner(run,w0,true);requestAnimationFrame(()=>{fill.style.width=w+"%";placeRunner(run,w);});});
     const wrap=h("div",{class:"mwrap"},run,h("div",{class:"mtrack",role:"img","aria-label":lab+" 済み"+fmtN(now)+"人工、見込み"+fmtN(top)+"人工"},fill,
       h("div",{class:"mticks"},Array.from({length:Math.min(Math.ceil(top),40)},()=>h("i")))));
     const set=n=>{n=Math.max(0,Math.min(top,n));if(n!==now)sv({done:n,by:me()||"",at:Date.now()});};
-    const el=h("div",{class:"mone part"},head,wrap,
+    const el=h("div",{class:"mone part"+appear,"data-key":key},head,wrap,
       h("div",{class:"mstep"},p.by?h("span",{class:"mby",text:"直した人："+nick(p.by)+"（"+md(ymd(new Date(p.at)))+" "+hm(p.at)+"）"}):null,
         lab+"の済み人工を",h("button",{type:"button","aria-label":"1人工へらす",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1人工ふやす",onclick:()=>set(now+1)},"＋")),
       info,h("div",{class:"mstep"},setTotal));
