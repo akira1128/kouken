@@ -164,6 +164,11 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* ウレタン前・後の札とウレタン後のメーターの色 */
 .meter .mh .ka{font-size:12px;font-weight:700;border-radius:6px;padding:0 7px;background:#dcfce7;color:#166534}
 .meter .mh .ka.a{background:#e0e7ff;color:#3730a3}
+.meter .mh .ka.p{background:#fef3c7;color:#92400e;font-size:13px}
+.mone.part{margin-top:6px;padding-top:8px;border-top:1px dashed var(--line)}
+.mone.part .mfill{background:linear-gradient(90deg,#0e7490,#06b6d4 60%,#67e8f9)}
+.ptot{display:inline-flex;gap:6px;align-items:center}
+.mone.part.done .mfill{background:linear-gradient(90deg,#b45309,#f59e0b 55%,#fde047)}
 .mone.after .mfill{background:linear-gradient(90deg,#3730a3,#6366f1 60%,#a5b4fc)}
 .mtog{display:flex;justify-content:flex-end;margin-top:2px}.mtog .btn{font-size:12.5px;padding:6px 10px;width:auto}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
@@ -437,6 +442,40 @@ function rollRunFace(){
   // 棟が分かれてメーターが何本かあっても、顔写真は1人だけ（どの棟で走るかもくじで決める）
   runFacePick=Math.random();
 }
+/* マンションの共用部・屋上のメーター（2026/10/30 ユーザー）。見込み人工はだれでも入れられ、あとで変えられる。入れた人の名前を出す
+   データ：x.parts.kyo／x.parts.okujo＝{total:見込み人工, totalBy, totalAt, done:済み人工, by, at} */
+const PARTS=[["kyo","共用部"],["okujo","屋上"]];
+function partMeters(x){
+  if(!x.mansion)return [];
+  return PARTS.map(([id,lab])=>{
+    const p=(x.parts||{})[id]||{}, top=+p.total||0, now=Math.max(0,Math.min(top||0,+p.done||0)), key=x.id+"/p"+id;
+    const sv=(obj,msg)=>needWho(async()=>{
+      const u={};for(const k in obj)u["parts."+id+"."+k]=obj[k];
+      try{await updateDoc(doc(fs,"sites",x.id),u);if(msg)toast(msg);}catch(e){toast("保存できませんでした。電波を確認してください");}});
+    // 見込み人工を入れる・変える
+    const inp=h("input",{class:"units",style:{fontSize:"16px",width:"5em"},type:"number",inputmode:"decimal",min:"0",step:"0.5",placeholder:"例 6"});
+    const setTotal=h("span",{class:"ptot",hidden:!!top},"見込み",inp,"人工",h("button",{type:"button",onclick:()=>{
+      const n=parseFloat(inp.value);if(!(n>0&&n<=999)){toast("見込みの人工を入れてください");return;}
+      sv({total:n,totalBy:me()||"",totalAt:Date.now()},"見込み人工を入れました");}},"入れる"));
+    const head=h("div",{class:"mh"},h("span",{class:"ka p",text:lab}),
+      h("span",{class:"fl"},top?["済み",h("b",{text:fmtN(now)}),"人工　／　見込み"+fmtN(top)+"人工"]:"見込み人工はまだ"));
+    const info=top?h("div",{class:"mstep"},h("span",{class:"mby",text:"見込みを入れた人："+nick(p.totalBy)+"（"+md(ymd(new Date(p.totalAt||Date.now())))+"）"}),
+      h("button",{type:"button",style:{fontSize:"12px"},onclick:e=>{e.currentTarget.hidden=true;inp.value=top;setTotal.hidden=false;inp.focus();}},"見込みを変える")):null;
+    if(!top)return h("div",{class:"mone part"},head,h("div",{class:"mtrack"}),h("div",{class:"mstep"},setTotal));
+    const w0=meterW[key]??0, w=now/top*100, fill=h("div",{class:"mfill",style:{width:w0+"%"}});meterW[key]=w;
+    const run=h("span",{class:"runner","data-w":w,"aria-hidden":"true"});run.innerHTML=runnerSVG("");
+    requestAnimationFrame(()=>{placeRunner(run,w0,true);requestAnimationFrame(()=>{fill.style.width=w+"%";placeRunner(run,w);});});
+    const wrap=h("div",{class:"mwrap"},run,h("div",{class:"mtrack",role:"img","aria-label":lab+" 済み"+fmtN(now)+"人工、見込み"+fmtN(top)+"人工"},fill,
+      h("div",{class:"mticks"},Array.from({length:Math.min(Math.ceil(top),40)},()=>h("i")))));
+    const set=n=>{n=Math.max(0,Math.min(top,n));if(n!==now)sv({done:n,by:me()||"",at:Date.now()});};
+    const el=h("div",{class:"mone part"},head,wrap,
+      h("div",{class:"mstep"},p.by?h("span",{class:"mby",text:"直した人："+nick(p.by)+"（"+md(ymd(new Date(p.at)))+"）"}):null,
+        lab+"の済み人工を",h("button",{type:"button","aria-label":"0.5人工へらす",onclick:()=>set(now-.5)},"−"),h("button",{type:"button","aria-label":"0.5人工ふやす",onclick:()=>set(now+.5)},"＋")),
+      info,h("div",{class:"mstep"},setTotal));
+    if(now>=top){const ran=w0!==w;setTimeout(()=>{el.classList.add("done");if(ran)celebrate(wrap,run);},ran?1450:0);}
+    return el;
+  });
+}
 function meter(x){
   // 棟が分かれている現場は towers:[{name:"A棟",floors:10,floor:3},…]。1棟だけなら floors／floor
   const tw=Array.isArray(x.towers)&&x.towers.length?x.towers:(+x.floors?[{name:"",floors:x.floors,floor:x.floor}]:[]);
@@ -448,7 +487,8 @@ function meter(x){
       h("div",{class:"mtrack"}),
       editor?h("div",{class:"mstep"},"最上階",inp,"階",h("button",{type:"button",style:{fontSize:"13px"},onclick:async()=>{
         const n=parseInt(inp.value,10);if(!(n>0&&n<=80)){toast("階数を入れてください");return;}
-        try{await updateDoc(doc(fs,"sites",x.id),{floors:n,floor:0});toast("最上階を入れました");}catch(e){toast("保存できませんでした");}}},"入れる")):null);
+        try{await updateDoc(doc(fs,"sites",x.id),{floors:n,floor:0});toast("最上階を入れました");}catch(e){toast("保存できませんでした");}}},"入れる")):null,
+      partMeters(x));
   }
   // つぎの階は社員だれでも変えられる。変えた人と日時を残す（2026/10/30 ユーザー）
   // ウレタン後の施工がある現場（x.after）は、棟ごとに「ウレタン前」「ウレタン後」の2本。ウレタン後の階は floorAfter（棟は t.floorAfter）
@@ -498,6 +538,7 @@ function meter(x){
   };
   return h("div",{class:"meter"},h("div",{class:"mh"},"進行状況"),
     tw.flatMap((t,k)=>aft?[one(t,k,false),one(t,k,true)]:[one(t,k,false)]),
+    partMeters(x),
     h("div",{class:"mtog"},tog));
 }
 
