@@ -180,7 +180,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .lastv .lvl{font-size:12px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 7px}
 .lastv:empty{display:none}
 .mtog{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:2px}
-.pask{display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:700;color:var(--ink)}.pask[hidden]{display:none}.pask .btn{min-width:56px}.mtog .btn{font-size:12.5px;padding:6px 10px;width:auto}
+.pask{display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:700;color:var(--ink)}.pask[hidden]{display:none}.pask:not([hidden]){animation:mappear .3s cubic-bezier(.2,.8,.2,1) both}.pask .btn{min-width:56px}.mtog .btn{font-size:12.5px;padding:6px 10px;width:auto}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
 /* 現場の詳しい画面 */
 .dhead{padding:14px;display:grid;gap:10px}
