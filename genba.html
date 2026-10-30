@@ -492,7 +492,8 @@ function meter(x){
   }
   // つぎの階は社員だれでも変えられる。変えた人と日時を残す（2026/10/30 ユーザー）
   // ウレタン後の施工がある現場（x.after）は、棟ごとに「ウレタン前」「ウレタン後」の2本。ウレタン後の階は floorAfter（棟は t.floorAfter）
-  const multi=!!(x.towers&&x.towers.length), aft=!!x.after;
+  // ウレタン後の施工は棟ごとに決める（棟がある現場は t.after、1棟だけなら x.after）。ボタンは各棟の階のメーターの＋−の下
+  const multi=!!(x.towers&&x.towers.length), aftOf=t=>multi?!!t.after:!!x.after;
   const save=(k,n,ka)=>needWho(async()=>{
     const by=me(), at=Date.now();
     try{
@@ -513,7 +514,7 @@ function meter(x){
     // 画面に出てからメーターの幅を測り、前の位置（w0）に置いてから、いまの位置（w）まで走らせる
     requestAnimationFrame(()=>{placeRunner(run,w0,true);requestAnimationFrame(()=>{fill.style.width=w+"%";placeRunner(run,w);});});
     const set=n=>{n=Math.max(0,Math.min(top,n));if(n!==now)save(k,n,ka);};
-    const lab=aft?(ka?"ウレタン後":"ウレタン前"):"";
+    const lab=aftOf(t)?(ka?"ウレタン後":"ウレタン前"):"";
     const wrap=h("div",{class:face?"mwrap fc":"mwrap"},run,
         h("div",{class:"mtrack",role:"img","aria-label":(t.name||"")+lab+"つぎ"+now+"階、"+top+"階まで"},fill,h("div",{class:"mticks"},Array.from({length:top},()=>h("i")))));
     const el=h("div",{class:"mone"+(ka?" after":"")},
@@ -521,7 +522,8 @@ function meter(x){
         h("span",{class:"fl"},"つぎ",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
       wrap,
       h("div",{class:"mstep"},tb?h("span",{class:"mby",text:"直した人："+nick(tb.by)+"（"+md(ymd(new Date(tb.at)))+"）"}):null,
-        (t.name||"")+(lab?lab+"の":"の")+"つぎの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")));
+        (t.name||"")+(lab?lab+"の":"の")+"つぎの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")),
+      ka?null:togBtn(t,k));
     // 最上階まで終わったら満タン。走ってきたときは着いてから紙ふぶきとジャンプ、描き直しのときは金色だけ
     if(now>=top){
       const ran=w0!==w;
@@ -529,17 +531,23 @@ function meter(x){
     }
     return el;
   };
-  // ウレタン後の施工がある・なしは社員も切りかえられる（なしにするときは2回押し）
-  const tog=h("button",{type:"button",class:"btn ghost small"},aft?"ウレタン後の施工をなくす":"＋ ウレタン後の施工がある");
-  tog.onclick=()=>{
-    if(aft&&tog.dataset.ok!=="1"){tog.dataset.ok="1";tog.textContent="本当になくす（ウレタン後のメーターを消す）";return;}
-    needWho(async()=>{try{await updateDoc(doc(fs,"sites",x.id),{after:!aft,afterBy:me(),afterAt:Date.now()});toast(aft?"ウレタン後をなくしました":"ウレタン後のメーターを足しました");}
-      catch(e){toast("保存できませんでした。電波を確認してください");}});
-  };
+  // ウレタン後の施工がある・なしは社員も切りかえられる（なしにするときは2回押し）。棟ごと
+  function togBtn(t,k){
+    const on=aftOf(t);
+    const b=h("button",{type:"button",class:"btn ghost small"},on?(t.name||"")+"ウレタン後の施工をなくす":"＋ "+(t.name||"")+"ウレタン後の施工がある");
+    b.onclick=()=>{
+      if(on&&b.dataset.ok!=="1"){b.dataset.ok="1";b.textContent="本当になくす（"+(t.name||"")+"ウレタン後のメーターを消す）";return;}
+      needWho(async()=>{try{
+        if(multi)await updateDoc(doc(fs,"sites",x.id),{towers:x.towers.map((u,i)=>i===k?{...u,after:!on,afterBy:me(),afterAt:Date.now()}:u)});
+        else await updateDoc(doc(fs,"sites",x.id),{after:!on,afterBy:me(),afterAt:Date.now()});
+        toast(on?"ウレタン後をなくしました":"ウレタン後のメーターを足しました");}
+        catch(e){toast("保存できませんでした。電波を確認してください");}});
+    };
+    return h("div",{class:"mtog"},b);
+  }
   return h("div",{class:"meter"},h("div",{class:"mh"},"進行状況"),
-    tw.flatMap((t,k)=>aft?[one(t,k,false),one(t,k,true)]:[one(t,k,false)]),
-    partMeters(x),
-    h("div",{class:"mtog"},tog));
+    tw.flatMap((t,k)=>aftOf(t)?[one(t,k,false),one(t,k,true)]:[one(t,k,false)]),
+    partMeters(x));
 }
 
 
