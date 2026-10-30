@@ -863,7 +863,7 @@ function dayTable(list,showDest){
   return h("table",{class:"sum"},h("thead",null,h("tr",null,h("th",{text:"材料"}),h("th",{text:"数",style:{textAlign:"right"}}))),
     h("tbody",null,keys.flatMap(k=>{const [d,t]=k.split("|");
       const items=[...g.get(k)].filter(([,n])=>n!==0).sort((a,b)=>a[0].localeCompare(b[0],"ja",{numeric:true}));
-      return [h("tr",{class:"dayh"},h("th",{colspan:"2"},d?md(d):"日付なし",t?h("span",{class:"dest",text:t}):null))].concat(items.map(([ik,n])=>{const [name,size,unit]=ik.split("|");
+      return [h("tr",{class:"dayh"},h("th",{colspan:"2"},d?((d.slice(0,4)!==String(new Date().getFullYear())?d.slice(0,4)+"年 ":"")+md(d)):"日付なし",t?h("span",{class:"dest",text:t}):null))].concat(items.map(([ik,n])=>{const [name,size,unit]=ik.split("|");
         return h("tr",null,h("td",null,name,size?h("small",{style:{display:"block",color:"var(--muted)"},text:size}):null),h("td",{class:"n",text:fmtN(n)+unit}));}));})));
 }
 
