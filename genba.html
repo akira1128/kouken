@@ -180,7 +180,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .lastv .lvl{font-size:12px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 7px}
 .lastv:empty{display:none}
 .mtog{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:2px}
-.pask{display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:700;color:var(--ink)}.pask .btn{min-width:56px}.mtog .btn{font-size:12.5px;padding:6px 10px;width:auto}
+.pask{display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:700;color:var(--ink)}.pask[hidden]{display:none}.pask .btn{min-width:56px}.mtog .btn{font-size:12.5px;padding:6px 10px;width:auto}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
 /* 現場の詳しい画面 */
 .dhead{padding:14px;display:grid;gap:10px}
@@ -465,14 +465,14 @@ function partMeters(x){
   return PART_KINDS.flatMap(([base,name,cf])=>{
     const n=Math.max(1,+x[cf]||1), out=[];
     for(let i=1;i<=n;i++)out.push(onePart(x,i===1?base:base+i,i===1?name:name+i));
-    // 最後のメーターの下に「○○は複数ありますか？ はい／いいえ」（2026/10/30 ユーザー）。はい＝1つ足す、いいえ＝聞くのをやめる（あとで足すときは小さい「○○を足す」）
-    const dn=cf+"Done", done=!!x[dn];
-    const sv=u=>needWho(async()=>{try{await updateDoc(doc(fs,"sites",x.id),u);}catch(e){toast("保存できませんでした。電波を確認してください");}});
-    const yes=()=>{const u={};u[cf]=n+1;u[dn]=false;const nk=x.id+"/p"+base+(n+1);meterAppear.add(nk);delete meterW[nk];sv(u);toast(name+(n+1)+"を足しました");};
-    const add=done?h("button",{type:"button",class:"btn ghost small",style:{opacity:.75},onclick:yes},"＋ "+name+"を足す")
-      :h("span",{class:"pask"},h("span",{text:(n>1?"ほかにも"+name+"はありますか？":name+"は複数ありますか？")}),
-        h("button",{type:"button",class:"btn small",onclick:yes},"はい"),
-        h("button",{type:"button",class:"btn ghost small",onclick:()=>{const u={};u[dn]=true;sv(u);}},"いいえ"));
+    // 最後のメーターの下に「＋ ○○を足す」。押すと「○○を足しますか？ はい／いいえ」と聞く（2026/10/30 ユーザー）
+    const yes=()=>needWho(async()=>{const u={};u[cf]=n+1;const nk=x.id+"/p"+base+(n+1);meterAppear.add(nk);delete meterW[nk];
+      try{await updateDoc(doc(fs,"sites",x.id),u);toast(name+(n+1)+"を足しました");}catch(e){meterAppear.delete(nk);toast("保存できませんでした。電波を確認してください");}});
+    const add=h("button",{type:"button",class:"btn ghost small"},"＋ "+name+"を足す");
+    const ask=h("span",{class:"pask",hidden:true},h("span",{text:name+"を足しますか？"}),
+      h("button",{type:"button",class:"btn small",onclick:yes},"はい"),
+      h("button",{type:"button",class:"btn ghost small",onclick:()=>{ask.hidden=true;add.hidden=false;}},"いいえ"));
+    add.onclick=()=>{add.hidden=true;ask.hidden=false;};
     let del=null;
     if(n>1){del=h("button",{type:"button",class:"btn ghost small"},name+n+"を消す");
       del.onclick=()=>{if(del.dataset.ok!=="1"){del.dataset.ok="1";del.textContent="本当に消す（"+name+n+"の記録も消える）";return;}
@@ -480,7 +480,7 @@ function partMeters(x){
             const old=document.querySelector('.mone.part[data-key="'+x.id+"/p"+base+n+'"]');if(old){old.classList.add("vanish");await new Promise(r=>setTimeout(r,320));}
             await updateDoc(doc(fs,"sites",x.id),u);toast(name+n+"を消しました");}
           catch(e){toast("保存できませんでした。電波を確認してください");}});};}
-    out.push(h("div",{class:"mtog"},del,add));
+    out.push(h("div",{class:"mtog"},del,add,ask));
     return out;
   });
 }
