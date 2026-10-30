@@ -465,10 +465,10 @@ function partMeters(x){
   return PART_KINDS.flatMap(([base,name,cf])=>{
     const n=Math.max(1,+x[cf]||1), out=[];
     for(let i=1;i<=n;i++)out.push(onePart(x,i===1?base:base+i,i===1?name:name+i));
-    // 最後のメーターの下に「＋ ○○を足す」（ボタンは残す）。押すと「○○は複数ありますか？ はい／いいえ」を出す（2026/10/30 ユーザー）
+    // 最後のメーターの下に「＋ ○○を増やす」（ボタンは残す）。押すと「○○は複数ありますか？ はい／いいえ」を出す（2026/10/30 ユーザー）
     const yes=()=>needWho(async()=>{const u={};u[cf]=n+1;const nk=x.id+"/p"+base+(n+1);meterAppear.add(nk);delete meterW[nk];
-      try{await updateDoc(doc(fs,"sites",x.id),u);toast(name+(n+1)+"を足しました");}catch(e){meterAppear.delete(nk);toast("保存できませんでした。電波を確認してください");}});
-    const add=h("button",{type:"button",class:"btn ghost small"},"＋ "+name+"を足す");
+      try{await updateDoc(doc(fs,"sites",x.id),u);toast(name+(n+1)+"を増やしました");}catch(e){meterAppear.delete(nk);toast("保存できませんでした。電波を確認してください");}});
+    const add=h("button",{type:"button",class:"btn ghost small"},"＋ "+name+"を増やす");
     const ask=h("span",{class:"pask",hidden:true},h("span",{text:name+"は複数ありますか？"}),
       h("button",{type:"button",class:"btn small",onclick:yes},"はい"),
       h("button",{type:"button",class:"btn ghost small",onclick:()=>{ask.hidden=true;}},"いいえ"));
