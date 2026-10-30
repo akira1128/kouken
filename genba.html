@@ -470,7 +470,7 @@ function partMeters(x){
       sv({total:n,totalBy:me()||"",totalAt:Date.now()},"見込み人工を入れました");}},"入れる"));
     const head=h("div",{class:"mh"},h("span",{class:"ka p",text:lab}),
       h("span",{class:"fl"},top?["済み",h("b",{text:fmtN(now)}),"人工　／　見込み"+fmtN(top)+"人工"]:"見込み人工はまだ"));
-    const info=top?h("div",{class:"mstep"},h("span",{class:"mby",text:"見込みを入れた人："+nick(p.totalBy)+"（"+md(ymd(new Date(p.totalAt||Date.now())))+"）"}),
+    const info=top?h("div",{class:"mstep"},h("span",{class:"mby",text:"見込みを入れた人："+nick(p.totalBy)+"（"+md(ymd(new Date(p.totalAt||Date.now())))+" "+hm(p.totalAt||Date.now())+"）"}),
       h("button",{type:"button",style:{fontSize:"12px"},onclick:e=>{e.currentTarget.hidden=true;inp.value=top;setTotal.hidden=false;inp.focus();}},"見込みを変える")):null;
     if(!top)return h("div",{class:"mone part"},head,h("div",{class:"mtrack"}),h("div",{class:"mstep"},setTotal));
     const w0=meterW[key]??0, w=now/top*100, fill=h("div",{class:"mfill",style:{width:w0+"%"}});meterW[key]=w;
@@ -480,7 +480,7 @@ function partMeters(x){
       h("div",{class:"mticks"},Array.from({length:Math.min(Math.ceil(top),40)},()=>h("i")))));
     const set=n=>{n=Math.max(0,Math.min(top,n));if(n!==now)sv({done:n,by:me()||"",at:Date.now()});};
     const el=h("div",{class:"mone part"},head,wrap,
-      h("div",{class:"mstep"},p.by?h("span",{class:"mby",text:"直した人："+nick(p.by)+"（"+md(ymd(new Date(p.at)))+"）"}):null,
+      h("div",{class:"mstep"},p.by?h("span",{class:"mby",text:"直した人："+nick(p.by)+"（"+md(ymd(new Date(p.at)))+" "+hm(p.at)+"）"}):null,
         lab+"の済み人工を",h("button",{type:"button","aria-label":"1人工へらす",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1人工ふやす",onclick:()=>set(now+1)},"＋")),
       info,h("div",{class:"mstep"},setTotal));
     if(now>=top){const ran=w0!==w;setTimeout(()=>{el.classList.add("done");if(ran)celebrate(wrap,run);},ran?1450:0);}
@@ -533,7 +533,7 @@ function meter(x){
       h("div",{class:"mh"},t.name?h("span",{class:"tw",text:t.name}):null,lab?h("span",{class:"ka"+(ka?" a":""),text:lab}):null,
         h("span",{class:"fl"},"つぎ",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
       wrap,
-      h("div",{class:"mstep"},tb?h("span",{class:"mby",text:"直した人："+nick(tb.by)+"（"+md(ymd(new Date(tb.at)))+"）"}):null,
+      h("div",{class:"mstep"},tb?h("span",{class:"mby",text:"直した人："+nick(tb.by)+"（"+md(ymd(new Date(tb.at)))+" "+hm(tb.at)+"）"}):null,
         ((t.name||"")+lab?(t.name||"")+lab+"の":"")+"つぎの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")),
       ka?null:togBtn(t,k));
     // 最上階まで終わったら満タン。走ってきたときは着いてから紙ふぶきとジャンプ、描き直しのときは金色だけ
