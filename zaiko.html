@@ -167,6 +167,10 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
 .incart{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accent);color:var(--accent-ink);margin-left:6px;vertical-align:2px}
 .ordernote{margin:8px 2px 0}
 .spotbox{display:grid;gap:6px}
+.flbox{padding:12px 14px;display:grid;gap:10px}
+.flbox h3{margin:0;font-size:14px}
+.flrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.flrow label{display:grid;gap:4px;font-weight:700;font-size:13px}
 .spotbox span{font-weight:700}
 .handbox{padding:12px 14px;display:grid;gap:8px}
 .handbox h3{margin:0;font-size:14px}
@@ -487,8 +491,10 @@ function renderList(){
   const inSub2=!!SUB2[cat];
   const qs2=/エルボ/.test(q)&&!/ジャケット/.test(q)?"エルボ":/ジャケット/.test(q)&&!/エルボ/.test(q)?"ジャケット":sub2;  // 言葉に「エルボ」があればエルボの中を探す
   const shown=items.filter(it=>(q&&!inSub2||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q&&!inSub2||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===(q?qs2:sub2))&&(!q||matchQ(it,q)));
+  // フランジカバーは色をえらんだあと、φとLをえらんで開く（2026/10/30 ユーザー）
+  const flp=cat==="フランジカバー"&&!q?flPanel():null;
   // 材料を頼むときの「その他」は手書きの欄だけ出すので、「見つかりません」は出さない
-  if(!shown.length&&cat==="その他"&&!q){list.replaceChildren();return;}
+  if(!shown.length&&(cat==="その他"||flp)&&!q){list.replaceChildren(...(flp?[flp]:[]));return;}
   if(!shown.length){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"見つかりません"}),h("span",{text:"ことばや種類を変えてさがしてください。"})));return;}
   const groups=[];
   for(const c of CATS){
@@ -498,7 +504,7 @@ function renderList(){
       else groups.push([c+"／"+sc,a2]);}}
     else if(arr.length)groups.push([c,arr]);
   }
-  list.replaceChildren(...groups.map(([c,arr])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
+  list.replaceChildren(...(flp?[flp]:[]),...groups.map(([c,arr])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
     arr.map(it=>ORDER?orderRow(it):h("button",{type:"button",class:"row"+(isLow(it)?" low":"")+(Number(it.qty)>0?" has":" zero"),onclick:()=>openItem(it.id)},
       h("span",{class:"nm"},it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
         h("span",{class:"sub",text:((HASLEN(it.cat)||it.no)&&sizeText(it)?(sizeText(it)+" ・ "):"")+(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
@@ -513,6 +519,33 @@ function orderRow(it){
     h("span",{class:"qty"},fmtN(n),h("small",{text:it.unit||""})));
 }
 /* ---------- 現場に頼む：1つの材料の数 ---------- */
+/* ---------- フランジカバー：φとLをえらぶ（φ140〜600・L80〜1000、10刻み）。色・φ・Lごとに在庫を持つ（2026/10/30） ---------- */
+const FL_PHI=Array.from({length:47},(_,i)=>140+i*10), FL_L=Array.from({length:93},(_,i)=>80+i*10);
+const flName=(p,l)=>"フランジカバー "+p+"φ×"+l+"L";
+function flPanel(){
+  const ph=h("select",{class:"inp","aria-label":"φ"},FL_PHI.map(v=>h("option",{value:v,selected:String(v)===(store("kouken-fl-phi")||"200")},v+"φ")));
+  const ln=h("select",{class:"inp","aria-label":"L"},FL_L.map(v=>h("option",{value:v,selected:String(v)===(store("kouken-fl-l")||"300")},v+"L")));
+  const err=h("p",{class:"err",hidden:true});
+  const go=h("button",{class:"btn",type:"button",onclick:async()=>{
+    store("kouken-fl-phi",ph.value);store("kouken-fl-l",ln.value);
+    const color=sub, name=flName(ph.value,ln.value);
+    let it=items.find(x=>x.cat==="フランジカバー"&&x.sub===color&&x.name===name);
+    if(!it){
+      if(!db){err.textContent="データにつながっていません。";err.hidden=false;return;}
+      if(!who){pickWho();return;}
+      go.disabled=true;
+      try{const now=Date.now();
+        it={name,cat:"フランジカバー",sub:color,unit:"個",qty:0,min:0,phi:Number(ph.value),fl:Number(ln.value),createdAt:now,updatedAt:now,updatedBy:who};
+        const ref=await db.collection("items").add(it);it=Object.assign({id:ref.id},it);
+        if(!items.some(x=>x.id===it.id))items.push(it);
+      }catch(x){err.textContent=errMsg(x);err.hidden=false;go.disabled=false;return;}
+      go.disabled=false;
+    }
+    ORDER?openOrderItem(it.id):openItem(it.id);
+  }},"この寸法をひらく");
+  return h("section",{class:"panel flbox"},h("h3",{text:sub+"のフランジカバー：寸法をえらぶ"}),
+    h("div",{class:"flrow"},h("label",null,h("span",{text:"φ"}),ph),h("label",null,h("span",{text:"L"}),ln)),go,err);
+}
 function openOrderItem(id){
   const it=items.find(x=>x.id===id);if(!it)return;
   if(!who){pickWho(()=>openOrderItem(id));return;}
