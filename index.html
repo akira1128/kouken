@@ -67,7 +67,7 @@ a.card:active{transform:scale(.98)}
   <div class="grid">
     <!-- 機能はここにカードで足していく -->
     <a class="card" href="yotei.html">
-      <span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+      <span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><text x="12" y="18.6" text-anchor="middle" font-size="8.5" font-weight="700" fill="currentColor" stroke="none" font-family="system-ui,sans-serif" id="calDay">30</text></svg></span>
       <b>予定表</b>
       <span>現場の予定・だれがどこへ</span>
     </a>
@@ -106,5 +106,6 @@ async function chkOpen(){try{const c=await caches.open("kouken-open");const r=aw
 chkOpen();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chkOpen();});
 if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="open")chkOpen();});
 </script>
+<script>/* 予定表のアイコンの数字は今日の日付 */try{document.getElementById("calDay").textContent=new Date().getDate();}catch(e){}</script>
 </body>
 </html>
