@@ -777,7 +777,8 @@ function renderOrders(){
 
 /* ---------- 集計（材料ごとの合計） ---------- */
 /* 期間は「2026年10月」のように西暦と月でえらぶ（注文のある月と今月）。"all" はぜんぶ（2026/10/28 ユーザー） */
-let sumSite="", sumMonth=ymd(new Date()).slice(0,7);
+// 集計は「すべての現場」「ぜんぶ」の期間から出す（2026/10/30 ユーザー）
+let sumSite="", sumMonth="all";
 const ymLabel=m=>{const [y,mm]=m.split("-");return y+"年"+Number(mm)+"月";};
 /* 集計：「届いた材料（材料屋さんの請求書）」と「アプリで頼んだ材料」を分けて出す。金額は出さない（2026/10/29 ユーザー）
    請求書の材料は deliveries（請求書1枚＝1件、lines：d 日付・t 納入先・n 品名・s 規格・q 数量・u 単位） */
