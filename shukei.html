@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>集計｜株式会社コウケン</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-title" content="コウケン">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* 株式会社コウケンアプリのトップ（メニュー）。機能はここにカードで増やしていく。色と文字は原田さんの勤怠台帳に合わせる */
+:root{
+  color-scheme:light;
+  --bg:#eaf1f8; --surface:#ffffff; --line:#cbdaea; --ink:#0d1a27; --muted:#465b70;
+  --accent:#0b5cab; --accent-ink:#ffffff; --accent-soft:#dceafa;
+  --shadow:0 1px 2px rgba(10,40,70,.07);
+  --f-body:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#08111b; --surface:#0f1c2a; --line:#25394f; --ink:#e6eff8; --muted:#a1b5ca;
+  --accent:#4c9ae8; --accent-ink:#04121f; --accent-soft:#12314f;
+  --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#08111b; --surface:#0f1c2a; --line:#25394f; --ink:#e6eff8; --muted:#a1b5ca;
+  --accent:#4c9ae8; --accent-ink:#04121f; --accent-soft:#12314f;
+  --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;padding-bottom:env(safe-area-inset-bottom,0px)}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+header.topbar{position:sticky;top:0;z-index:5;background:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow);padding-top:env(safe-area-inset-top,0px)}
+.topbar-in{max-width:640px;margin:0 auto;display:flex;align-items:center;gap:12px;
+  padding:12px max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px))}
+.mark{display:block;width:44px;height:40px;border-radius:9px;background:#fff;padding:3px 4px;flex:none}
+.mark img{display:block;width:100%;height:100%;object-fit:contain}
+.brand{font-weight:700;font-size:18px;letter-spacing:.04em;line-height:1.25}
+.brand small{display:block;font-size:11px;font-weight:500;opacity:.78;letter-spacing:.14em}
+main{max-width:640px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right,0px)) 32px max(16px,env(safe-area-inset-left,0px))}
+h1{font-size:15px;color:var(--muted);font-weight:700;letter-spacing:.08em;margin:4px 0 12px}
+/* 集計（社員ごと）。いまはダミー：名前を押しても開かない（2026/10/30 ユーザー） */
+.names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.nm{font:inherit;font-size:18px;font-weight:700;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:20px 12px;cursor:pointer}
+.nm:active{transform:scale(.98)}
+.back{display:inline-block;margin:0 0 14px;color:var(--accent);font-weight:700;text-decoration:none}
+.scrim{position:fixed;inset:0;background:rgba(5,15,25,.45);display:grid;place-items:center;padding:16px;z-index:20}
+.scrim[hidden]{display:none}
+.dlg{background:var(--surface);border-radius:14px;padding:20px 18px;max-width:340px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.dlg b{display:block;font-size:17px;margin-bottom:6px;color:#b0322d}
+.dlg p{margin:0 0 14px;color:var(--muted);font-size:14.5px}
+.dlg button{font:inherit;font-weight:700;width:100%;padding:12px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink)}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-in">
+  <span class="mark"><img src="logo.png" alt="コウケンのロゴ"></span>
+  <div class="brand">株式会社コウケン<small>社内アプリ</small></div>
+</div></header>
+<main>
+  <a class="back" href="index.html">‹ メニュー</a>
+  <h1>集計</h1>
+  <div class="names" id="names"></div>
+</main>
+<div class="scrim" id="scrim" hidden><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+  <b id="dlgT">西崎専用です</b><p id="dlgP">この集計は西崎さんだけが見られます。</p>
+  <button type="button" id="ok">閉じる</button>
+</div></div>
+<script>
+// 西崎さん以外のメンバー（呼び名）。押すと「西崎専用」と出して開かない
+const MEMBERS=["原田","福島","嗣穏","ヒエウ","ズオン","ロン"];
+const box=document.getElementById("names"),sc=document.getElementById("scrim");
+MEMBERS.forEach(n=>{const b=document.createElement("button");b.type="button";b.className="nm";b.textContent=n;
+  b.onclick=()=>{document.getElementById("dlgP").textContent=n+"さんの集計は、西崎さんだけが見られます。";sc.hidden=false;};box.appendChild(b);});
+document.getElementById("ok").onclick=()=>{sc.hidden=true;};
+sc.onclick=e=>{if(e.target===sc)sc.hidden=true;};
+</script>
+</body>
+</html>
