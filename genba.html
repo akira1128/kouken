@@ -442,9 +442,9 @@ function rollRunFace(){
   // 棟が分かれてメーターが何本かあっても、顔写真は1人だけ（どの棟で走るかもくじで決める）
   runFacePick=Math.random();
 }
-/* マンションの共用部・屋上のメーター（2026/10/30 ユーザー）。見込み人工はだれでも入れられ、あとで変えられる。入れた人の名前を出す
+/* マンションの共用部・外部屋上のメーター（2026/10/30 ユーザー）。見込み人工はだれでも入れられ、あとで変えられる。入れた人の名前を出す
    データ：x.parts.kyo／x.parts.okujo＝{total:見込み人工, totalBy, totalAt, done:済み人工, by, at} */
-const PARTS=[["kyo","共用部"],["okujo","屋上"]];
+const PARTS=[["kyo","共用部"],["okujo","外部屋上"]];
 function partMeters(x){
   if(!x.mansion)return [];
   return PARTS.map(([id,lab])=>{
