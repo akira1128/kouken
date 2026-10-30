@@ -458,11 +458,11 @@ function meter(x){
     requestAnimationFrame(()=>{placeRunner(run,w0,true);requestAnimationFrame(()=>{fill.style.width=w+"%";placeRunner(run,w);});});
     const set=n=>{n=Math.max(0,Math.min(top,n));if(n!==now)save(k,n);};
     const wrap=h("div",{class:runFace&&k===fk?"mwrap fc":"mwrap"},run,
-        h("div",{class:"mtrack",role:"img","aria-label":(t.name||"")+"いま"+now+"階、"+top+"階まで"},fill,h("div",{class:"mticks"},Array.from({length:top},()=>h("i")))));
+        h("div",{class:"mtrack",role:"img","aria-label":(t.name||"")+"次"+now+"階、"+top+"階まで"},fill,h("div",{class:"mticks"},Array.from({length:top},()=>h("i")))));
     const el=h("div",{class:"mone"},
-      h("div",{class:"mh"},t.name?h("span",{class:"tw",text:t.name}):null,h("span",{class:"fl"},"いま",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
+      h("div",{class:"mh"},t.name?h("span",{class:"tw",text:t.name}):null,h("span",{class:"fl"},"次",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
       wrap,
-      editor?h("div",{class:"mstep"},(t.name||"")+"のいまの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")):null);
+      editor?h("div",{class:"mstep"},(t.name||"")+"の次の階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")):null);
     // 最上階まで終わったら満タン。走ってきたときは着いてから紙ふぶきとジャンプ、描き直しのときは金色だけ
     if(now>=top){
       const ran=w0!==w;
