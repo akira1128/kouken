@@ -554,7 +554,8 @@ function meter(x){
       wrap,
       h("div",{class:"mstep"},tb?h("span",{class:"mby",text:"直した人："+nick(tb.by)+"（"+md(ymd(new Date(tb.at)))+" "+hm(tb.at)+"）"}):null,
         ((t.name||"")+lab?(t.name||"")+lab+"の":"")+"つぎの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")),
-      ka?null:togBtn(t,k));
+      // 「＋ ウレタン後の施工がある」は階のメーターの下、ウレタン後があるときの「なくす」はウレタン後のメーターの＋−の下（2026/10/30 ユーザー）
+      (aftOf(t)?ka:!ka)?togBtn(t,k):null);
     // 最上階まで終わったら満タン。走ってきたときは着いてから紙ふぶきとジャンプ、描き直しのときは金色だけ
     if(now>=top){
       const ran=w0!==w;
