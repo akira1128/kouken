@@ -232,6 +232,13 @@ h4.vh{margin:14px 0 6px;font-size:13px;color:var(--muted)}
 .order .top b{color:var(--ink);font-size:14.5px;overflow-wrap:anywhere}
 .order ul{margin:0;padding-left:1.2em;font-size:14.5px}
 .order .mm{font-size:13px;color:var(--muted);white-space:pre-wrap}
+/* 注文済み（西崎さんがチェック）：赤 */
+.order.done{background:var(--low-soft);box-shadow:inset 4px 0 0 var(--low)}
+.donechk{display:inline-flex;align-items:center;gap:6px;justify-self:start;border:1.5px solid var(--low);color:var(--low);background:transparent;border-radius:999px;padding:5px 12px;font-size:13.5px;font-weight:700}
+.donechk .bx{width:18px;height:18px;border:2px solid var(--low);border-radius:5px;display:inline-grid;place-items:center;font-size:13px;line-height:1}
+.order.done .donechk{background:var(--low);color:#fff}
+.order.done .donechk .bx{border-color:#fff}
+.donemark{color:var(--low);font-weight:700;font-size:13.5px}
 .tag{font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--in-soft);color:var(--in);white-space:nowrap}
 .dayh{margin:0;padding:10px 14px 2px;font-size:13px;font-weight:700;color:var(--muted);border-top:1px solid var(--line)}
 .dayh:first-child{border-top:0}
@@ -793,11 +800,19 @@ function editInfo(x){
 /* ---------- 注文の1件 ---------- */
 function orderRow(o){
   const lines=o.lines||[];
-  return h("div",{class:"order"},
-    h("div",{class:"top"},h("b",{text:view==="vSite"?md(o.date):shortSite(o.siteName||siteName(o.siteId))}),h("span",{text:hm(o.at)+"　"+nick(o.who)})),
+  return h("div",{class:"order"+(o.done?" done":"")},
+    h("div",{class:"top"},h("b",{text:view==="vSite"?md(o.date):(o.spot?"単発：":"")+shortSite(o.siteName||siteName(o.siteId))}),h("span",{text:hm(o.at)+"　"+nick(o.who)})),
     h("ul",null,lines.map(l=>h("li",{text:l.name+"　"+fmtN(l.qty)+(l.unit||"")}))),
     o.memo?h("div",{class:"mm",text:"メモ："+o.memo}):null,
+    editor==="西崎剣"?doneBtn(o):(o.done?h("div",{class:"donemark",text:"✓ 注文済み"}):null),
     editor==="西崎剣"?ecBtn(o):null);
+}
+/* 注文済みのチェック（西崎さんだけ押せる。もう一度押すと外れる 2026/10/30） */
+function doneBtn(o){
+  return h("button",{type:"button",class:"donechk","aria-pressed":String(!!o.done),onclick:async e=>{e.currentTarget.disabled=true;
+      try{await updateDoc(doc(fs,"orders",o.id),o.done?{done:false,doneAt:deleteField(),doneBy:deleteField()}:{done:true,doneAt:Date.now(),doneBy:editor});}
+      catch(x){toast("変えられませんでした。電波を確認してください。");e.currentTarget.disabled=false;}}},
+    h("span",{class:"bx",text:o.done?"✓":""}),o.done?"注文済み "+(o.doneAt?(new Date(o.doneAt).getMonth()+1)+"/"+new Date(o.doneAt).getDate():""):"注文したらチェック");
 }
 
 /* ---------- グラスロンに注文（西崎さんだけ。ECサイトを開いて、ブックマーク「コウケン→カート」でカートに入れる 2026/10/30） ---------- */
@@ -868,7 +883,8 @@ let ordSite=store("kouken-ord-site")||"";
 function siteFilter(val,on){
   const used=[...new Set(orders.map(o=>o.siteId))];
   return h("select",{class:"inp","aria-label":"現場でしぼる",onchange:e=>on(e.target.value)},h("option",{value:""},"すべての現場"),
-    sites.filter(s=>used.includes(s.id)).map(s=>h("option",{value:s.id,selected:s.id===val},shortSite(s.name))));
+    sites.filter(s=>used.includes(s.id)).map(s=>h("option",{value:s.id,selected:s.id===val},shortSite(s.name))),
+    used.includes("tanpatsu")?h("option",{value:"tanpatsu",selected:val==="tanpatsu"},"単発現場"):null);
 }
 function renderOrders(){
   const box=$("vOrders");
@@ -979,7 +995,7 @@ function renderNotice(){
   if(!editor){box.hidden=true;return;}
   let seen=Number(store("kouken-ord-seen"))||0;
   if(!seen){seen=Date.now();store("kouken-ord-seen",String(seen));}
-  const nw=orders.filter(o=>o.at>seen&&o.who!==editor);
+  const nw=orders.filter(o=>o.at>seen&&o.who!==editor&&!o.done);
   if(!nw.length){box.hidden=true;return;}
   box.hidden=false;
   box.replaceChildren(h("h3",{text:"新しい材料の注文が"+nw.length+"件あります"}),

@@ -166,6 +166,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
 .cartbar .btn{max-width:608px;margin:0 auto;display:block}
 .incart{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accent);color:var(--accent-ink);margin-left:6px;vertical-align:2px}
 .ordernote{margin:8px 2px 0}
+.spotbox{display:grid;gap:6px}
+.spotbox span{font-weight:700}
 .handbox{padding:12px 14px;display:grid;gap:8px}
 .handbox h3{margin:0;font-size:14px}
 .handrow{display:flex;gap:8px}
@@ -368,6 +370,8 @@ let db=null, items=[], logs=[], sites=[], loaded=false, readOnly=false;
 /* 現場に材料を頼むとき（現場一覧の「この現場の材料を頼む」から zaiko.html?order=現場のID で開く）。
    材料のえらび方は在庫と同じ。頼む数を入れて「頼むもの」に入れ、最後にまとめて送る（2026/10/28 ユーザー） */
 const ORDER=new URLSearchParams(location.search).get("order")||"";
+// 単発現場の材料の注文（メニューの「材料の注文」）。現場名は送るときに書く（2026/10/30）
+const SPOT=ORDER==="tanpatsu";
 let orderSite="";
 const cartKey="kouken-cart-"+ORDER;
 let cart=(()=>{try{return JSON.parse(sessionStorage.getItem(cartKey)||"{}")||{};}catch(e){return {};}})();   // { 材料のID: 数 }。「一覧にない材料」は x+番号
@@ -548,15 +552,17 @@ function openCart(){
   send.addEventListener("click",async()=>{
     const lines=Object.entries(cart).map(([id,l])=>({itemId:id.startsWith("x")?"":id,name:l.name,unit:l.unit,cat:l.cat||"",qty:l.n}));
     if(!lines.length){err.textContent="頼むものがありません。";err.hidden=false;return;}
+    const siteNm=SPOT?$("spotName").value.trim():orderSite;
+    if(SPOT&&!siteNm){err.textContent="いちばん上の「現場名」を書いてください。";err.hidden=false;return;}
     send.disabled=true;send.textContent="送っています…";
     const d=new Date(),p2=n=>String(n).padStart(2,"0");
     try{
-      await addDoc(collection(fs,"orders"),{at:Date.now(),date:d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()),siteId:ORDER,siteName:orderSite,who,lines,memo:memo.value.trim(),fromStock:false});
+      await addDoc(collection(fs,"orders"),{at:Date.now(),date:d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate()),siteId:ORDER,siteName:siteNm,...(SPOT?{spot:true}:{}),who,lines,memo:memo.value.trim(),fromStock:false});
       cart={};try{sessionStorage.removeItem(cartKey);}catch(e){}
-      location.href="genba.html?site="+encodeURIComponent(ORDER)+"&sent=1";
+      location.href=SPOT?"zaiko.html?order=tanpatsu&sent=1":"genba.html?site="+encodeURIComponent(ORDER)+"&sent=1";
     }catch(e){err.textContent=e&&e.code==="permission-denied"?"送る権限がありません。ページを開き直してください。":"送れませんでした。電波を確認してください。";err.hidden=false;send.disabled=false;send.textContent="西崎へ送る";}
   });
-  close=openSheet(h("h2",{text:"頼むもの"}),h("p",{class:"hint",text:"現場："+(orderSite||"―")+"　頼む人："+nick(who)}),list,
+  close=openSheet(h("h2",{text:"頼むもの"}),SPOT?h("p",{class:"hint",text:"現場："+($("spotName").value.trim()||"（まだ書いていません）")+"　頼む人："+nick(who)}):h("p",{class:"hint",text:"現場："+(orderSite||"―")+"　頼む人："+nick(who)}),list,
     h("label",{class:"fl"},h("span",null,"メモ ",h("em",{text:"なくてもよい"})),memo),err,send);
 }
 $("cartBtn").addEventListener("click",openCart);
@@ -863,8 +869,15 @@ async function migrateCats(){
 let fs=null, uid="";
 if(ORDER){document.documentElement.classList.add("ordermode");
   document.querySelector(".brand").firstChild.textContent="材料を頼む";
-  const back=document.querySelector("a.brandrow.home");back.href="genba.html?site="+encodeURIComponent(ORDER);back.setAttribute("aria-label","現場にもどる");back.querySelector(".backlbl").textContent="現場";
-  $("banner").insertAdjacentElement("afterend",h("p",{class:"ordersite",id:"orderSite",text:"現場を読み込んでいます…"}));
+  const back=document.querySelector("a.brandrow.home");
+  if(SPOT){document.querySelector(".brand").firstChild.textContent="材料の注文";}
+  else{back.href="genba.html?site="+encodeURIComponent(ORDER);back.setAttribute("aria-label","現場にもどる");back.querySelector(".backlbl").textContent="現場";}
+  $("banner").insertAdjacentElement("afterend",SPOT?
+    // 単発現場：現場名は手書き。この携帯に覚えておく
+    h("label",{class:"ordersite spotbox",id:"orderSite"},h("span",{text:"現場名（手書き）"}),
+      h("input",{class:"inp",id:"spotName",maxlength:"60",placeholder:"例：○○ビル 空調改修（品川区）",value:store("kouken-spot-name")||"",oninput:e=>store("kouken-spot-name",e.target.value)})):
+    h("p",{class:"ordersite",id:"orderSite",text:"現場を読み込んでいます…"}));
+  if(SPOT&&new URLSearchParams(location.search).get("sent"))setTimeout(()=>toast("西崎へ送りました"),300);
   // 一覧にない材料の手書きの欄
   const xName=h("input",{class:"inp",placeholder:"材料の名前（例：アルミテープ 50mm）"}),
     xN=h("input",{class:"inp",type:"number",inputmode:"decimal",min:"0",step:"any",placeholder:"数",style:"width:84px;flex:none"}),
@@ -926,7 +939,7 @@ renderWho();renderCats();renderList();renderLog();show(view);
   onSnapshot(query(collection(fs,"logs"),orderBy("at","desc"),limit(300)),s=>{logs=s.docs.map(d=>d.data());renderLog();},()=>{});
   // 現場の一覧（現場一覧の施工中・これからの現場）
   onSnapshot(collection(fs,"sites"),s=>{sites=s.docs.map(d=>d.data()).filter(x=>x&&x.name&&x.active!==false).sort((a,b)=>(a.order||0)-(b.order||0));renderLog();},()=>{});
-  if(ORDER)try{const sd=await getDoc(doc(fs,"sites",ORDER));orderSite=sd.exists()?sd.data().name||"":"";
+  if(ORDER&&!SPOT)try{const sd=await getDoc(doc(fs,"sites",ORDER));orderSite=sd.exists()?sd.data().name||"":"";
     $("orderSite").textContent=orderSite?"頼む現場："+orderSite:"現場が見つかりません。現場一覧から開き直してください。";}catch(e){}
   if(!who)setTimeout(()=>{if(!who&&$("scrim").hidden)pickWho();},400);
 })();
