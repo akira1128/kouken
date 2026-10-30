@@ -725,9 +725,10 @@ function renderSite(){
     h("section",{class:"panel dhead"},
       h("button",{type:"button",class:"backlink",onclick:()=>{siteId="";history.replaceState(null,"",location.pathname);show("vSites");}},h("b",{text:"‹"}),"現場一覧"),
       h("h2",null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),x.name),
+      // 材料を頼むボタンは一番上（2026/10/30 ユーザー）
+      h("a",{class:"btn",href:"zaiko.html?order="+encodeURIComponent(x.id),style:{textAlign:"center",textDecoration:"none",marginBottom:"6px"}},"この現場の材料を頼む"),
       meter(x),
-      (()=>{const lv=h("p",{class:"lastv",id:"lastVisit"});fillLastVisit(lv,x);return lv;})(),
-      h("a",{class:"btn",href:"zaiko.html?order="+encodeURIComponent(x.id),style:{textAlign:"center",textDecoration:"none"}},"この現場の材料を頼む")),
+      (()=>{const lv=h("p",{class:"lastv",id:"lastVisit"});fillLastVisit(lv,x);return lv;})()),
     h("section",{class:"panel sec"},
       h("h3",null,"現場の情報",h("button",{type:"button",class:"btn ghost small",onclick:()=>needWho(()=>editInfo(x))},"書きかえる")),
       h("dl",{class:"info"},FIELDS.flatMap(([k,l])=>[h("dt",{text:l}),val(k,inf[k])])),
