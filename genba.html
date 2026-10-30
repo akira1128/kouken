@@ -128,6 +128,20 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 @keyframes mstripe{to{background-position:25.4px 0}}
 @keyframes mshine{0%{left:-40%}60%,100%{left:110%}}
 @media (prefers-reduced-motion:reduce){.mfill::before,.mfill::after{animation:none}.mfill{transition:none}}
+/* 満タン（最上階まで終わった）：金色のメーター・「満タン！」の札・紙ふぶき・職人がジャンプ 2026/10/30 ユーザー */
+.mone.done .mfill{background:linear-gradient(90deg,#b45309,#f59e0b 55%,#fde047)}
+.mone.done .mtrack{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.25),0 0 14px rgba(245,158,11,.45)}
+.mdone{position:absolute;right:0;top:2px;display:none;padding:2px 10px;border-radius:999px;background:#f59e0b;color:#fff;font-size:13px;font-weight:800;letter-spacing:.06em;
+  box-shadow:0 2px 6px rgba(180,83,9,.35);transform-origin:right center}
+.mone.done .mdone{display:block;animation:mpop .5s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes mpop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+.mconf{position:absolute;right:0;bottom:30px;width:0;height:0;pointer-events:none}
+.mconf i{position:absolute;left:0;top:0;width:7px;height:10px;border-radius:2px;background:var(--c);opacity:0;
+  animation:mconf 1.3s cubic-bezier(.15,.7,.3,1) forwards;animation-delay:var(--d)}
+@keyframes mconf{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}}
+.runner.jump svg,.runner.jump .rface{animation:rjump .42s ease-in-out 3}
+@keyframes rjump{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@media (prefers-reduced-motion:reduce){.mone.done .mdone{animation:none}.mconf{display:none}.runner.jump svg,.runner.jump .rface{animation:none}}
 /* メーターの上を走る人（黄色いヘルメットの職人）。メーターの先っぽについていく */
 .mwrap{position:relative;padding-top:40px}.mwrap.fc{padding-top:54px}
 /* 走る位置は走る人そのものを translateX（px）で動かす。left だと顔写真の層とずれてカクつき、
@@ -369,6 +383,19 @@ function renderSites(){
 /* ---------- 進行状況のメーター（floors＝最上階、floor＝いまの階）。階を変えるのは編集する人だけ ---------- */
 const meterW={};
 // 走る人をメーターの w％ の位置へ（px で transform）。jump のときはアニメーションなしで置く
+// 満タンのお祝い：メーターの右はしから紙ふぶき、職人がジャンプ
+function celebrate(wrap,run){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  const cols=["#f59e0b","#ef4444","#3b82f6","#10b981","#a855f7","#fde047","#ec4899"];
+  const box=h("div",{class:"mconf"});
+  for(let i=0;i<28;i++){
+    const a=(200+Math.random()*130)*Math.PI/180, d=50+Math.random()*70;
+    box.append(h("i",{style:{"--c":cols[i%cols.length],"--x":Math.round(Math.cos(a)*d)+"px","--y":Math.round(Math.sin(a)*d)+"px",
+      "--r":Math.round(Math.random()*720-360)+"deg","--d":Math.round(Math.random()*120)+"ms"}}));
+  }
+  wrap.append(box);run.classList.add("jump");
+  setTimeout(()=>{box.remove();run.classList.remove("jump");},1700);
+}
 function placeRunner(run,w,jump){
   const W=run.parentElement?run.parentElement.clientWidth:0;
   if(jump){run.style.transition="none";run.style.transform="translateX("+(W*w/100)+"px)";void run.offsetWidth;run.style.transition="";}
@@ -434,11 +461,18 @@ function meter(x){
     // 画面に出てからメーターの幅を測り、前の位置（w0）に置いてから、いまの位置（w）まで走らせる
     requestAnimationFrame(()=>{placeRunner(run,w0,true);requestAnimationFrame(()=>{fill.style.width=w+"%";placeRunner(run,w);});});
     const set=n=>{n=Math.max(0,Math.min(top,n));if(n!==now)save(k,n);};
-    return h("div",{class:"mone"},
+    const wrap=h("div",{class:runFace&&k===fk?"mwrap fc":"mwrap"},run,h("span",{class:"mdone",text:"満タン！"}),
+        h("div",{class:"mtrack",role:"img","aria-label":(t.name||"")+"いま"+now+"階、"+top+"階まで"},fill,h("div",{class:"mticks"},Array.from({length:top},()=>h("i")))));
+    const el=h("div",{class:"mone"},
       h("div",{class:"mh"},t.name?h("span",{class:"tw",text:t.name}):null,h("span",{class:"fl"},"いま",h("b",{text:now||"―"}),"階　／　"+top+"階まで")),
-      h("div",{class:runFace&&k===fk?"mwrap fc":"mwrap"},run,
-        h("div",{class:"mtrack",role:"img","aria-label":(t.name||"")+"いま"+now+"階、"+top+"階まで"},fill,h("div",{class:"mticks"},Array.from({length:top},()=>h("i"))))),
+      wrap,
       editor?h("div",{class:"mstep"},(t.name||"")+"のいまの階を",h("button",{type:"button","aria-label":"1階下げる",onclick:()=>set(now-1)},"−"),h("button",{type:"button","aria-label":"1階上げる",onclick:()=>set(now+1)},"＋")):null);
+    // 最上階まで終わったら満タン。走ってきたときは着いてから紙ふぶきとジャンプ、描き直しのときは札と金色だけ
+    if(now>=top){
+      const ran=w0!==w;
+      setTimeout(()=>{el.classList.add("done");if(ran)celebrate(wrap,run);},ran?1450:0);
+    }
+    return el;
   }));
 }
 
