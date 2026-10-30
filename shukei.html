@@ -51,6 +51,11 @@ h1{font-size:15px;color:var(--muted);font-weight:700;letter-spacing:.08em;margin
 .dlg{background:var(--surface);border-radius:14px;padding:22px 18px 18px;max-width:320px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)}
 .dlg b{display:block;font-size:17px;margin-bottom:14px}
 .dlg button{font:inherit;font-weight:700;width:100%;padding:12px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink)}
+/* 西暦を選ぶ欄。選んだ年にいたメンバーだけ出す。名前の位置は変えない（いない人は空きにする）（2026/10/31 ユーザー） */
+.yearrow{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+.yearrow label{font-size:14px;font-weight:700;color:var(--muted)}
+.yearrow select{font:inherit;font-size:17px;font-weight:700;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:9px 12px;min-width:130px}
+.nm.off{visibility:hidden}
 .sec{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.06em;margin:18px 2px 8px}
 /* 戻る「‹ TOP」：ほかの画面と同じ形（2026/10/30） */
 .brandrow{display:flex;align-items:center;gap:10px;min-width:0}
@@ -70,6 +75,7 @@ a.brandrow:active .back{background:rgba(255,255,255,.3)}
   <a class="brandrow home" href="./" aria-label="メニューにもどる"><span class="back" aria-hidden="true"><b>‹</b><span class="backlbl">TOP</span></span><span class="mark"><img src="logo.png" alt=""></span><div class="brand">集計<small>株式会社コウケン</small></div></a>
 </div></header>
 <main>
+  <div class="yearrow"><label for="year">西暦</label><select id="year"></select></div>
   <h1>集計</h1>
   <div class="names" id="names"></div>
   <h2 class="sec">外注</h2>
@@ -82,11 +88,21 @@ a.brandrow:active .back{background:rgba(255,255,255,.3)}
 <script>
 // メンバー（呼び名）。いまはダミーで、押すと「西崎さんだけが見れます」と出して開かない（2026/10/30 ユーザー）
 const MEMBERS=["西崎","原田","福島","嗣穏","ヒエウ","ズオン","ロン"];
+// 何年から集計に出すか（2026/10/31 ユーザー）
+const FROM={"西崎":2017,"ヒエウ":2019,"ズオン":2021,"原田":2024,"福島":2024,"嗣穏":2025,"ロン":2025};
+const Y_MIN=2017,Y_MAX=2026;
 // 外注（2026/10/30 ユーザー）
 const OUTS=["コウケン板金","竹内工業","小原興業","高橋断熱","その他"];
 const sc=document.getElementById("scrim");
 [["names",MEMBERS],["outs",OUTS]].forEach(([bid,list])=>{const box=document.getElementById(bid);list.forEach(n=>{const b=document.createElement("button");b.type="button";b.className="nm";b.textContent=n;
   b.onclick=()=>{sc.hidden=false;};box.appendChild(b);});});
+// 西暦を選ぶ。はじめは今年（範囲外なら端の年）
+const ysel=document.getElementById("year");
+for(let y=Y_MAX;y>=Y_MIN;y--){const o=document.createElement("option");o.value=y;o.textContent=y+"年";ysel.appendChild(o);}
+ysel.value=Math.min(Y_MAX,Math.max(Y_MIN,new Date().getFullYear()));
+function showYear(){const y=+ysel.value;
+  document.querySelectorAll("#names .nm").forEach((b,i)=>{const off=y<FROM[MEMBERS[i]];b.classList.toggle("off",off);b.tabIndex=off?-1:0;b.setAttribute("aria-hidden",off);});}
+ysel.onchange=showYear;showYear();
 document.getElementById("ok").onclick=()=>{sc.hidden=true;};
 sc.onclick=e=>{if(e.target===sc)sc.hidden=true;};
 </script>
