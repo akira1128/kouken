@@ -366,7 +366,7 @@ async function chkOpen(){try{const c=await caches.open("kouken-open");const r=aw
 chkOpen();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chkOpen();});
 if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="open")chkOpen();});
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {getMessaging,getToken,isSupported} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+import {renderPushBox} from "./push.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,getDoc,setDoc,onSnapshot,query,where,orderBy,limit,arrayUnion,arrayRemove,writeBatch,deleteField,getDocsFromServer} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {FIREBASE_CONFIG} from "./firebase-config.js";
@@ -1272,36 +1272,9 @@ function renderNotice(){
       h("button",{type:"button",class:"btn ghost small",onclick:()=>{store("kouken-ord-seen",String(Date.now()));renderNotice();}},"確認した")));
 }
 
-/* ---------- 携帯への通知（西崎さんの携帯だけ。注文が来たらすぐ届く 2026/10/30） ---------- */
-const VAPID_KEY="BIgE1nu5kfTRSKcNKpx7qwDm28Sk7_BrNUotCE2QK3Lc71ai3kB6CsHDJt-XXlJ3nlkqE2PP1lwNgm7wgRF5Y1g";
+/* ---------- 携帯への通知（社員全員が受け取れる 2026/10/31。注文・工程表の通知は西崎さんだけに届く） ---------- */
 let fbApp=null;
-async function pushToken(ask){
-  if(ask&&Notification.permission!=="granted"&&await Notification.requestPermission()!=="granted")return "";
-  if(Notification.permission!=="granted")return "";
-  const reg=await navigator.serviceWorker.register("sw.js");await navigator.serviceWorker.ready;
-  const t=await getToken(getMessaging(fbApp),{vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
-  if(t)await setDoc(doc(fs,"pushTokens",t.slice(-40).replace(/[^A-Za-z0-9_-]/g,"_")),{token:t,who:editor,at:Date.now(),ua:navigator.userAgent.slice(0,120)});
-  return t;
-}
-async function renderPush(){
-  const box=$("pushbox");
-  if(editor!=="西崎剣"||!fs){box.hidden=true;return;}
-  const ok="serviceWorker" in navigator&&"Notification" in window&&"PushManager" in window&&await isSupported().catch(()=>false);
-  const home=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
-  // もう受け取っている携帯は、開くたびに登録を新しくするだけ（欄は出さない）
-  if(ok&&Notification.permission==="granted"){box.hidden=true;pushToken(false).catch(()=>{});return;}
-  box.hidden=false;
-  if(!ok){box.replaceChildren(h("h3",{text:"注文の通知をこの携帯で受け取る"}),
-    h("p",{class:"hint",text:home?"この携帯は通知に対応していません。iPhoneの「設定」→「一般」→「ソフトウェアアップデート」でiOSを新しくしてください。":"Safariの共有ボタン（□に↑）→「ホーム画面に追加」をして、ホーム画面のコウケンのアイコンから開いてください。そこで通知を受け取れるようになります。"}));return;}
-  if(Notification.permission==="denied"){box.replaceChildren(h("h3",{text:"通知が止められています"}),
-    h("p",{class:"hint",text:"iPhoneの「設定」→「通知」→「コウケン」で通知を許可してください。"}));return;}
-  const err=h("p",{class:"err",hidden:true});
-  const go=h("button",{type:"button",class:"btn small",onclick:async()=>{go.disabled=true;err.hidden=true;
-    try{const t=await pushToken(true);if(t){toast("通知を受け取れるようにしました");renderPush();}else{err.textContent="通知が許可されませんでした。";err.hidden=false;}}
-    catch(x){err.textContent="うまく登録できませんでした（"+(x&&x.code||x&&x.message||"")+"）";err.hidden=false;}
-    go.disabled=false;}},"通知を受け取る");
-  box.replaceChildren(h("h3",{text:"注文の通知をこの携帯で受け取る"}),h("p",{class:"hint",text:"社員や西崎さんが材料を頼んだら、すぐこの携帯に通知が届きます。"}),go,err);
-}
+const renderPush=()=>renderPushBox({box:$("pushbox"),app:fbApp,fs,name:me,pickName:pickWho,h,toast});
 
 /* ---------- 会社の暗証番号（在庫・予定表と同じ。もう入れた携帯は聞かない） ---------- */
 function askPin(){

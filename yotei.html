@@ -64,6 +64,10 @@ a.brandrow:active .back{background:rgba(255,255,255,.3)}
 button.who{color:inherit;font:inherit;font-size:13px}
 /* お知らせ（自分の予定が変わったとき） */
 .notice{padding:12px 14px;display:grid;gap:8px;border-color:var(--low);background:var(--low-soft)}
+.pushbox{padding:12px 14px;display:grid;gap:8px}
+.pushbox h3{margin:0;font-size:15px}
+.pushbox .rowbtns{display:flex;gap:8px;flex-wrap:wrap}
+.pushbox .btn{width:auto;padding:10px 16px;font-size:15px}
 .notice h3{margin:0;font-size:15px;display:flex;align-items:center;gap:8px;color:var(--low)}
 .notice .dot{width:10px;height:10px;border-radius:50%;background:var(--low);flex:none}
 .notice ul{list-style:none;margin:0;padding:0;display:grid}
@@ -243,6 +247,7 @@ textarea.inp{min-height:68px;resize:vertical}
   <p class="banner" id="banner" hidden></p>
   <main>
     <section class="panel notice" id="notice" aria-live="polite" hidden></section>
+    <section class="panel pushbox" id="pushbox" hidden></section>
     <section class="panel">
       <div class="month">
         <button type="button" id="prev" aria-label="前の月">‹</button>
@@ -275,6 +280,7 @@ async function chkOpen(){try{const c=await caches.open("kouken-open");const r=aw
 chkOpen();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chkOpen();});
 if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="open")chkOpen();});
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {renderPushBox} from "./push.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,setDoc,onSnapshot,query,where,orderBy,limit,deleteField,FieldPath,writeBatch} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {FIREBASE_CONFIG} from "./firebase-config.js";
@@ -924,11 +930,12 @@ function listen(){
 }
 
 /* ---------- 起動 ---------- */
+let fbApp=null;
 renderPeople();renderAll();
 (async()=>{
   if(!FIREBASE_CONFIG||!FIREBASE_CONFIG.apiKey){setBanner("まだ設定がすんでいません（firebase-config.js）。");return;}
   try{
-    const app=initializeApp(FIREBASE_CONFIG);
+    const app=initializeApp(FIREBASE_CONFIG);fbApp=app;
     try{fs=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});}catch(e){fs=getFirestore(app);}
     const auth=getAuth(app);
     await signInAnonymously(auth);uid=auth.currentUser.uid;
@@ -937,6 +944,8 @@ renderPeople();renderAll();
   }catch(e){fs=null;setBanner("予定表につながりません。電波を確認して、ページを開き直してください。");return;}
   try{const ed=await getDoc(doc(fs,"editors",uid));if(ed.exists())editor=ed.data().name||"";}catch(e){}
   applyEditor();                         // ここで予定（西崎さんはメモも）を読みはじめる
+  // 携帯への通知（予定が入った・変わったとき 2026/10/31）
+  renderPushBox({box:$("pushbox"),app:fbApp,fs,name:myName,pickName:then=>{pickMe();const t=setInterval(()=>{if(myName()){clearInterval(t);then();}else if($("scrim").hidden)clearInterval(t);},300);},h,toast});
   if(!editor&&!me)setTimeout(()=>{if(!me&&$("scrim").hidden)pickMe();},400);
   // 現場の一覧（在庫と同じ。施工中・これからの現場）
   onSnapshot(collection(fs,"sites"),s=>{sites=s.docs.map(d=>d.data()).filter(x=>x&&x.name&&x.active!==false&&x.status!=="見積もり")  /* 見積もり中の現場は出さない */.sort((a,b)=>(a.order||0)-(b.order||0));

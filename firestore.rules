@@ -45,8 +45,8 @@ service cloud.firestore {
     match /photoFull/{id} { allow read, write: if member(); }
     // 材料屋さんの請求書から取った納品（金額は入れない）：見るのは社員。足すのは暗証番号を入れた携帯（請求書を読み込むとき）、直す・消すのは編集する人だけ
     match /deliveries/{id} { allow read, create: if member(); allow update, delete: if editor(); }
-    // 注文の通知を受け取る携帯の登録：西崎さんの携帯だけが入れられる（読むのは通知を送る仕組みだけ）
-    match /pushTokens/{id} { allow create, update, delete: if boss(); allow read: if false; }
+    // 通知を受け取る携帯の登録：社員だれでも自分の携帯を入れられる（2026/10/31）。読むのは通知を送る仕組みだけ
+    match /pushTokens/{id} { allow create, update: if member() && request.resource.data.token is string; allow delete: if boss(); allow read: if false; }
     // 工程表の写真（社員が送る）：送る・見るのは社員だれでも。保存済みにする・消すのは編集する人（西崎・原田）だけ（2026/10/31）
     match /koutei/{id} { allow read, create: if member(); allow update, delete: if editor(); }
     match /kouteiFull/{id} { allow read, create: if member(); allow update, delete: if editor(); }
