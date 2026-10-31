@@ -62,6 +62,26 @@ a.brandrow:active .back{background:rgba(255,255,255,.3)}
 .who b{opacity:.78;font-weight:400;font-size:11px}
 .banner{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:var(--out-soft);font-size:14px}
 main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
+/* ウレタンカレンダー（紫＝LINE WORKS のウレタンと同じ色の考え方） */
+.ucal{padding:10px 10px 6px}
+.uc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.uc-head h3{margin:0;font-size:15px;color:var(--nx)}
+.uc-nav{font:inherit;font-size:22px;line-height:1;width:40px;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+.uc-wk,.uc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.uc-wk span{text-align:center;font-size:11.5px;font-weight:700;color:var(--muted)}
+.uc-wk .sun,.uc-cell.sun .uc-d{color:var(--low)} .uc-wk .sat,.uc-cell.sat .uc-d{color:#1d5fbf}
+.uc-cell{font:inherit;min-height:52px;border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:2px 2px 3px;display:flex;flex-direction:column;align-items:stretch;gap:2px;text-align:left;min-width:0;overflow:hidden;color:var(--ink)}
+.uc-cell.empty{border:0;background:transparent}
+.uc-cell.has{background:var(--nx-soft);border-color:var(--nx)}
+.uc-cell.today{box-shadow:inset 0 0 0 2px var(--ink)}
+.uc-cell.sel{outline:2px solid var(--nx);outline-offset:1px}
+.uc-d{font-size:11.5px;font-weight:700}
+.uc-e{font-size:10px;line-height:1.2;background:var(--nx);color:#fff;border-radius:4px;padding:1px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uc-e.more{background:transparent;color:var(--nx);padding:0}
+.uc-list{display:grid;gap:4px;margin-top:8px}
+.uc-row{font:inherit;display:flex;gap:10px;align-items:baseline;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;padding:8px 4px;color:var(--ink)}
+.uc-row b{color:var(--nx);min-width:76px;font-size:14px}
+.uc-row span{font-size:14px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
 .hint{font-size:13px;color:var(--muted);margin:0}
 .empty{padding:22px 14px;text-align:center;color:var(--muted);font-size:14px}
@@ -475,13 +495,55 @@ function render(){
 const siteName=id=>{const s=sites.find(x=>x.id===id);return s?s.name:"";};
 
 /* ---------- 現場の一覧（施工中・これから・そのほか） ---------- */
+/* ---------- ウレタンカレンダー（現場一覧のいちばん上。2026/10/31 ユーザー）
+   日にちは元請けの工程表PDFから読んで、現場の urethane:[{label:"A棟1F・B棟3F",from:"2026-11-09",to:"2026-11-10"}] に入れる ---------- */
+let uretYM=null, uretDay="";
+function uretItems(){
+  const out=[];
+  for(const x of sites)for(const u of (x.urethane||[])){
+    const a=new Date(u.from+"T00:00"),b=new Date((u.to||u.from)+"T00:00");
+    for(let d=new Date(a);d<=b;d.setDate(d.getDate()+1))out.push({day:ymd(d),site:x,label:u.label||"",short:x.uretShort||shortSite(x.name).replace(/^八王子市|計画$/g,"")});
+  }
+  return out;
+}
+function uretCal(){
+  const all=uretItems();
+  if(!all.length)return h("div");
+  const now=new Date();
+  if(!uretYM)uretYM={y:now.getFullYear(),m:now.getMonth()};
+  const {y,m}=uretYM, first=new Date(y,m,1), days=new Date(y,m+1,0).getDate(), lead=first.getDay(), today=ymd(now);
+  const byDay={};all.forEach(e=>{(byDay[e.day]=byDay[e.day]||[]).push(e);});
+  const move=k=>{const d=new Date(y,m+k,1);uretYM={y:d.getFullYear(),m:d.getMonth()};uretDay="";renderSites();};
+  const cells=[];
+  for(let i=0;i<lead;i++)cells.push(h("div",{class:"uc-cell empty"}));
+  for(let d=1;d<=days;d++){
+    const key=y+"-"+p2(m+1)+"-"+p2(d), es=byDay[key]||[], wd=(lead+d-1)%7;
+    cells.push(h("button",{type:"button",class:"uc-cell"+(es.length?" has":"")+(key===today?" today":"")+(key===uretDay?" sel":"")+(wd===0?" sun":wd===6?" sat":""),
+      onclick:()=>{uretDay=uretDay===key?"":key;renderSites();}},
+      h("span",{class:"uc-d",text:String(d)}),...es.slice(0,2).map(e=>h("span",{class:"uc-e",text:e.short})),es.length>2?h("span",{class:"uc-e more",text:"+"+(es.length-2)}):null));
+  }
+  // 押した日（なければ今月の予定）を下に一覧で出す
+  const mk=y+"-"+p2(m+1);
+  const list=uretDay?(byDay[uretDay]||[]):all.filter(e=>e.day.startsWith(mk));
+  const grp={};list.forEach(e=>{const k=e.site.id+"|"+e.label;(grp[k]=grp[k]||{e,days:[]}).days.push(e.day);});
+  const md2=s=>{const [,mm,dd]=s.split("-");return +mm+"/"+ +dd;};
+  return h("section",{class:"panel ucal",style:{marginBottom:"14px"}},
+    h("div",{class:"uc-head"},h("button",{type:"button",class:"uc-nav","aria-label":"前の月",onclick:()=>move(-1)},"‹"),
+      h("h3",{text:"ウレタン予定　"+y+"年"+(m+1)+"月"}),h("button",{type:"button",class:"uc-nav","aria-label":"次の月",onclick:()=>move(1)},"›")),
+    h("div",{class:"uc-wk"},..."日月火水木金土".split("").map((w,i)=>h("span",{class:i===0?"sun":i===6?"sat":"",text:w}))),
+    h("div",{class:"uc-grid"},...cells),
+    h("div",{class:"uc-list"},
+      Object.values(grp).length?Object.values(grp).map(({e,days})=>h("button",{type:"button",class:"uc-row",onclick:()=>openSite(e.site.id)},
+        h("b",{text:days.length>1?md2(days[0])+"〜"+md2(days[days.length-1]):md2(days[0])}),h("span",{text:shortSite(e.site.name)+"　"+e.label}))):
+        h("p",{class:"empty",text:uretDay?"この日のウレタンはありません":"この月のウレタンはありません"})));
+}
 function renderSites(){
   const box=$("vSites");
   if(!sites.length){box.replaceChildren(h("div",{class:"panel empty",text:fs?"現場がまだありません":"読み込んでいます…"}));return;}
   const groups=[["施工中","",x=>x.status==="施工中","now"],["これから","",x=>x.status==="これから","next"],["予定","まだ決まっていない",x=>x.status==="予定","plan"],["見積もり","見積を出している",x=>x.status==="見積もり","est"],["そのほか","",x=>!(x.status in STATUS_ORDER),"other"]];
   // 外注が施工している現場は、まとまりのいちばん下に出す（2026/10/28 ユーザー）
   const outs=x=>!!(x.info&&x.info.outsource);
-  box.replaceChildren(...groups.filter(([,,f,k])=>k==="est"||sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>outs(a)-outs(b));
+  box.replaceChildren(uretCal(),...groups.filter(([,,f,k])=>k==="est"||sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>outs(a)-outs(b));
     return h("section",{class:"panel grp-"+k,style:{marginBottom:"14px"}},h("h3",{class:"grouph"},t+"　"+arr.length+"件",sub?h("small",{text:"（"+sub+"）"}):null),
       k==="est"&&!arr.length?h("p",{class:"empty",text:"見積もり中の現場はまだありません"}):null,
       // 見積もりの現場は西崎さんの指示でこちらから入れる（アプリに足すボタンは出さない 2026/10/30 ユーザー）
