@@ -63,7 +63,16 @@ a.brandrow:active .back{background:rgba(255,255,255,.3)}
 .banner{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:var(--out-soft);font-size:14px}
 main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* ウレタンカレンダー（紫＝LINE WORKS のウレタンと同じ色の考え方） */
-.mtm,.ami{padding:0 0 10px}
+.mtm,.ami,.tbx{padding:0 0 10px}
+.tbx>*:not(.sec){margin-left:14px;margin-right:14px}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:6px;margin-bottom:6px}
+.ctbl{border-collapse:collapse;font-size:13px;min-width:100%;white-space:nowrap}
+.ctbl th,.ctbl td{border:1px solid var(--line);padding:6px 8px;text-align:right}
+.ctbl thead th{background:var(--bg);font-size:12px;text-align:center}
+.ctbl tbody th{text-align:left;position:sticky;left:0;background:var(--surface);font-weight:700}
+.ctbl tr.b th,.ctbl tr.b td{font-weight:800;background:var(--bg)}
+.tmemo p{font-size:12.5px;color:var(--muted);margin:4px 0}
+.tmemo b{color:var(--ink)}
 .mtm>*:not(.sec),.ami>*:not(.sec){margin-left:14px;margin-right:14px}
 .mtabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .mtabs button{font:inherit;font-size:14px;font-weight:700;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px}
@@ -1078,6 +1087,17 @@ function amiBox(x){
     a.ductTitle?h("h4",{class:"vh",text:a.ductTitle}):null,(a.duct||[]).map(grp),
     (a.ductNotes||[]).map(t=>h("p",{class:"hint",text:t})));
 }
+/* ---------- 比べる表（大阪南港の冷凍倉庫の比較など。会社用＝利益・契約金額は入れない 2026/10/31 ユーザー）
+   sites.tables：[{title,sub,cols:[…],rows:[{k,v:[…],memo,b}],notes:[…]}]。横に長いので、表は横にずらして見る ---------- */
+function tableBox(t){
+  return h("section",{class:"panel tbx"},h("div",{class:"sec"},h("h3",{text:t.title||"表"})),
+    t.sub?h("p",{class:"hint",text:t.sub}):null,
+    h("div",{class:"tscroll"},h("table",{class:"ctbl"},
+      h("thead",null,h("tr",null,h("th",{text:""}),(t.cols||[]).map(c=>h("th",{text:c})))),
+      h("tbody",null,(t.rows||[]).map(r=>h("tr",{class:r.b?"b":null},h("th",{text:r.k}),(r.v||[]).map(v=>h("td",{text:v}))))))),
+    (t.rows||[]).some(r=>r.memo)?h("div",{class:"tmemo"},(t.rows||[]).filter(r=>r.memo).map(r=>h("p",null,h("b",{text:r.k+"："}),r.memo))):null,
+    (t.notes||[]).map(n=>h("p",{class:"hint",text:n})));
+}
 function renderSite(){
   const box=$("vSite"), x=sites.find(s=>s.id===siteId);
   if(!x){box.replaceChildren(h("div",{class:"panel empty",text:fs?"この現場は見つかりません":"読み込んでいます…"}));return;}
@@ -1124,6 +1144,7 @@ function renderSite(){
       h("button",{type:"button",class:"btn ghost",onclick:()=>openPhoto(x,null)},"＋ 写真を入れる")),
     (x.matome||[]).length?matomeBox(x):null,
     x.ami?amiBox(x):null,
+    ...(x.tables||[]).map(tableBox),
     (()=>{const vb=h("section",{class:"panel",id:"visitBox"});fillVisits(vb,x);return vb;})(),
     h("section",{class:"panel"},h("div",{class:"sec"},h("h3",{text:"この現場の注文履歴（新しい順）"})),
       siteOrders.length?siteOrders.slice(0,20).map(orderRow):h("p",{class:"empty",text:"まだ注文はありません"})));
