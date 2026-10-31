@@ -389,12 +389,14 @@ const saveCart=()=>{try{sessionStorage.setItem(cartKey,JSON.stringify(cart));}ca
 let who=store("kouken-who")||"";
 if(who&&!NICK[who])who="";              // 前の版の名前の書き方だったら選び直してもらう
 let logSite="すべて";
-let cat=store("kouken-cat")||"すべて";
+// 材料を頼む画面は、いつも「ALK（P）保温筒」から始める。頼む画面で選んだ種類は覚えない（工場在庫の覚えている種類を変えないように 2026/10/31 ユーザー）
+let cat=ORDER?"ALK（P）保温筒":(store("kouken-cat")||"すべて");
+const keepCS=(k,v)=>{if(!ORDER)store(k,v);};
 /* 種類の「すべて」ボタン。false で出さない（2026/10/28 ユーザー：いったん消す） */
 const SHOW_ALL=false;
 const CAT_BTNS=SHOW_ALL?["すべて",...CATS]:CATS;
 if(!CAT_BTNS.includes(cat))cat=CAT_BTNS[0];
-let sub=store("kouken-sub")||"すべて";
+let sub=ORDER?"すべて":(store("kouken-sub")||"すべて");
 /* 3段目：ジャケット・エルボの中を、さらに「ジャケット」「エルボ」で分ける（名前の頭で見分ける 2026/10/28） */
 const SUB2={"ジャケット・エルボ":["ジャケット","エルボ"]};
 const sub2Of=it=>/^エルボ/.test(it.name||"")?"エルボ":/^ジャケット/.test(it.name||"")?"ジャケット":"";
@@ -443,12 +445,12 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("clic
 /* フランジカバー・BOXカバー・トランクカバーは、上の段は「フランジカバー」1つにまとめ、その下の段で3つから選ぶ（2026/10/31 ユーザー） */
 const FLK=["フランジカバー","BOXカバー","トランクカバー"];
 function renderCats(){
-  const pick=c=>{cat=c;store("kouken-cat",c);sub="すべて";fixSub();store("kouken-sub",sub);renderCats();renderList();};
+  const pick=c=>{cat=c;keepCS("kouken-cat",c);sub="すべて";fixSub();keepCS("kouken-sub",sub);renderCats();renderList();};
   $("cats").replaceChildren(...CAT_BTNS.filter(c=>c==="フランジカバー"||!FLK.includes(c)).map(c=>h("button",{type:"button","aria-pressed":String(c===cat||(c==="フランジカバー"&&FLK.includes(cat))),onclick:()=>pick(c==="フランジカバー"&&FLK.includes(cat)?cat:c)},c)));
   $("flk").hidden=!FLK.includes(cat);
-  $("flk").replaceChildren(...FLK.map(c=>h("button",{type:"button","aria-pressed":String(c===cat),onclick:()=>{const keep=sub;cat=c;store("kouken-cat",c);if(subBtns(c).includes(keep))sub=keep;else fixSub();store("kouken-sub",sub);renderCats();renderList();}},c)));
+  $("flk").replaceChildren(...FLK.map(c=>h("button",{type:"button","aria-pressed":String(c===cat),onclick:()=>{const keep=sub;cat=c;keepCS("kouken-cat",c);if(subBtns(c).includes(keep))sub=keep;else fixSub();keepCS("kouken-sub",sub);renderCats();renderList();}},c)));
   const list=subBtns(cat);$("subs").hidden=!list.length;
-  $("subs").replaceChildren(...list.map(c=>h("button",{type:"button","aria-pressed":String(c===sub),onclick:()=>{sub=c;store("kouken-sub",c);renderCats();renderList();}},c)));
+  $("subs").replaceChildren(...list.map(c=>h("button",{type:"button","aria-pressed":String(c===sub),onclick:()=>{sub=c;keepCS("kouken-sub",c);renderCats();renderList();}},c)));
   const l2=SUB2[cat]||[];$("subs2").hidden=!l2.length;
   if(l2.length&&!l2.includes(sub2))sub2=l2[0];
   $("subs2").replaceChildren(...l2.map(c=>h("button",{type:"button","aria-pressed":String(c===sub2),onclick:()=>{sub2=c;store("kouken-sub2",c);renderCats();renderList();}},c)));
@@ -825,7 +827,7 @@ $("addForm").addEventListener("submit",async e=>{
     await db.collection("logs").add({at:now,kind:"new",itemId:ref.id,itemName:name,unit:$("aUnit").value,n:qty,after:qty,who,memo:""});
     $("aName").value="";$("aLen").value="";$("aWid").value="";$("aThk").value="";$("aQty").value="0";$("aMin").value="0";$("aWsQty").value="0";$("aWlQty").value="0";
     toast("「"+name+"」を登録しました");
-    cat=$("aCat").value;store("kouken-cat",cat);sub=SUBS[cat]?$("aSub").value:"すべて";fixSub();store("kouken-sub",sub);renderCats();show("vStock");renderList();
+    cat=$("aCat").value;keepCS("kouken-cat",cat);sub=SUBS[cat]?$("aSub").value:"すべて";fixSub();keepCS("kouken-sub",sub);renderCats();show("vStock");renderList();
   }catch(x){err.textContent=errMsg(x);err.hidden=false;}
   $("aBtn").disabled=readOnly;
 });
