@@ -68,7 +68,8 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .usrc h4{margin:0 0 2px;font-size:14px;color:var(--nx)}
 .usrc-row{display:flex;gap:10px;font-size:13.5px}
 .usrc-row span{color:var(--muted)}
-.kbox{border-top:1px solid var(--line);margin-top:8px;padding:10px 2px 6px;display:grid;gap:8px}
+.kbox{padding:12px 14px;display:grid;gap:8px}
+.kbox .kh{margin:0;font-size:15px;color:var(--nx)}
 .kbox h4,.klist h4{margin:0;font-size:14px;color:var(--nx)}
 .kwarn{margin:0;font-weight:700;color:var(--low);font-size:14px}
 .kbox .btn{justify-self:start;width:auto}
@@ -569,7 +570,7 @@ function uretCal(){
       Object.values(grp).length?Object.values(grp).map(({e,days})=>h("button",{type:"button",class:"uc-row",onclick:()=>openSite(e.site.id)},
         h("b",{text:days.length>1?md2(days[0])+"〜"+md2(days[days.length-1]):md2(days[0])}),h("span",{text:shortSite(e.site.name)+"　"+e.label}))):
         h("p",{class:"empty",text:uretDay?"この日のウレタンはありません":"この月のウレタンはありません"})),
-    uretSrcs(),kouteiBox())));
+    uretSrcs())));
   return sec;
 }
 // ウレタン予定に入っている現場と、もとの工程表の更新日（2026/10/31 ユーザー）
@@ -596,7 +597,7 @@ function kouteiBox(){
   // 西崎さん・原田さんが送るときは、工程表の更新日も入れる（2026/10/31 ユーザー）
   const upd=editor?h("input",{class:"inp",type:"date","aria-label":"工程表の更新日"}):null;
   const msg=h("p",{class:"hint",hidden:true});
-  const go=h("button",{type:"button",class:"btn small",onclick:()=>{
+  const go=h("button",{type:"button",class:"btn",onclick:()=>{
     if(!sel.value||(sel.value==="_other"&&!other.value.trim())){msg.textContent="先に現場名をえらぶか、書いてください。";msg.hidden=false;return;}
     store("kouken-koutei-site",sel.value);
     needWho(async()=>{
@@ -610,8 +611,9 @@ function kouteiBox(){
           msg.textContent="";msg.hidden=true;toast("工程表の写真を"+n+"枚送りました");}
         catch(e){msg.textContent="送れませんでした（"+n+"枚まで送れました）。電波を確認してください。";msg.hidden=false;}
         go.disabled=false;});
-      document.body.append(f);f.click();});}},"工程表の写真を送る");
-  return h("div",{class:"kbox"},h("h4",{text:"工程表の写真を送る"}),
+      document.body.append(f);f.click();});}},"写真をえらぶ・撮る");
+  // ウレタン予定の下に、いつも見える形で置く（社員全員が送れる 2026/10/31 ユーザー）
+  return h("section",{class:"panel kbox",style:{marginBottom:"14px"}},h("h3",{class:"kh",text:"工程表をアップロード"}),
     h("p",{class:"kwarn",text:"一枚ずつ綺麗に撮影してください。"}),
     h("p",{class:"hint",text:"日付と階が読めるように、まっすぐ・明るい所で。紙が何枚もあるときは1枚ずつ撮ってください。"}),
     sel,other,upd?h("label",{class:"fl"},"工程表の更新日（わかれば）",upd):null,go,msg,editor?kouteiList():null);
@@ -643,7 +645,7 @@ function renderSites(){
   const groups=[["施工中","",x=>x.status==="施工中","now"],["これから","",x=>x.status==="これから","next"],["予定","まだ決まっていない",x=>x.status==="予定","plan"],["見積もり","見積を出している",x=>x.status==="見積もり","est"],["そのほか","",x=>!(x.status in STATUS_ORDER),"other"]];
   // 外注が施工している現場は、まとまりのいちばん下に出す（2026/10/28 ユーザー）
   const outs=x=>!!(x.info&&x.info.outsource);
-  box.replaceChildren(uretCal(),...groups.filter(([,,f,k])=>k==="est"||sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>outs(a)-outs(b));
+  box.replaceChildren(uretCal(),kouteiBox(),...groups.filter(([,,f,k])=>k==="est"||sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>outs(a)-outs(b));
     return h("section",{class:"panel grp-"+k,style:{marginBottom:"14px"}},h("h3",{class:"grouph"},t+"　"+arr.length+"件",sub?h("small",{text:"（"+sub+"）"}):null),
       k==="est"&&!arr.length?h("p",{class:"empty",text:"見積もり中の現場はまだありません"}):null,
       // 見積もりの現場は西崎さんの指示でこちらから入れる（アプリに足すボタンは出さない 2026/10/30 ユーザー）
