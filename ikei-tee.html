@@ -177,10 +177,10 @@ function drawTee(){
   const top1=P(L,-w), top2=P(L,w), b1=P(st.ang===90?40:46,-w), b2=P(st.ang===90?40:28,w);
   const tc=P(L,0);
   $("tee").innerHTML=
-    // 本管
-    `<path d="M70 118 H290 A16 32 0 0 1 290 182 H70" fill="var(--pipe)" stroke="var(--pipe-line)" stroke-width="2"/>
-     <ellipse cx="70" cy="150" rx="16" ry="32" fill="#fff" stroke="var(--pipe-line)" stroke-width="2"/>
-     <path d="M48 150 H312" stroke="var(--pipe-line)" stroke-dasharray="6 5"/>`+
+    // 本管（枝管が真ん中に来るよう、左右を cx=170 でそろえる）
+    `<path d="M60 118 H280 A16 32 0 0 1 280 182 H60" fill="var(--pipe)" stroke="var(--pipe-line)" stroke-width="2"/>
+     <ellipse cx="60" cy="150" rx="16" ry="32" fill="#fff" stroke="var(--pipe-line)" stroke-width="2"/>
+     <path d="M36 150 H304" stroke="var(--pipe-line)" stroke-dasharray="6 5"/>`+
     // 枝管（切り口は本管の上にのる曲線）
     `<path d="M${b1} L${top1} L${top2} L${b2} Q${P(st.ang===90?30:34,0)} ${b1}" fill="#fff" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>
      <ellipse cx="${tc[0]}" cy="${tc[1]}" rx="${w}" ry="7" transform="rotate(${90-st.ang} ${tc[0]} ${tc[1]})" fill="#fff" stroke="var(--ink)" stroke-width="2"/>
