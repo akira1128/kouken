@@ -511,7 +511,9 @@ function renderMonthLW(){
       // 今日より前の日は、うすい色にする（LINE WORKS と同じ）
       let bg=x.c[0];const past=c=>"color-mix(in srgb,"+c+" 45%,#fff)";
       if(x.t<t)bg=past(x.c[0]);else if(x.s<t){const k=(parse(t)-parse(x.s))/864e5, n=(parse(x.t)-parse(x.s))/864e5+1, pc=(k/n*100).toFixed(2);bg="linear-gradient(90deg,"+past(x.c[0])+" "+pc+"%,"+x.c[0]+" "+pc+"%)";}
-      kids.push(h("span",{class:"lwbar"+(x.l?" l":"")+(x.r?" r":"")+(x.off?" off":""),style:{gridColumn:c1+" / "+c2,gridRow:String(x.lane+2),background:bg,color:x.c[1]},text:x.label}));
+      // うすい所に白い字は読みにくいので、過ぎた日がかかる帯は人の色を濃くした字にする
+      const fg=x.s<t&&x.c[1]==="#fff"?"color-mix(in srgb,"+x.c[0]+" 55%,#000)":x.c[1];
+      kids.push(h("span",{class:"lwbar"+(x.l?" l":"")+(x.r?" r":"")+(x.off?" off":""),style:{gridColumn:c1+" / "+c2,gridRow:String(x.lane+2),background:bg,color:fg},text:x.label}));
     }
     weeks.push(h("div",{class:"lwk"+(open?" open":""),"data-w":wa,style:{gridTemplateRows:"30px repeat("+show+",22px)"+(bars.some(x=>x.lane>=show)?" 18px":"")+" 6px"}},...kids));
   }
