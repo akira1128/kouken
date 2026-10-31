@@ -512,9 +512,10 @@ const me=()=>editor||who;
 const needWho=then=>{if(me())then();else pickWho(then);};
 
 /* ---------- 画面の切りかえ ---------- */
+let keepOrdSite=false;  // 通知から開いたときだけ、その現場でしぼったまま出す
 function show(v){
   // ほかの画面（現場・注文の記録・集計）から現場一覧に戻ったら、ウレタン予定は閉じる
-  if(v!==view){uretOpen=false;uretDay="";uretYM=null;}
+  if(v!==view){uretOpen=false;uretDay="";uretYM=null;if((v==="vOrders"||v==="vSum")&&!keepOrdSite){ordSite="";sumSite="";sumDest="";}keepOrdSite=false;}
   view=v;
   for(const id of ["vSites","vSite","vOrders","vSum"])$(id).hidden=id!==v;
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===(v==="vSite"?"vSites":v)?"page":"false"));
@@ -1193,7 +1194,7 @@ async function ecSend(o,lines,btn){
 }
 
 /* ---------- 注文の記録（日付ごと） ---------- */
-let ordSite=store("kouken-ord-site")||"";
+let ordSite="";  // 開くたびに「すべての現場」から（覚えない 2026/10/31 ユーザー）
 function siteFilter(val,on){
   const used=[...new Set(orders.map(o=>o.siteId))];
   return h("select",{class:"inp","aria-label":"現場でしぼる",onchange:e=>on(e.target.value)},h("option",{value:""},"すべての現場"),
@@ -1205,7 +1206,7 @@ function renderOrders(){
   const list=orders.filter(o=>!ordSite||o.siteId===ordSite);
   const days=[...new Set(list.map(o=>o.date))];
   box.replaceChildren(h("section",{class:"panel"},
-    h("div",{class:"tools",style:{gridTemplateColumns:"1fr"}},siteFilter(ordSite,v=>{ordSite=v;store("kouken-ord-site",v);renderOrders();})),
+    h("div",{class:"tools",style:{gridTemplateColumns:"1fr"}},siteFilter(ordSite,v=>{ordSite=v;renderOrders();})),
     list.length?days.flatMap(d=>[h("h4",{class:"dayh",text:md(d)+"　"+list.filter(o=>o.date===d).length+"件"}),...list.filter(o=>o.date===d).map(orderRow)]):
       h("p",{class:"empty",text:"まだ注文はありません。現場の画面の「この現場の材料を頼む」から頼めます。"})));
 }
@@ -1343,7 +1344,7 @@ function askPin(){
 /* ---------- 起動 ---------- */
 // 通知を押したとき（?ord=現場）：その現場の「注文の記録」を開く（2026/10/30）
 const ordParam=new URLSearchParams(location.search).get("ord");
-if(ordParam!==null){ordSite=ordParam;store("kouken-ord-site",ordSite);store("kouken-ord-seen",String(Date.now()));}
+if(ordParam!==null){ordSite=ordParam;keepOrdSite=true;store("kouken-ord-seen",String(Date.now()));}
 renderWho();show(ordParam!==null?"vOrders":siteId?"vSite":"vSites");
 if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みました");
 (async()=>{
