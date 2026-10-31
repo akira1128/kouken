@@ -47,9 +47,9 @@ service cloud.firestore {
     match /deliveries/{id} { allow read, create: if member(); allow update, delete: if editor(); }
     // 注文の通知を受け取る携帯の登録：西崎さんの携帯だけが入れられる（読むのは通知を送る仕組みだけ）
     match /pushTokens/{id} { allow create, update, delete: if boss(); allow read: if false; }
-    // 工程表の写真（社員が送る）：送るのは社員だれでも。見る・保存済みにする・消すのは編集する人（西崎・原田）だけ（2026/10/31）
-    match /koutei/{id} { allow create: if member(); allow read, update, delete: if editor(); }
-    match /kouteiFull/{id} { allow create: if member(); allow read, update, delete: if editor(); }
+    // 工程表の写真（社員が送る）：送る・見るのは社員だれでも。保存済みにする・消すのは編集する人（西崎・原田）だけ（2026/10/31）
+    match /koutei/{id} { allow read, create: if member(); allow update, delete: if editor(); }
+    match /kouteiFull/{id} { allow read, create: if member(); allow update, delete: if editor(); }
     // 履歴は足すだけ（直したり消したりはできない）
     match /logs/{id} { allow read, create: if member(); allow update, delete: if false; }
   }
