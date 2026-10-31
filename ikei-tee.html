@@ -174,7 +174,10 @@ function drawTee(){
   const ux=Math.cos(a), uy=-Math.sin(a), px=-uy, py=ux;          // 枝管の向きと、それに直角の向き
   const w=26, L=105;
   const P=(t,s)=>[(cx+ux*t+px*s).toFixed(1),(cy+uy*t+py*s).toFixed(1)];
-  const top1=P(L,-w), top2=P(L,w), b1=P(st.ang===90?40:46,-w), b2=P(st.ang===90?40:28,w);
+  // 枝管の両側の線が本管の上の線（y=118）に当たる所を付け根にする
+  const foot=sd=>P((118-cy-py*sd)/uy,sd);
+  const top1=P(L,-w), top2=P(L,w), b1=foot(-w), b2=foot(w);
+  const mid=[((+b1[0]+ +b2[0])/2).toFixed(1),(118+12).toFixed(1)];   // 切り口は本管の丸みに沿って少し下がる
   const tc=P(L,0);
   $("tee").innerHTML=
     // 本管（枝管が真ん中に来るよう、左右を cx=170 でそろえる）
@@ -182,10 +185,10 @@ function drawTee(){
      <ellipse cx="60" cy="150" rx="16" ry="32" fill="#fff" stroke="var(--pipe-line)" stroke-width="2"/>
      <path d="M36 150 H304" stroke="var(--pipe-line)" stroke-dasharray="6 5"/>`+
     // 枝管（切り口は本管の上にのる曲線）
-    `<path d="M${b1} L${top1} L${top2} L${b2} Q${P(st.ang===90?30:34,0)} ${b1}" fill="#fff" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>
+    `<path d="M${b1} L${top1} L${top2} L${b2} Q${mid} ${b1}" fill="#fff" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>
      <ellipse cx="${tc[0]}" cy="${tc[1]}" rx="${w}" ry="7" transform="rotate(${90-st.ang} ${tc[0]} ${tc[1]})" fill="#fff" stroke="var(--ink)" stroke-width="2"/>
      <path d="M${P(L+10,0)} L${cx} ${cy}" stroke="var(--ink)" stroke-dasharray="6 5"/>
-     <path d="M${b2} Q${P(st.ang===90?30:34,0)} ${b1}" fill="none" stroke="var(--cut)" stroke-width="3"/>`+
+     <path d="M${b2} Q${mid} ${b1}" fill="none" stroke="var(--cut)" stroke-width="3"/>`+
     // 角度
     (st.ang===90?`<path d="M${cx+16} ${cy} V${cy-16} H${cx}" fill="none" stroke="var(--muted)"/>`
       :`<path d="M${cx+30} ${cy} A30 30 0 0 0 ${(cx+30*Math.cos(a)).toFixed(1)} ${(cy-30*Math.sin(a)).toFixed(1)}" fill="none" stroke="var(--muted)"/><text x="${cx+38}" y="${cy-8}" font-size="14" font-weight="700" fill="var(--muted)">45°</text>`);
