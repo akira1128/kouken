@@ -64,6 +64,22 @@ a.brandrow:active .back{background:rgba(255,255,255,.3)}
 main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* ウレタンカレンダー（紫＝LINE WORKS のウレタンと同じ色の考え方） */
 .ucal{padding:0;overflow:hidden}
+.usrc{border-top:1px solid var(--line);margin-top:8px;padding:10px 2px 2px;display:grid;gap:4px}
+.usrc h4{margin:0 0 2px;font-size:14px;color:var(--nx)}
+.usrc-row{display:flex;gap:10px;font-size:13.5px}
+.usrc-row span{color:var(--muted)}
+.kbox{border-top:1px solid var(--line);margin-top:8px;padding:10px 2px 6px;display:grid;gap:8px}
+.kbox h4,.klist h4{margin:0;font-size:14px;color:var(--nx)}
+.kwarn{margin:0;font-weight:700;color:var(--low);font-size:14px}
+.kbox .btn{justify-self:start;width:auto}
+.klist{display:grid;gap:6px;margin-top:6px}
+.krow{display:flex;gap:10px;align-items:center}
+.krow.saved{opacity:.55}
+.kth{flex:none;width:64px;height:64px;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.kth img{width:100%;height:100%;object-fit:cover;display:block}
+.kmeta{display:grid;font-size:13px;min-width:0}
+.kmeta span{color:var(--muted)}
+.kbig{width:100%;border-radius:8px;border:1px solid var(--line)}
 .uc-tog{font:inherit;width:100%;display:flex;align-items:center;gap:10px;border:0;background:var(--nx-soft);color:var(--ink);padding:12px 14px;text-align:left;cursor:pointer}
 .uc-tog b{color:var(--nx);font-size:15px;flex:none}
 .uc-next{font-size:13px;color:var(--muted);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -552,8 +568,74 @@ function uretCal(){
     h("div",{class:"uc-list"},
       Object.values(grp).length?Object.values(grp).map(({e,days})=>h("button",{type:"button",class:"uc-row",onclick:()=>openSite(e.site.id)},
         h("b",{text:days.length>1?md2(days[0])+"〜"+md2(days[days.length-1]):md2(days[0])}),h("span",{text:shortSite(e.site.name)+"　"+e.label}))):
-        h("p",{class:"empty",text:uretDay?"この日のウレタンはありません":"この月のウレタンはありません"})))));
+        h("p",{class:"empty",text:uretDay?"この日のウレタンはありません":"この月のウレタンはありません"})),
+    uretSrcs(),kouteiBox())));
   return sec;
+}
+// ウレタン予定に入っている現場と、もとの工程表の更新日（2026/10/31 ユーザー）
+function uretSrcs(){
+  const ss=sites.filter(x=>(x.urethane||[]).length);
+  if(!ss.length)return null;
+  return h("div",{class:"usrc"},h("h4",{text:"入っている工程表"}),
+    ss.map(x=>h("div",{class:"usrc-row"},h("b",{text:shortSite(x.name)}),h("span",{text:x.urethaneUpd?md2(x.urethaneUpd)+" 更新の工程表":"更新日不明"}))));
+}
+/* ---------- 工程表の写真（社員が現場で撮って送る→西崎さんが保存→Claudeが読んでウレタン予定に入れる 2026/10/31 ユーザー）
+   koutei/{id}：小さい写真＋現場・送った人、kouteiFull/{id}：大きい写真 ---------- */
+let kouteis=[], unKoutei=null;
+function watchKoutei(){
+  if(unKoutei||!fs||!editor)return;
+  unKoutei=onSnapshot(query(collection(fs,"koutei"),orderBy("at","desc"),limit(60)),s=>{kouteis=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(view==="vSites")renderSites();},()=>{unKoutei=null;});
+}
+function kouteiBox(){
+  const cand=sites.filter(x=>x.status==="施工中"||x.status==="これから");
+  const last=store("kouken-koutei-site")||"";
+  const sel=h("select",{class:"inp","aria-label":"どの現場の工程表か"},h("option",{value:""},"現場をえらぶ（必ず）"),cand.map(x=>h("option",{value:x.id,selected:x.id===last},shortSite(x.name))),h("option",{value:"_other",selected:last==="_other"},"一覧にない現場（名前を書く）"));
+  // 一覧にない現場は名前を手で書く
+  const other=h("input",{class:"inp",maxlength:"60",placeholder:"現場名（例：○○マンション）",hidden:last!=="_other"});
+  sel.addEventListener("change",()=>{other.hidden=sel.value!=="_other";});
+  // 西崎さん・原田さんが送るときは、工程表の更新日も入れる（2026/10/31 ユーザー）
+  const upd=editor?h("input",{class:"inp",type:"date","aria-label":"工程表の更新日"}):null;
+  const msg=h("p",{class:"hint",hidden:true});
+  const go=h("button",{type:"button",class:"btn small",onclick:()=>{
+    if(!sel.value||(sel.value==="_other"&&!other.value.trim())){msg.textContent="先に現場名をえらぶか、書いてください。";msg.hidden=false;return;}
+    store("kouken-koutei-site",sel.value);
+    needWho(async()=>{
+      const f=h("input",{type:"file",accept:"image/*",multiple:true,style:{display:"none"}});
+      f.addEventListener("change",async()=>{const files=[...(f.files||[])];f.remove();if(!files.length)return;
+        const x=sel.value==="_other"?{id:"",name:other.value.trim()}:sites.find(y=>y.id===sel.value);go.disabled=true;let n=0;
+        try{for(const file of files){msg.textContent="送っています… "+(n+1)+"/"+files.length+"枚";msg.hidden=false;
+            const big=await shrinkPhoto(file,2400,.85), small=await shrinkPhoto(file,360,.6), at=Date.now();
+            const ref=await addDoc(collection(fs,"koutei"),{siteId:x.id,siteName:x.name,who:me(),at,thumb:small,n:files.length>1?n+1:0,...(upd&&upd.value?{upd:upd.value}:{})});
+            await setDoc(doc(fs,"kouteiFull",ref.id),{siteId:x.id,img:big});n++;}
+          msg.textContent="";msg.hidden=true;toast("工程表の写真を"+n+"枚送りました");}
+        catch(e){msg.textContent="送れませんでした（"+n+"枚まで送れました）。電波を確認してください。";msg.hidden=false;}
+        go.disabled=false;});
+      document.body.append(f);f.click();});}},"工程表の写真を送る");
+  return h("div",{class:"kbox"},h("h4",{text:"工程表の写真を送る"}),
+    h("p",{class:"kwarn",text:"一枚ずつ綺麗に撮影してください。"}),
+    h("p",{class:"hint",text:"日付と階が読めるように、まっすぐ・明るい所で。紙が何枚もあるときは1枚ずつ撮ってください。"}),
+    sel,other,upd?h("label",{class:"fl"},"工程表の更新日（わかれば）",upd):null,go,msg,editor?kouteiList():null);
+}
+// 西崎さん・原田さんの携帯だけ：届いた工程表（押すと大きく開いて保存できる）
+function kouteiList(){
+  watchKoutei();
+  const nw=kouteis.filter(k=>!k.saved), old=kouteis.filter(k=>k.saved).slice(0,6);
+  const row=k=>h("div",{class:"krow"+(k.saved?" saved":"")},
+    h("button",{type:"button",class:"kth",onclick:()=>openKoutei(k),"aria-label":"大きく見る"},h("img",{src:k.thumb,alt:""})),
+    h("div",{class:"kmeta"},h("b",{text:shortSite(k.siteName||siteName(k.siteId))+(k.n?"（"+k.n+"枚目）":"")+(k.upd?"　"+md2(k.upd)+"更新":"")}),
+      h("span",{text:(new Date(k.at).getMonth()+1)+"/"+new Date(k.at).getDate()+" "+hm(k.at)+"　"+nick(k.who)+(k.saved?"　保存済み":"")})));
+  return h("div",{class:"klist"},h("h4",{text:"届いた工程表"+(nw.length?"（新しい "+nw.length+"枚）":"")}),
+    nw.length?nw.map(row):h("p",{class:"empty",text:"新しく届いた工程表はありません"}),...old.map(row));
+}
+function openKoutei(k){
+  const big=h("img",{class:"kbig",src:k.thumb,alt:"工程表"});
+  const dl=h("a",{class:"btn",download:"工程表_"+(k.siteName||"").replace(/[（）()\s]/g,"")+"_"+new Date(k.at).toISOString().slice(0,10).replace(/-/g,"")+(k.n?"_"+k.n:"")+".jpg",href:k.thumb},"写真を保存する");
+  getDoc(doc(fs,"kouteiFull",k.id)).then(d=>{if(d.exists()){big.src=d.data().img;dl.href=d.data().img;}}).catch(()=>{});
+  let close;
+  const done=h("button",{type:"button",class:"btn ghost",onclick:async()=>{try{await updateDoc(doc(fs,"koutei",k.id),k.saved?{saved:false}:{saved:true,savedAt:Date.now()});close();}catch(e){toast("変えられませんでした");}}},k.saved?"「保存済み」を外す":"保存した（一覧から外す）");
+  const del=h("button",{type:"button",class:"btn ghost",onclick:async()=>{if(!confirm("この工程表の写真を消しますか？"))return;
+    try{const b=writeBatch(fs);b.delete(doc(fs,"koutei",k.id));b.delete(doc(fs,"kouteiFull",k.id));await b.commit();close();toast("消しました");}catch(e){toast("消せませんでした");}}},"消す");
+  close=openSheet(h("h2",{text:shortSite(k.siteName||"")+" の工程表"}),h("p",{class:"hint",text:nick(k.who)+"さんが送った写真。保存したら、Claude に「工程表を読んで」と言ってください。"}),big,dl,done,del);
 }
 function renderSites(){
   const box=$("vSites");
