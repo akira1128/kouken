@@ -170,6 +170,9 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
 .flbox{padding:12px 14px;display:grid;gap:10px}
 .flbox h3{margin:0;font-size:14px}
 .flrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.flrow.three{grid-template-columns:1fr 1fr 1fr}
+.bxpic{display:grid;place-items:center;background:#f3ece2;border-radius:10px;padding:6px}
+.bxpic svg{width:100%;max-width:300px;height:auto;display:block}
 .flrow label{display:grid;gap:4px;font-weight:700;font-size:13px}
 .spotbox span{font-weight:700}
 .handbox{padding:12px 14px;display:grid;gap:8px}
@@ -500,9 +503,9 @@ function renderList(){
   const qs2=/エルボ/.test(q)&&!/ジャケット/.test(q)?"エルボ":/ジャケット/.test(q)&&!/エルボ/.test(q)?"ジャケット":sub2;  // 言葉に「エルボ」があればエルボの中を探す
   let shown=items.filter(it=>(q&&!inSub2||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q&&!inSub2||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===(q?qs2:sub2))&&(!q||matchQ(it,q)));
   // フランジカバーは色をえらんだあと、φとLをえらんで開く（2026/10/30 ユーザー）
-  const flp=cat==="フランジカバー"&&!q?flPanel():null;
+  const flp=!q?(cat==="フランジカバー"?flPanel():BOXLIKE(cat)?boxPanel():null):null;
   // フランジカバーの一覧には、在庫が0個の寸法は出さない（寸法は上の欄からひらく 2026/10/30 ユーザー）
-  if(flp)shown=shown.filter(it=>it.cat!=="フランジカバー"||Number(it.qty)>0);
+  if(flp)shown=shown.filter(it=>!FLK.includes(it.cat)||Number(it.qty)>0);
   // 材料を頼むときの「その他」は手書きの欄だけ出すので、「見つかりません」は出さない
   if(!shown.length&&(cat==="その他"||flp)&&!q){list.replaceChildren(...(flp?[flp]:[]));return;}
   if(!shown.length){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"見つかりません"}),h("span",{text:"ことばや種類を変えてさがしてください。"})));return;}
@@ -556,6 +559,56 @@ function flPanel(){
   return h("section",{class:"panel flbox"},h("h3",{text:sub+"のフランジカバー：寸法をえらぶ"}),
     h("div",{class:"flrow"},h("label",null,h("span",{text:"φ"}),ph),h("label",null,h("span",{text:"L"}),ln)),go,err);
 }
+/* ---------- BOXカバー・トランクカバー：絵を見て H・W・L をえらぶ（10刻み）。色・H・W・Lごとに在庫を持つ（2026/10/31 ユーザー）
+   トランクカバー＝舟形バルブカバー（底が丸い形）。絵は旭産業さんのカタログの形をまねた線画 ---------- */
+const BOXLIKE=c=>c==="BOXカバー"||c==="トランクカバー";
+const steps=(a,b)=>Array.from({length:(b-a)/10+1},(_,i)=>a+i*10);
+const BX_H=steps(50,1000), BX_W=steps(50,1000), BX_L=steps(50,1500);
+const boxName=(c,H,W,L)=>c+" H"+H+"×W"+W+"×L"+L;
+// 寸法の矢印（線と両はしの小さな矢じり）
+const DIMS='<defs><marker id="ah" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" fill="#c2410c"/></marker></defs>';
+const BOX_SVG='<svg viewBox="0 0 260 190" role="img" aria-label="BOXカバーの絵"><title>BOXカバー</title>'+DIMS+
+  '<g fill="#fff" stroke="#222" stroke-width="2.2" stroke-linejoin="round">'+
+  '<path d="M60 70 L130 30 L230 30 L160 70 Z"/><path d="M160 70 L230 30 L230 120 L160 160 Z"/><rect x="60" y="70" width="100" height="90"/></g>'+
+  '<g stroke="#222" stroke-width="1.6"><path d="M110 70 V160"/><path d="M110 70 L180 30"/></g>'+
+  '<g stroke="#c2410c" stroke-width="1.8" fill="none" marker-start="url(#ah)" marker-end="url(#ah)"><path d="M42 72 V158"/><path d="M62 176 H158"/><path d="M172 172 L236 135"/></g>'+
+  '<g fill="#c2410c" font-size="17" font-weight="700" font-family="system-ui,sans-serif"><text x="22" y="121">H</text><text x="102" y="188">W</text><text x="212" y="174">L</text></g></svg>';
+const TRUNK_SVG='<svg viewBox="0 0 260 200" role="img" aria-label="トランクカバー（舟形バルブカバー）の絵"><title>トランクカバー</title>'+DIMS+
+  '<g fill="#fff" stroke="#222" stroke-width="2.2" stroke-linejoin="round">'+
+  '<path d="M60 60 L130 20 L230 20 L160 60 Z"/>'+
+  '<path d="M160 60 L230 20 L230 105 Q230 135 200 152 L160 175 Z"/>'+
+  '<path d="M60 60 H160 V130 Q160 175 110 175 Q60 175 60 130 Z"/></g>'+
+  '<g stroke="#222" stroke-width="1.6" fill="none"><path d="M110 60 V175"/><path d="M110 60 L180 20"/></g>'+
+  '<g stroke="#c2410c" stroke-width="1.8" fill="none" marker-start="url(#ah)" marker-end="url(#ah)"><path d="M42 62 V173"/><path d="M62 190 H158"/><path d="M175 182 L238 146"/></g>'+
+  '<g fill="#c2410c" font-size="17" font-weight="700" font-family="system-ui,sans-serif"><text x="22" y="123">H</text><text x="102" y="200">W</text><text x="214" y="186">L</text></g></svg>';
+function boxPanel(){
+  const c=cat, k=c==="BOXカバー"?"bx":"tr";
+  const mk=(lab,list,key,def)=>h("label",null,h("span",{text:lab}),h("select",{class:"inp","aria-label":lab},list.map(v=>h("option",{value:v,selected:String(v)===(store("kouken-"+k+"-"+key)||def)},String(v)))));
+  const H=mk("H",BX_H,"h","300"), W=mk("W",BX_W,"w","300"), L=mk("L",BX_L,"l","400");
+  const sv=x=>x.querySelector("select");
+  const err=h("p",{class:"err",hidden:true});
+  const go=h("button",{class:"btn",type:"button",onclick:async()=>{
+    const hv=sv(H).value,wv=sv(W).value,lv=sv(L).value;
+    store("kouken-"+k+"-h",hv);store("kouken-"+k+"-w",wv);store("kouken-"+k+"-l",lv);
+    const color=sub, name=boxName(c,hv,wv,lv);
+    let it=items.find(x=>x.cat===c&&x.sub===color&&x.name===name);
+    if(!it){
+      if(!db){err.textContent="データにつながっていません。";err.hidden=false;return;}
+      if(!who){pickWho();return;}
+      go.disabled=true;
+      try{const now=Date.now();
+        it={name,cat:c,sub:color,unit:"個",qty:0,min:0,bh:+hv,bw:+wv,bl:+lv,createdAt:now,updatedAt:now,updatedBy:who};
+        const ref=await db.collection("items").add(it);it=Object.assign({id:ref.id},it);
+        if(!items.some(x=>x.id===it.id))items.push(it);
+      }catch(x){err.textContent=errMsg(x);err.hidden=false;go.disabled=false;return;}
+      go.disabled=false;
+    }
+    ORDER?openOrderItem(it.id):openItem(it.id);
+  }},"この寸法をひらく");
+  const pic=h("div",{class:"bxpic"});pic.innerHTML=c==="BOXカバー"?BOX_SVG:TRUNK_SVG;
+  return h("section",{class:"panel flbox"},h("h3",{text:sub+"の"+c+"："+"寸法をえらぶ（mm）"}),pic,
+    h("div",{class:"flrow three"},H,W,L),go,err);
+}
 function openOrderItem(id){
   const it=items.find(x=>x.id===id);if(!it)return;
   if(!who){pickWho(()=>openOrderItem(id));return;}
@@ -594,7 +647,7 @@ function openCart(){
   let close;
   send.addEventListener("click",async()=>{
     // フランジカバーは工場で作るので「製作もの」として送る（2026/10/30 ユーザー）
-    const lines=Object.entries(cart).map(([id,l])=>({itemId:id.startsWith("x")?"":id,name:(l.cat==="フランジカバー"&&l.sub?l.sub+" ":"")+l.name,unit:l.unit,cat:l.cat||"",qty:l.n,...(l.cat==="フランジカバー"?{make:true}:{})}));
+    const lines=Object.entries(cart).map(([id,l])=>({itemId:id.startsWith("x")?"":id,name:(FLK.includes(l.cat)&&l.sub?l.sub+" ":"")+l.name,unit:l.unit,cat:l.cat||"",qty:l.n,...(FLK.includes(l.cat)?{make:true}:{})}));
     if(!lines.length){err.textContent="頼むものがありません。";err.hidden=false;return;}
     const siteNm=SPOT?$("spotName").value.trim():orderSite;
     if(SPOT&&!siteNm){err.textContent="いちばん上の「現場名」を書いてください。";err.hidden=false;return;}
