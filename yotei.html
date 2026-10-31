@@ -473,9 +473,10 @@ function calCells(){
 /* ---------- 月：LINE WORKS と同じ作り（2026/10/31 ユーザー）
    何日も続く予定は、週の中で日をまたいだ1本の帯。帯の色は人ごと（LINE WORKS のスマホの色合い）。
    ふだんは1週に2段まで出して、あふれた分は日ごとに「＋数」。週を押すと広がって全部出る ---------- */
-const LWC={"福島正純":["#ee8a73","#fff"],"NGUYEN VAN HIEU":["#7896e6","#fff"],"田中嗣音":["#c8dcf6","#3d64b5"],"NGUYEN NGOC LONG":["#6bbe6b","#fff"],
-  "DANG BINH DUONG":["#e9727f","#fff"],"西崎剣":["#f6cbcb","#c93a3a"],"原田弓子":["#f6cde0","#b03a6a"],"竹内工業":["#f2b36b","#fff"],"高橋断熱":["#9ccb6a","#fff"]};
-const LW_NONE=["#b4bac6","#fff"];
+/* 人の色：6人＋西崎がはっきり分かれる色（2026/10/31 ユーザー「ズオンと福島、ヒエウと嗣穏が被る」）。白い字が読める濃さ */
+const LWC={"西崎剣":["#6a3fb5","#fff"],"福島正純":["#f07f22","#fff"],"DANG BINH DUONG":["#d6337a","#fff"],"NGUYEN VAN HIEU":["#2b62d9","#fff"],
+  "田中嗣音":["#0ea5a5","#fff"],"NGUYEN NGOC LONG":["#3f9b3a","#fff"],"原田弓子":["#9a6a3a","#fff"],"竹内工業":["#c49a12","#fff"],"高橋断熱":["#7d8a2a","#fff"]};
+const LW_NONE=["#9aa3b2","#fff"];
 const lwc=n=>LWC[n]||LW_NONE;
 const LW_LANES=2;
 function weekBars(wa,wb){
