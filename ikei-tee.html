@@ -76,6 +76,7 @@ main{max-width:640px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-rig
 /* 答え */
 .res[hidden],.inp[hidden],#tOsu[hidden],#tMesu[hidden]{display:none}
 .sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.sum.s2{grid-template-columns:repeat(2,1fr)}
 .sum div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 6px;text-align:center}
 .sum small{display:block;font-size:12px;color:var(--muted);font-weight:700}
 .sum b{font-size:20px;font-variant-numeric:tabular-nums}
@@ -129,19 +130,16 @@ td b{font-size:19px}
       <button type="button" data-tab="mesu" aria-pressed="false">メス（本管の穴）</button>
     </span></div>
     <div id="tOsu">
-    <div class="sum">
+    <div class="sum s2">
       <div><small>枝管 × 本管</small><b id="rSize"></b></div>
       <div><small>円周長さ</small><b id="rCirc"></b></div>
-      <div><small>ピッチ</small><b id="rPitch"></b></div>
+      <div><small>円周の 1/2</small><b id="rHalf"></b></div>
+      <div><small>円周の 1/4</small><b id="rQuar"></b></div>
     </div>
     <div class="panel dev">
       <svg id="dev" viewBox="0 0 340 200"></svg>
       <p class="cap" id="cap"></p>
     </div>
-    <table class="panel">
-      <thead><tr><th>線</th><th>寸法（mm）</th></tr></thead>
-      <tbody id="rows"></tbody>
-    </table>
     </div>
     <div id="tMesu" hidden>
     <div class="sum">
@@ -227,12 +225,11 @@ function calc(){
   if(d>D){$("err").textContent="枝管は本管と同じか、細い太さにしてください。";return;}
   const r=d/2, R=D/2, al=st.ang*Math.PI/180;
   const t=th=>(Math.sqrt(Math.max(0,R*R-r*r*Math.sin(th)**2))+r*Math.cos(th)*Math.cos(al))/Math.sin(al);
-  const circ=Math.PI*d, pitch=circ/N;
+  const circ=Math.PI*d;
   const ts=[...Array(N+1)].map((_,i)=>t(2*Math.PI*i/N)), tmax=Math.max(...ts);
   const vals=ts.map(x=>tmax-x);
   $("rSize").innerHTML=fmt(d)+"<i>φ</i> × "+fmt(D)+"<i>φ</i>";
-  $("rCirc").innerHTML=fmt(circ)+"<i>mm</i>";$("rPitch").innerHTML=fmt(pitch)+"<i>mm</i>";
-  $("rows").innerHTML=vals.map((v,i)=>`<tr><td>${i}</td><td><b>${fmt(v)}</b></td></tr>`).join("");
+  $("rCirc").innerHTML=fmt(circ)+"<i>mm</i>";$("rHalf").innerHTML=fmt(circ/2)+"<i>mm</i>";$("rQuar").innerHTML=fmt(circ/4)+"<i>mm</i>";
   drawDev(circ,vals,R,r,al,tmax);
   // メス：枝管の線が本管に当たる点を、本管の上に展開する
   //   横 x = t·cosα + r·cosθ·sinα（穴の真ん中から本管の向き）
