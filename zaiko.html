@@ -216,6 +216,7 @@ details.edit form{padding:12px 0 0}
     <div class="tools">
       <input class="search" id="q" type="search" enterkeyhint="search" placeholder="さがす（例：ALK 25 20、ALK テープ）" aria-label="材料をさがす">
       <div class="chips" id="cats" role="toolbar" aria-label="種類でしぼる"></div>
+      <div class="chips subs" id="flk" role="toolbar" aria-label="フランジ・BOX・トランクでしぼる" hidden></div>
       <div class="chips subs" id="subs" role="toolbar" aria-label="色・材質でしぼる" hidden></div>
       <div class="chips subs sub2" id="subs2" role="toolbar" aria-label="ジャケットかエルボかでしぼる" hidden></div>
     </div>
@@ -436,8 +437,13 @@ function show(v){if(ORDER)v="vStock";else{view=v;store("kouken-view",v);}
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>show(b.dataset.v)));
 
 /* ---------- 在庫一覧 ---------- */
+/* フランジカバー・BOXカバー・トランクカバーは、上の段は「フランジカバー」1つにまとめ、その下の段で3つから選ぶ（2026/10/31 ユーザー） */
+const FLK=["フランジカバー","BOXカバー","トランクカバー"];
 function renderCats(){
-  $("cats").replaceChildren(...CAT_BTNS.map(c=>h("button",{type:"button","aria-pressed":String(c===cat),onclick:()=>{cat=c;store("kouken-cat",c);sub="すべて";fixSub();store("kouken-sub",sub);renderCats();renderList();}},c)));
+  const pick=c=>{cat=c;store("kouken-cat",c);sub="すべて";fixSub();store("kouken-sub",sub);renderCats();renderList();};
+  $("cats").replaceChildren(...CAT_BTNS.filter(c=>c==="フランジカバー"||!FLK.includes(c)).map(c=>h("button",{type:"button","aria-pressed":String(c===cat||(c==="フランジカバー"&&FLK.includes(cat))),onclick:()=>pick(c==="フランジカバー"&&FLK.includes(cat)?cat:c)},c)));
+  $("flk").hidden=!FLK.includes(cat);
+  $("flk").replaceChildren(...FLK.map(c=>h("button",{type:"button","aria-pressed":String(c===cat),onclick:()=>{const keep=sub;cat=c;store("kouken-cat",c);if(subBtns(c).includes(keep))sub=keep;else fixSub();store("kouken-sub",sub);renderCats();renderList();}},c)));
   const list=subBtns(cat);$("subs").hidden=!list.length;
   $("subs").replaceChildren(...list.map(c=>h("button",{type:"button","aria-pressed":String(c===sub),onclick:()=>{sub=c;store("kouken-sub",c);renderCats();renderList();}},c)));
   const l2=SUB2[cat]||[];$("subs2").hidden=!l2.length;
