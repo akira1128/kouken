@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ja" translate="no" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light only">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>異形チーズ｜株式会社コウケン</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-title" content="コウケン">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* 便利ツール：異形チーズ（2026/11/01 ユーザー）
+   枝管φ・本管φ・角度（90°/45°）を入れて「計算する」→ 枝管の切り口を8等分した寸法を出す。
+   寸法は、切り口でいちばん長いところ（0の線）からどれだけ短く切るか。数は小数1けたで切り捨て（今まで使っていたアプリに合わせる） */
+:root{
+  color-scheme:light;
+  --bg:#eaf1f8; --surface:#ffffff; --line:#cbdaea; --ink:#0d1a27; --muted:#465b70;
+  --accent:#0b5cab; --accent-ink:#ffffff; --accent-soft:#dceafa;
+  --pipe:#f4f7fb; --pipe-line:#7d8fa3; --cut:#c2410c;
+  --shadow:0 1px 2px rgba(10,40,70,.07);
+  --f-body:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;padding-bottom:env(safe-area-inset-bottom,0px)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+header.topbar{position:sticky;top:0;z-index:5;background:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow);padding-top:env(safe-area-inset-top,0px)}
+.topbar-in{max-width:640px;margin:0 auto;display:flex;align-items:center;gap:12px;
+  padding:12px max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px))}
+.mark{display:block;width:40px;height:36px;border-radius:9px;background:#fff;padding:3px 4px;flex:none}
+.mark img{display:block;width:100%;height:100%;object-fit:contain}
+.brand{font-weight:700;font-size:16px;letter-spacing:.04em;line-height:1.25}
+.brand small{display:block;font-size:11px;font-weight:500;opacity:.78;letter-spacing:.06em}
+.brandrow{display:flex;align-items:center;gap:10px;min-width:0}
+a.brandrow{color:inherit;text-decoration:none}
+.brandrow .back{display:grid;justify-items:center;align-content:center;flex:none;min-width:44px;height:46px;margin:-4px -2px -4px -8px;border-radius:10px;
+  background:rgba(255,255,255,.16);line-height:1;padding:0 5px 3px}
+.brandrow .back b{font-size:26px;font-weight:400;line-height:.9}
+.brandrow .back .backlbl{font-size:10.5px;font-weight:700;letter-spacing:.06em}
+a.brandrow:active .back{background:rgba(255,255,255,.3)}
+main{max-width:640px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+
+/* 入力：絵の上に数字の欄 */
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.div8{font-weight:700;font-size:15px;padding:6px 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{border:0;background:transparent;border-radius:999px;padding:6px 16px;font-weight:700;font-size:16px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.fig{position:relative;padding:8px}
+.fig svg{display:block;width:100%;height:auto}
+.fld{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:4px;border:2px solid var(--line);background:var(--surface);
+  border-radius:12px;padding:4px 12px;min-width:104px;justify-content:center;box-shadow:var(--shadow)}
+.fld small{font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap}
+.fld b{font-size:22px;font-variant-numeric:tabular-nums;min-width:2.2em;text-align:right}
+.fld i{font-style:normal;font-size:15px;color:var(--muted)}
+.fld[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.fld[aria-pressed="true"] b::after{content:"";display:inline-block;width:2px;height:.9em;background:var(--accent);margin-left:2px;vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.hint{font-size:12.5px;color:var(--muted);margin:6px 2px 0;text-align:center}
+.err{color:#b42318;font-weight:700;font-size:14px;text-align:center;margin:8px 0 0;min-height:1.4em}
+
+/* 電卓のボタン */
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.keys button{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 0;font-size:24px;font-weight:500;box-shadow:var(--shadow)}
+.keys button:active{background:var(--accent-soft)}
+.keys .fn{background:#f6e3e1;border-color:#e8c4c0;color:#8a2c22;font-size:18px;font-weight:700}
+.keys .go{grid-column:span 2;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-size:19px;font-weight:700}
+.keys .go:active{background:#094b8c}
+
+/* 答え */
+.res[hidden],.inp[hidden],#tOsu[hidden],#tMesu[hidden]{display:none}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.sum div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 6px;text-align:center}
+.sum small{display:block;font-size:12px;color:var(--muted);font-weight:700}
+.sum b{font-size:20px;font-variant-numeric:tabular-nums}
+.sum b i{font-style:normal;font-size:12px;color:var(--muted);margin-left:2px}
+.dev{padding:10px 6px 4px}
+.dev svg{display:block;width:100%;height:auto;overflow:visible}
+.dev .cap{font-size:12px;color:var(--muted);text-align:center;margin:4px 0 2px}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:center;font-size:17px}
+th{font-size:12.5px;color:var(--muted);font-weight:700}
+td b{font-size:19px}
+.again{display:block;width:100%;margin-top:12px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px;font-weight:700;font-size:16px;box-shadow:var(--shadow)}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-in">
+  <a class="brandrow" href="benri.html" aria-label="便利ツールにもどる"><span class="back" aria-hidden="true"><b>‹</b><span class="backlbl">もどる</span></span><span class="mark"><img src="logo.png" alt=""></span><div class="brand">異形チーズ<small>便利ツール</small></div></a>
+</div></header>
+<main>
+  <!-- 入力 -->
+  <section class="inp" id="inp">
+    <div class="top">
+      <span class="div8">8等分</span>
+      <span class="seg" role="group" aria-label="角度">
+        <button type="button" data-ang="90" aria-pressed="true">90°</button>
+        <button type="button" data-ang="45" aria-pressed="false">45°</button>
+      </span>
+    </div>
+    <div class="panel fig">
+      <svg id="tee" viewBox="0 0 340 230" aria-hidden="true"></svg>
+      <button type="button" class="fld" id="fB" style="left:50%;top:9%" aria-pressed="true"><small>枝管</small><i>φ</i><b id="vB"></b></button>
+      <button type="button" class="fld" id="fM" style="left:20%;top:88%" aria-pressed="false"><small>本管</small><i>φ</i><b id="vM"></b></button>
+    </div>
+    <p class="hint">数字の欄を押してから、下のボタンで太さ（φ）を入れてください。</p>
+    <p class="err" id="err" role="alert"></p>
+    <div class="keys">
+      <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" class="fn" data-k="del">DEL</button>
+      <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button><button type="button" class="fn" data-k="ac">AC</button>
+      <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button><button type="button" data-k=".">.</button>
+      <button type="button" data-k="0">0</button><button type="button" data-k="next">次へ</button><button type="button" class="go" id="go">計算する</button>
+    </div>
+  </section>
+
+  <!-- 答え -->
+  <section class="res" id="res" hidden>
+    <div class="top"><span class="seg" role="group" aria-label="オス・メス">
+      <button type="button" data-tab="osu" aria-pressed="true">オス（枝管）</button>
+      <button type="button" data-tab="mesu" aria-pressed="false">メス（本管の穴）</button>
+    </span></div>
+    <div id="tOsu">
+    <div class="sum">
+      <div><small>枝管 × 本管</small><b id="rSize"></b></div>
+      <div><small>円周長さ</small><b id="rCirc"></b></div>
+      <div><small>ピッチ</small><b id="rPitch"></b></div>
+    </div>
+    <div class="panel dev">
+      <svg id="dev" viewBox="0 0 340 200"></svg>
+      <p class="cap" id="cap"></p>
+    </div>
+    <table class="panel">
+      <thead><tr><th>線</th><th>寸法（mm）</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    </div>
+    <div id="tMesu" hidden>
+    <div class="sum">
+      <div><small>本管の円周</small><b id="mCirc"></b></div>
+      <div><small>穴の長さ（横）</small><b id="mLen"></b></div>
+      <div><small>穴の幅（周り）</small><b id="mWid"></b></div>
+    </div>
+    <div class="panel dev">
+      <svg id="hole" viewBox="0 0 340 240"></svg>
+      <p class="cap">本管の上に十字の線を引き、真ん中から 横（本管の向き）と 周り（本管に沿って）を測る。数字は線の番号</p>
+    </div>
+    <table class="panel">
+      <thead><tr><th>線</th><th>横（mm）</th><th>周り（mm）</th></tr></thead>
+      <tbody id="mrows"></tbody>
+    </table>
+    </div>
+    <button type="button" class="again" id="again">‹ 入力にもどる</button>
+  </section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const N=8;                                   // 8等分で固定
+const st={B:"",M:"",ang:90,cur:"B",fresh:true};
+const fix1=x=>Math.floor(x*10+1e-6)/10;      // 小数1けたで切り捨て
+const fmt=x=>fix1(x).toFixed(1).replace(/\.0$/,"");
+
+/* 絵：本管（横）と枝管（90°は真上、45°は斜め） */
+function drawTee(){
+  const a=st.ang*Math.PI/180, cx=170, cy=150;
+  const ux=Math.cos(a), uy=-Math.sin(a), px=-uy, py=ux;          // 枝管の向きと、それに直角の向き
+  const w=26, L=105;
+  const P=(t,s)=>[(cx+ux*t+px*s).toFixed(1),(cy+uy*t+py*s).toFixed(1)];
+  const top1=P(L,-w), top2=P(L,w), b1=P(st.ang===90?40:46,-w), b2=P(st.ang===90?40:28,w);
+  const tc=P(L,0);
+  $("tee").innerHTML=
+    // 本管
+    `<path d="M70 118 H290 A16 32 0 0 1 290 182 H70" fill="var(--pipe)" stroke="var(--pipe-line)" stroke-width="2"/>
+     <ellipse cx="70" cy="150" rx="16" ry="32" fill="#fff" stroke="var(--pipe-line)" stroke-width="2"/>
+     <path d="M48 150 H312" stroke="var(--pipe-line)" stroke-dasharray="6 5"/>`+
+    // 枝管（切り口は本管の上にのる曲線）
+    `<path d="M${b1} L${top1} L${top2} L${b2} Q${P(st.ang===90?30:34,0)} ${b1}" fill="#fff" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>
+     <ellipse cx="${tc[0]}" cy="${tc[1]}" rx="${w}" ry="7" transform="rotate(${90-st.ang} ${tc[0]} ${tc[1]})" fill="#fff" stroke="var(--ink)" stroke-width="2"/>
+     <path d="M${P(L+10,0)} L${cx} ${cy}" stroke="var(--ink)" stroke-dasharray="6 5"/>
+     <path d="M${b2} Q${P(st.ang===90?30:34,0)} ${b1}" fill="none" stroke="var(--cut)" stroke-width="3"/>`+
+    // 角度
+    (st.ang===90?`<path d="M${cx+16} ${cy} V${cy-16} H${cx}" fill="none" stroke="var(--muted)"/>`
+      :`<path d="M${cx+30} ${cy} A30 30 0 0 0 ${(cx+30*Math.cos(a)).toFixed(1)} ${(cy-30*Math.sin(a)).toFixed(1)}" fill="none" stroke="var(--muted)"/><text x="${cx+38}" y="${cy-8}" font-size="14" font-weight="700" fill="var(--muted)">45°</text>`);
+  // 枝管の欄は枝管の先に合わせる
+  $("fB").style.left=(+tc[0]/340*100)+"%";
+}
+function render(){
+  $("vB").textContent=st.B;$("vM").textContent=st.M;
+  $("fB").setAttribute("aria-pressed",String(st.cur==="B"));$("fM").setAttribute("aria-pressed",String(st.cur==="M"));
+  document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.ang===st.ang)));
+  drawTee();
+}
+function pick(f){st.cur=f;st.fresh=true;$("err").textContent="";render();}
+$("fB").onclick=()=>pick("B");$("fM").onclick=()=>pick("M");
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{st.ang=+b.dataset.ang;render();});
+document.querySelectorAll(".keys button[data-k]").forEach(b=>b.onclick=()=>{
+  const k=b.dataset.k;let v=st[st.cur];$("err").textContent="";
+  if(k==="ac"){st.B="";st.M="";st.cur="B";st.fresh=true;render();return;}
+  if(k==="next"){pick(st.cur==="B"?"M":"B");return;}
+  if(k==="del"){v=v.slice(0,-1);st.fresh=false;}
+  else{ if(st.fresh)v="";st.fresh=false;
+    if(k==="."&&v.includes("."))return;
+    if(v.replace(".","").length>=5)return;
+    v=(v===""&&k===".")?"0.":v+k; }
+  st[st.cur]=v;render();
+});
+
+/* 計算：枝管の半径 r、本管の半径 R、角度 α
+   枝管の円周を8等分した線 θ = 0°,45°,…,360° ごとに、本管の中心線に当たるまでの長さ
+     t(θ) = ( √(R² − r²sin²θ) + r·cosθ·cosα ) ÷ sinα
+   寸法 = 一番長い t − t(θ)（0の線からどれだけ短く切るか） */
+function calc(){
+  const d=parseFloat(st.B), D=parseFloat(st.M);
+  if(!(d>0)){pick("B");$("err").textContent="枝管の太さ（φ）を入れてください。";return;}
+  if(!(D>0)){pick("M");$("err").textContent="本管の太さ（φ）を入れてください。";return;}
+  if(d>D){$("err").textContent="枝管は本管と同じか、細い太さにしてください。";return;}
+  const r=d/2, R=D/2, al=st.ang*Math.PI/180;
+  const t=th=>(Math.sqrt(Math.max(0,R*R-r*r*Math.sin(th)**2))+r*Math.cos(th)*Math.cos(al))/Math.sin(al);
+  const circ=Math.PI*d, pitch=circ/N;
+  const ts=[...Array(N+1)].map((_,i)=>t(2*Math.PI*i/N)), tmax=Math.max(...ts);
+  const vals=ts.map(x=>tmax-x);
+  $("rSize").innerHTML=fmt(d)+"<i>φ</i> × "+fmt(D)+"<i>φ</i>";
+  $("rCirc").innerHTML=fmt(circ)+"<i>mm</i>";$("rPitch").innerHTML=fmt(pitch)+"<i>mm</i>";
+  $("rows").innerHTML=vals.map((v,i)=>`<tr><td>${i}</td><td><b>${fmt(v)}</b></td></tr>`).join("");
+  drawDev(circ,vals,R,r,al,tmax);
+  // メス：枝管の線が本管に当たる点を、本管の上に展開する
+  //   横 x = t·cosα + r·cosθ·sinα（穴の真ん中から本管の向き）
+  //   周り s = R·asin(r·sinθ ÷ R)（本管のてっぺんの線から、本管に沿って）
+  const pts=[...Array(N)].map((_,i)=>{const th=2*Math.PI*i/N;return {i,x:t(th)*Math.cos(al)+r*Math.cos(th)*Math.sin(al),s:R*Math.asin(Math.min(1,r*Math.sin(th)/R))};});
+  const xs=pts.map(p=>p.x), cxm=(Math.max(...xs)+Math.min(...xs))/2;
+  pts.forEach(p=>{p.x-=cxm;if(Math.abs(p.x)<1e-9)p.x=0;if(Math.abs(p.s)<1e-9)p.s=0;});
+  const len=Math.max(...xs)-Math.min(...xs), wid=2*R*Math.asin(Math.min(1,r/R));
+  $("mCirc").innerHTML=fmt(Math.PI*D)+"<i>mm</i>";$("mLen").innerHTML=fmt(len)+"<i>mm</i>";$("mWid").innerHTML=fmt(wid)+"<i>mm</i>";
+  const sg=v=>(v<0?"−":"")+fmt(Math.abs(v));
+  $("mrows").innerHTML=pts.map(p=>`<tr><td>${p.i}</td><td><b>${sg(p.x)}</b></td><td><b>${sg(p.s)}</b></td></tr>`).join("");
+  drawHole(pts,R,r,al,cxm,t);
+  showTab("osu");
+  $("inp").hidden=true;$("res").hidden=false;scrollTo(0,0);
+}
+/* 展開図：横が枝管の円周、縦の線が8等分の線。線の上に寸法、下に線の番号 */
+function drawDev(circ,vals,R,r,al,tmax){
+  const W=340, x0=14, x1=W-14, base=40, sx=(x1-x0)/circ;
+  const vmax=Math.max(...vals,0.0001);
+  let sy=sx, big=false;
+  if(vmax*sy<70){sy=70/vmax;big=true;}          // 浅いときは高さだけ見やすく大きくする
+  if(vmax*sy>130)sy=130/vmax;
+  const H=base+vmax*sy+44;
+  const X=i=>x0+(x1-x0)*i/N, Y=v=>base+v*sy;
+  const tt=th=>(Math.sqrt(Math.max(0,R*R-r*r*Math.sin(th)**2))+r*Math.cos(th)*Math.cos(al))/Math.sin(al);
+  let path="";for(let k=0;k<=160;k++){const th=2*Math.PI*k/160;path+=(k?"L":"M")+(x0+(x1-x0)*k/160).toFixed(1)+" "+Y(tmax-tt(th)).toFixed(1);}
+  let s=`<rect x="${x0}" y="${base}" width="${x1-x0}" height="${(H-44-base+8).toFixed(1)}" fill="var(--accent-soft)" opacity=".35"/>`+
+    `<path d="M${x0} ${base} H${x1}" stroke="var(--muted)" stroke-width="1.5"/>`+
+    `<text x="${x1}" y="${base-26}" text-anchor="end" font-size="11" fill="var(--muted)">↓ 0の線から下へ測る</text>`;
+  vals.forEach((v,i)=>{
+    const x=X(i).toFixed(1);
+    s+=`<path d="M${x} ${base} V${Y(v).toFixed(1)}" stroke="var(--accent)" stroke-width="${v>0?2:1}"/>`+
+       `<text x="${x}" y="${base-8}" text-anchor="middle" font-size="${i%N?13:12}" font-weight="700" fill="var(--ink)">${fmt(v)}</text>`+
+       `<text x="${x}" y="${(H-14).toFixed(1)}" text-anchor="middle" font-size="12" fill="var(--muted)">${i}</text>`;
+  });
+  s+=`<path d="${path}" fill="none" stroke="var(--cut)" stroke-width="2.5"/>`;
+  $("dev").setAttribute("viewBox",`0 0 ${W} ${H.toFixed(0)}`);$("dev").innerHTML=s;
+  $("cap").textContent="横：枝管の円周（"+fmt(circ)+"mm）を8等分　赤い線が切り口"+(big?"（高さは見やすく拡大）":"");
+}
+/* メスの絵：横が本管の向き、縦が本管のまわり。十字の真ん中から各点までの寸法を入れる */
+function drawHole(pts,R,r,al,cxm,t){
+  const W=340, mx=Math.max(...pts.map(p=>Math.abs(p.x)),1), my=Math.max(...pts.map(p=>Math.abs(p.s)),1);
+  const sc=Math.min(120/mx,80/my), cx=W/2, cy=110, H=220;
+  const X=x=>cx+x*sc, Y=v=>cy-v*sc;
+  let path="";for(let k=0;k<=160;k++){const th=2*Math.PI*k/160;const x=t(th)*Math.cos(al)+r*Math.cos(th)*Math.sin(al)-cxm, v=R*Math.asin(Math.min(1,r*Math.sin(th)/R));path+=(k?"L":"M")+X(x).toFixed(1)+" "+Y(v).toFixed(1);}
+  let s=`<path d="M14 ${cy} H${W-14}" stroke="var(--muted)" stroke-dasharray="6 5"/><path d="M${cx} ${cy-100} V${cy+100}" stroke="var(--muted)" stroke-dasharray="6 5"/>`+
+    `<text x="${W-14}" y="${cy-6}" text-anchor="end" font-size="11" fill="var(--muted)">本管の向き</text>`+
+    `<path d="${path}Z" fill="var(--accent-soft)" stroke="var(--cut)" stroke-width="2.5"/>`;
+  const seen=new Set();
+  pts.forEach(p=>{
+    const x=X(p.x), y=Y(p.s);
+    if(p.s!==0)s+=`<path d="M${x.toFixed(1)} ${cy} V${y.toFixed(1)}" stroke="var(--accent)" stroke-width="1.5"/>`+
+      `<text x="${(x+(p.x>=0?6:-6)).toFixed(1)}" y="${((y+cy)/2+4).toFixed(1)}" text-anchor="${p.x>=0?"start":"end"}" font-size="12.5" font-weight="700" fill="var(--accent)">${fmt(Math.abs(p.s))}</text>`;
+    // 横の寸法は十字の線の下に（同じ所は1回だけ）
+    const key=fmt(p.x);if(!seen.has(key)&&p.x!==0){seen.add(key);s+=`<path d="M${x.toFixed(1)} ${cy+100} V${cy+92}" stroke="var(--ink)"/><text x="${x.toFixed(1)}" y="${cy+114}" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">${fmt(Math.abs(p.x))}</text>`;}
+    s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--cut)"/>`+
+      `<text x="${(x+(p.x>0?9:p.x<0?-9:0)).toFixed(1)}" y="${(y+(p.s>0?-8:p.s<0?16:-8)).toFixed(1)}" text-anchor="${p.x>0?"start":p.x<0?"end":"middle"}" font-size="12" fill="var(--muted)">${p.i}</text>`;
+  });
+  s+=`<path d="M${cx} ${cy+100} V${cy+92}" stroke="var(--ink)"/><text x="${cx}" y="${cy+114}" text-anchor="middle" font-size="11" fill="var(--muted)">0</text>`;
+  $("hole").setAttribute("viewBox",`0 0 ${W} ${H+16}`);$("hole").innerHTML=s;
+}
+function showTab(k){$("tOsu").hidden=k!=="osu";$("tMesu").hidden=k!=="mesu";
+  document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tab===k)));}
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+$("go").onclick=calc;
+$("again").onclick=()=>{$("res").hidden=true;$("inp").hidden=false;};
+render();
+</script>
+</body>
+</html>
