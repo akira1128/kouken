@@ -82,6 +82,22 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0;scrollbar-width:none}
 .chips button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:14px}
 .chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+/* 月：LINE WORKS の作り */
+.cal.lw{display:block;padding:0 0 6px}
+.lwhd{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;font-size:12.5px;color:var(--ink);padding:6px 0 2px}
+.lwhd .sun{color:var(--low)}
+.lwk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));column-gap:0;row-gap:2px;border-top:1px solid var(--line);position:relative}
+.lwday{border:0;background:transparent;padding:0;margin:0;z-index:0;cursor:pointer}
+.lwday.sel{background:var(--accent-soft)}
+.lwn{z-index:1;pointer-events:none;justify-self:center;align-self:center;font-size:15px;line-height:1;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;color:var(--ink)}
+.lwn.red{color:var(--low)} .lwn.out{opacity:.45}
+.lwn.today{background:#1f1f1f;color:#fff;font-weight:700;opacity:1}
+.lwbar{z-index:1;pointer-events:none;align-self:stretch;margin:0 1px;border-radius:3px;font-size:11.5px;line-height:22px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:clip;letter-spacing:-.02em}
+.lwbar.l{border-top-left-radius:0;border-bottom-left-radius:0;margin-left:0}
+.lwbar.r{border-top-right-radius:0;border-bottom-right-radius:0;margin-right:0}
+.lwbar.off{opacity:.6}
+.lwmore{z-index:1;pointer-events:none;font-size:11px;color:var(--muted);padding-left:6px;line-height:18px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .lwn.today{background:#f1f1f1;color:#111}}
 /* カレンダー */
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));padding:0 4px 6px}
 .cal .wd{text-align:center;font-size:12px;font-weight:700;color:var(--muted);padding:4px 0}
@@ -449,7 +465,65 @@ function calCells(){
   }
   return cells;
 }
+/* ---------- 月：LINE WORKS と同じ作り（2026/10/31 ユーザー）
+   何日も続く予定は、週の中で日をまたいだ1本の帯。帯の色は人ごと（LINE WORKS のスマホの色合い）。
+   ふだんは1週に2段まで出して、あふれた分は日ごとに「＋数」。週を押すと広がって全部出る ---------- */
+const LWC={"福島正純":["#ee8a73","#fff"],"NGUYEN VAN HIEU":["#7896e6","#fff"],"田中嗣音":["#c8dcf6","#3d64b5"],"NGUYEN NGOC LONG":["#6bbe6b","#fff"],
+  "DANG BINH DUONG":["#e9727f","#fff"],"西崎剣":["#f6cbcb","#c93a3a"],"原田弓子":["#f6cde0","#b03a6a"],"竹内工業":["#f2b36b","#fff"],"高橋断熱":["#9ccb6a","#fff"]};
+const LW_NONE=["#b4bac6","#fff"];
+const lwc=n=>LWC[n]||LW_NONE;
+const LW_LANES=2;
+function weekBars(wa,wb){
+  const bars=[];
+  for(const e of shown()){
+    const a=e.date, b=e.end||e.date;if(b<wa||a>wb)continue;
+    const ps=(e.people||[]).filter(n=>person==="すべて"||n===person).sort((x,y)=>(ORDER[x]??50)-(ORDER[y]??50));
+    const s=a<wa?wa:a, t=b>wb?wb:b, what=siteText(e);
+    for(const n of (ps.length?ps:[""]))bars.push({n,s,t,label:n?nick(n)+"　"+what:what,c:n?lwc(n):LW_NONE,off:e.site===OFF,l:a<wa,r:b>wb});
+  }
+  // 長い帯から先に、同じ長さなら社員の順で、上の段から空いている所に入れる
+  const len=x=>(parse(x.t)-parse(x.s));
+  bars.sort((x,y)=>len(y)-len(x)||(x.n?ORDER[x.n]??50:99)-(y.n?ORDER[y.n]??50:99)||(x.s<y.s?-1:1));
+  const lanes=[];
+  for(const x of bars){let i=0;for(;i<lanes.length;i++)if(!lanes[i].some(y=>!(x.t<y.s||x.s>y.t)))break;(lanes[i]=lanes[i]||[]).push(x);x.lane=i;}
+  return {bars,lanes:lanes.length};
+}
+function renderMonthLW(){
+  const cal=$("cal");cal.classList.remove("week");cal.classList.add("lw");
+  const [a,b]=gridRange(), t=todayS();
+  const anim=animNext&&!reduceMotion();animNext=false;
+  const before={};cal.querySelectorAll(".lwk").forEach(el=>{before[el.dataset.w]=el.getBoundingClientRect().height;});
+  const head=h("div",{class:"lwhd"},...[...WD].map((w,i)=>h("span",{class:i===0?"sun":"",text:w})));
+  const weeks=[];
+  for(let wa=a;wa<=b;wa=addDays(wa,7)){
+    const wb=addDays(wa,6), open=openWeek===wa, {bars,lanes}=weekBars(wa,wb), show=open?lanes:Math.min(lanes,LW_LANES);
+    const kids=[];
+    for(let i=0;i<7;i++){
+      const s=addDays(wa,i), d=parse(s), dow=d.getDay();
+      const hid=bars.filter(x=>x.lane>=show&&x.s<=s&&x.t>=s).length;
+      // 日のマス（下にしいて、押すとその週が広がる。2回押しで予定を入れる）
+      kids.push(h("button",{type:"button",class:"lwday"+(s===sel?" sel":""),style:{gridColumn:String(i+1),gridRow:"1 / -1"},"aria-label":md(s)+(HOLI[s]?" "+HOLI[s]:""),"data-d":s,onclick:()=>dbl("d"+s,()=>tapDay(s),()=>addOn(s))}));
+      kids.push(h("span",{class:"lwn"+(dow===0||HOLI[s]?" red":"")+(s.slice(0,7)!==ym?" out":"")+(s===t?" today":""),style:{gridColumn:String(i+1),gridRow:"1"},text:String(d.getDate())}));
+      if(hid)kids.push(h("span",{class:"lwmore",style:{gridColumn:String(i+1),gridRow:String(show+2)},text:"＋"+hid}));
+    }
+    for(const x of bars){if(x.lane>=show)continue;
+      const c1=(parse(x.s)-parse(wa))/864e5+1, c2=(parse(x.t)-parse(wa))/864e5+2;
+      // 今日より前の日は、うすい色にする（LINE WORKS と同じ）
+      let bg=x.c[0];const past=c=>"color-mix(in srgb,"+c+" 45%,#fff)";
+      if(x.t<t)bg=past(x.c[0]);else if(x.s<t){const k=(parse(t)-parse(x.s))/864e5, n=(parse(x.t)-parse(x.s))/864e5+1, pc=(k/n*100).toFixed(2);bg="linear-gradient(90deg,"+past(x.c[0])+" "+pc+"%,"+x.c[0]+" "+pc+"%)";}
+      kids.push(h("span",{class:"lwbar"+(x.l?" l":"")+(x.r?" r":"")+(x.off?" off":""),style:{gridColumn:c1+" / "+c2,gridRow:String(x.lane+2),background:bg,color:x.c[1]},text:x.label}));
+    }
+    weeks.push(h("div",{class:"lwk"+(open?" open":""),"data-w":wa,style:{gridTemplateRows:"30px repeat("+show+",22px)"+(bars.some(x=>x.lane>=show)?" 18px":"")+" 6px"}},...kids));
+  }
+  cal.replaceChildren(head,...weeks);
+  if(!anim)return;
+  // 広げた週・閉じた週の高さを滑らかに変える
+  cal.querySelectorAll(".lwk").forEach(el=>{const f=before[el.dataset.w], to=el.getBoundingClientRect().height;
+    if(f!=null&&Math.abs(to-f)>2)el.animate([{height:f+"px",overflow:"hidden"},{height:to+"px",overflow:"hidden"}],{duration:to>f?DUR_OPEN:DUR_CLOSE,easing:EASE});});
+}
 function renderCal(){
+  if(view==="month"){renderMonthLW();return;}
+  $("cal").classList.remove("lw");
   const wk=view==="week", cal=$("cal");
   const anim=animNext&&!wk&&!reduceMotion();animNext=false;
   if(calAnim){calAnim.cancel();calAnim=null;}
