@@ -101,8 +101,10 @@ const sc=document.getElementById("scrim");
 // 西暦を選ぶ。はじめは2026年（2026/10/31 ユーザー）
 const ysel=document.getElementById("year");
 for(let y=Y_MAX;y>=Y_MIN;y--){const o=document.createElement("option");o.value=y;o.textContent=y+"年";ysel.appendChild(o);}
+// 2017年の下に「全ての現場」（年でしぼらず全員を出す 2026/10/31 ユーザー）
+{const o=document.createElement("option");o.value="all";o.textContent="全ての現場";ysel.appendChild(o);}
 ysel.value=Y_MAX;
-function showYear(){const y=+ysel.value;
+function showYear(){const y=ysel.value==="all"?9999:+ysel.value;
   document.querySelectorAll("#names .nm,#outs .nm").forEach(b=>{const off=y<(FROM[b.textContent]||Y_MIN);b.classList.toggle("off",off);b.tabIndex=off?-1:0;b.setAttribute("aria-hidden",off);});}
 ysel.onchange=showYear;showYear();
 document.getElementById("ok").onclick=()=>{sc.hidden=true;};
