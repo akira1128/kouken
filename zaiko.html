@@ -389,14 +389,14 @@ const saveCart=()=>{try{sessionStorage.setItem(cartKey,JSON.stringify(cart));}ca
 let who=store("kouken-who")||"";
 if(who&&!NICK[who])who="";              // 前の版の名前の書き方だったら選び直してもらう
 let logSite="すべて";
-// 材料を頼む画面は、いつも「ALK（P）保温筒」から始める。頼む画面で選んだ種類は覚えない（工場在庫の覚えている種類を変えないように 2026/10/31 ユーザー）
-let cat=ORDER?"ALK（P）保温筒":(store("kouken-cat")||"すべて");
-const keepCS=(k,v)=>{if(!ORDER)store(k,v);};
+// 工場在庫も材料を頼む画面も、開いたときはいつも「ALK（P）保温筒」から始める（選んだ種類は覚えない 2026/10/31 ユーザー）
+let cat="ALK（P）保温筒";
+const keepCS=(k,v)=>{};
 /* 種類の「すべて」ボタン。false で出さない（2026/10/28 ユーザー：いったん消す） */
 const SHOW_ALL=false;
 const CAT_BTNS=SHOW_ALL?["すべて",...CATS]:CATS;
 if(!CAT_BTNS.includes(cat))cat=CAT_BTNS[0];
-let sub=ORDER?"すべて":(store("kouken-sub")||"すべて");
+let sub="すべて";
 /* 3段目：ジャケット・エルボの中を、さらに「ジャケット」「エルボ」で分ける（名前の頭で見分ける 2026/10/28） */
 const SUB2={"ジャケット・エルボ":["ジャケット","エルボ"]};
 const sub2Of=it=>/^エルボ/.test(it.name||"")?"エルボ":/^ジャケット/.test(it.name||"")?"ジャケット":"";
