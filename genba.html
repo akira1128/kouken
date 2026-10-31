@@ -1054,7 +1054,7 @@ function matomeBox(x){
       ...(r.m||[]).map(a=>row(a.k,n1(a.v)+" m")),row("合計",n1(r.mTotal)+" m",true),
       h("h4",{class:"vh",text:"実績"}),
       row("最後に作業した日",r.last?md(r.last):"―"),row("行った日数",(r.days||0)+" 日"),row("合計人工",n1(r.ninku)+" 人工"),
-      row("1日の平均",n1(r.avg)+" m"),row("1人工あたり",n1(r.perNinku)+" m"),row("1時間あたり（1人）",n1(r.perHour)+" 本"),row("予定人工（歩掛）",n1(r.planNinku)+" 人工"),
+      row("1日の平均",n1(r.avg)+" m"),row("1人工あたり",n1(r.perNinku)+" m"),row("1時間あたり（1人）",n1(r.perHour)+" 本"),row("歩掛",n1(r.planNinku)+" 人工"),
       (r.people||[]).length?[h("h4",{class:"vh",text:"行った人"}),...r.people.map(a=>row(a.k,(a.v||0)+" 日"))]:null,
       (r.move||[]).some(a=>a.d)?[h("h4",{class:"vh",text:"移動"}),...r.move.filter(a=>a.d).map(a=>row(a.k,a.d+" 日"))]:null,
       (r.log||[]).length?[h("h4",{class:"vh",text:"毎日の記録"}),h("ul",{class:"visits"},r.log.map(l=>h("li",null,h("b",{text:md(l.d)}),h("span",{text:l.who+"（"+l.n+"人）"}),(l.mv||[]).length?h("span",{class:"memo",text:l.mv.join("・")}):null)))]:null];
