@@ -373,7 +373,7 @@ let person=store("kouken-yotei-person")||"すべて";
 if(person!=="すべて"&&!PEOPLE.some(([n])=>n===person))person="すべて";
 let me=store("kouken-who")||"";          // この携帯を使う人（在庫で選んだ名前と同じ）
 if(me&&!NICK[me])me="";
-let view=store("kouken-yotei-view")||"month";
+let view="month";  // 入り直したら、いつも「月」から（前に見ていた表示は覚えない 2026/10/31 ユーザー）
 if(!VIEWS.some(v=>v[0]===view))view="month";
 const weekly=()=>view==="week"||view==="member";
 
