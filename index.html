@@ -91,12 +91,12 @@ a.card:active{transform:scale(.98)}
       <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>
       <b>集計</b>
     </a>
-    <!-- 便利ツール：計算などの道具（2026/11/01 異形チーズから） -->
-    <a class="card" href="benri.html">
+    <!-- 便利ツール：西崎さんだけが開ける。ほかの人には「準備中」と出す（2026/11/01 ユーザー） -->
+    <div class="card soon" id="benriCard" aria-disabled="true">
       <span class="ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg></span>
       <b>便利ツール</b>
-      <span>異形チーズの寸法など</span>
-    </a>
+      <span class="tag">準備中</span>
+    </div>
   </div>
   <p class="note">株式会社コウケン 社内用。リンクと暗証番号とアプリ内の情報は、社外の人に教えないでください。</p>
 </main>
@@ -106,6 +106,23 @@ a.card:active{transform:scale(.98)}
 async function chkOpen(){try{const c=await caches.open("kouken-open");const r=await c.match("pending");if(!r)return;const t=await r.json();await c.delete("pending");if(Date.now()-t.at<300000)location.href=t.url;}catch(e){}}
 chkOpen();document.addEventListener("visibilitychange",()=>{if(!document.hidden)chkOpen();});
 if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="open")chkOpen();});
+</script>
+<script type="module">
+/* 便利ツール：この携帯が西崎さん（editors に西崎剣）なら開けるカードにする */
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,doc,getDoc} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {FIREBASE_CONFIG} from "./firebase-config.js";
+try{
+  const app=initializeApp(FIREBASE_CONFIG),auth=getAuth(app);
+  await signInAnonymously(auth);
+  const ed=await getDoc(doc(getFirestore(app),"editors",auth.currentUser.uid));
+  if(ed.exists()&&ed.data().name==="西崎剣"){
+    const c=document.getElementById("benriCard"),a=document.createElement("a");
+    a.className="card";a.href="benri.html";a.innerHTML=c.innerHTML.replace('<span class="tag">準備中</span>','<span>異形チーズの寸法など</span>');
+    c.replaceWith(a);
+  }
+}catch(e){}
 </script>
 <script>/* 予定表のアイコンの数字は今日の日付 */try{document.getElementById("calDay").textContent=new Date().getDate();}catch(e){}</script>
 </body>
