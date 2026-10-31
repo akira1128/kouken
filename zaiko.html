@@ -313,11 +313,11 @@ const FACTORY="工場（加工）", OTHER="その他（メモに書く）";
 const facLbl=n=>n===FACTORY?"工場":n;
 /* 種類の中をさらに分ける（色・材質）。ジャケット・エルボとフランジカバー */
 const COLORS=["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"];
-const SUBS={"ジャケット・エルボ":COLORS,"フランジカバー":COLORS,"PF保温筒":["直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
+const SUBS={"ジャケット・エルボ":COLORS,"フランジカバー":COLORS,"BOXカバー":COLORS,"トランクカバー":COLORS,"PF保温筒":["直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
 const SUBLABEL=c=>c==="PF保温筒"?"直管・エルボ":"色・材質";
 const NOSUB="分けていない";
 /* 2段目に「すべて」を出さない種類（2026/10/28 ユーザー） */
-const SUB_NOALL=new Set(["ジャケット・エルボ","フランジカバー"]);
+const SUB_NOALL=new Set(["ジャケット・エルボ","フランジカバー","BOXカバー","トランクカバー"]);  // BOX・トランクカバーも色で分ける（2026/10/31 ユーザー）
 const subBtns=c=>SUBS[c]?(SUB_NOALL.has(c)?SUBS[c]:["すべて",...SUBS[c]]):[];
 const fixSub=()=>{const l=subBtns(cat);if(l.length&&!l.includes(sub)&&!(sub===NOSUB&&SUBS[cat]))sub=l[0];if(!l.length)sub="すべて";};
 /* 1つの材料に複数の数を持たせる仕組み（今は使っていない。2026/10/28 PF保温筒は2段目で直管・エルボを分ける形に変更） */
@@ -353,7 +353,7 @@ const ROLL_LEN={"ALKロール 24K×25t":22,"ALKロール 24K×50t":16,"ALKロー
 const EPARTS=[["ws","溶接ショートエルボ","wsqty"],["wl","溶接ロングエルボ","wlqty"]];
 const partField=p=>p==="s"?"qty":(EPARTS.find(x=>x[0]===p)||[])[2]||"qty";
 const partName=p=>p==="s"?"直管":(EPARTS.find(x=>x[0]===p)||[])[1]||"直管";
-const CATS=["ALK（P）保温筒","ALGC（P）保温筒","PF保温筒","ロール","セラカバー","遮音シート","金網","テープ・副資材","ジャケット・エルボ","フランジカバー","コイル","板","その他"];
+const CATS=["ALK（P）保温筒","ALGC（P）保温筒","PF保温筒","ロール","セラカバー","遮音シート","金網","テープ・副資材","ジャケット・エルボ","フランジカバー","BOXカバー","トランクカバー","コイル","板","その他"];
 const UNITS=["本","個","巻","枚","ケース","箱","m","kg"];
 /* 動きの種類。back＝戻し（現場で余って工場に戻す。入庫＝買ったものと分ける 2026/10/28） */
 const KIND={in:"入庫",out:"持ち出し",back:"戻し",set:"数を直す",new:"登録",del:"削除"};

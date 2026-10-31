@@ -87,14 +87,14 @@ a.brandrow:active .back{background:rgba(255,255,255,.3)}
 </div></div>
 <script>
 // メンバー（呼び名）。いまはダミーで、押すと「西崎さんだけが見れます」と出して開かない（2026/10/30 ユーザー）
-const MEMBERS=["西崎","原田","福島","嗣穏","ヒエウ","ズオン","ロン"];
+const MEMBERS=["西崎","原田","福島","嗣穏","ヒエウ","ズオン","ロン","総合"];  // 総合・外注総合はどの年も出す（2026/10/31 ユーザー）
 // 何年から集計に出すか（2026/10/31 ユーザー。原田は2022年から）
 // 外注も同じ。「その他」はいつも出す
 const FROM={"西崎":2017,"ヒエウ":2019,"ズオン":2021,"原田":2022,"福島":2024,"嗣穏":2025,"ロン":2025,
   "コウケン板金":2017,"竹内工業":2022,"小原興業":2022,"高橋断熱":2025};
 const Y_MIN=2017,Y_MAX=2026;
 // 外注（2026/10/30 ユーザー）
-const OUTS=["コウケン板金","竹内工業","小原興業","高橋断熱","その他"];
+const OUTS=["コウケン板金","竹内工業","小原興業","高橋断熱","その他","外注総合"];
 const sc=document.getElementById("scrim");
 [["names",MEMBERS],["outs",OUTS]].forEach(([bid,list])=>{const box=document.getElementById(bid);list.forEach(n=>{const b=document.createElement("button");b.type="button";b.className="nm";b.textContent=n;
   b.onclick=()=>{sc.hidden=false;};box.appendChild(b);});});
