@@ -63,6 +63,20 @@ a.brandrow:active .back{background:rgba(255,255,255,.3)}
 .banner{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:var(--out-soft);font-size:14px}
 main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* ウレタンカレンダー（紫＝LINE WORKS のウレタンと同じ色の考え方） */
+.mtm,.ami{padding:0 0 10px}
+.mtm>*:not(.sec),.ami>*:not(.sec){margin-left:14px;margin-right:14px}
+.mtabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.mtabs button{font:inherit;font-size:14px;font-weight:700;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px}
+.mtabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.mrow,.mrow3{display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.mrow.b b{font-size:17px}
+.mrow3{grid-template-columns:1fr 92px 92px;text-align:right}
+.mrow3 span{text-align:left}.mrow3.hd b{font-size:12px;color:var(--muted)}.mrow3.red b,.mrow3.red span{color:var(--low)}
+.amig{border-bottom:1px solid var(--line);padding:8px 0}
+.amih{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.amic{display:inline-block;min-width:44px;text-align:center;font-size:13px;font-weight:700;border:1.5px solid #3c3c3c;border-radius:6px;padding:2px 8px}
+.amir{display:grid;gap:2px;padding:4px 0 4px 10px;font-size:14px}
+.amir span{font-size:13px;color:var(--ink)}.amir small{font-size:12px;color:var(--muted);white-space:pre-wrap}.amir small.warn{color:var(--low);font-weight:700}
 .ucal{padding:0;overflow:hidden}
 .usrc{border-top:1px solid var(--line);margin-top:8px;padding:10px 2px 2px;display:grid;gap:4px}
 .usrc h4{margin:0 0 2px;font-size:14px;color:var(--nx)}
@@ -1011,6 +1025,59 @@ function fillVisits(box,x){
     next.length?[h("h4",{class:"vh",text:"これからの予定"}),h("ul",{class:"visits next"},next.map(row))]:null,
     h("p",{class:"hint",style:{marginTop:"10px"},text:"予定表の現場名で探しています。出てこない日があるときは、現場の情報の「予定表での呼び方」に予定表で使っている名前を入れてください。"})));
 }
+/* ---------- 回ごとのまとめ（中防不燃など。社員もいつでも見られる。金額は西崎さんの携帯だけ 2026/10/31 ユーザー）
+   sites.matome：[{no,title,range,upd,m:[{k,v}],mTotal,last,days,ninku,avg,perNinku,perHour,planNinku,people:[{k,v}],move:[{k,d,y}],log}]（Firestoreは配列の中に配列を入れられないので{}にする）
+   金額は matomeMoney/{現場ID}（編集する人だけ読める） ---------- */
+let matomeSel={}, matomeMoney={};
+const n1=(v,d=1)=>v==null||v===""?"−":Number(v).toLocaleString("ja-JP",{maximumFractionDigits:d,minimumFractionDigits:d});
+const yen=v=>v==null||v===""?"−":Math.round(v).toLocaleString("ja-JP")+"円";
+function matomeBox(x){
+  const list=x.matome.slice().sort((a,b)=>a.no-b.no);
+  const box=h("section",{class:"panel mtm"});
+  const draw=()=>{
+    const no=matomeSel[x.id]||list[list.length-1].no, r=list.find(a=>a.no===no)||list[list.length-1];
+    const row=(k,v,b)=>h("div",{class:"mrow"+(b?" b":"")},h("span",{text:k}),h("b",{text:v}));
+    const kids=[h("div",{class:"sec"},h("h3",{text:"まとめ（回ごと）"})),
+      h("div",{class:"mtabs"},list.map(a=>h("button",{type:"button","aria-pressed":String(a.no===r.no),onclick:()=>{matomeSel[x.id]=a.no;draw();}},a.no+"回目"))),
+      h("p",{class:"hint",text:r.title+"　更新 "+(r.upd?md(r.upd):"―")}),
+      r.range?h("p",{class:"hint",text:"範囲："+r.range}):null,
+      h("h4",{class:"vh",text:"施工m数（注文した材料のm数で数える）"}),
+      ...(r.m||[]).map(a=>row(a.k,n1(a.v)+" m")),row("合計",n1(r.mTotal)+" m",true),
+      h("h4",{class:"vh",text:"実績"}),
+      row("最後に作業した日",r.last?md(r.last):"―"),row("行った日数",(r.days||0)+" 日"),row("合計人工",n1(r.ninku)+" 人工"),
+      row("1日の平均",n1(r.avg)+" m"),row("1人工あたり",n1(r.perNinku)+" m"),row("1時間あたり（1人）",n1(r.perHour)+" 本"),row("予定人工（歩掛）",n1(r.planNinku)+" 人工"),
+      (r.people||[]).length?[h("h4",{class:"vh",text:"行った人"}),...r.people.map(a=>row(a.k,(a.v||0)+" 日"))]:null,
+      (r.move||[]).some(a=>a.d)?[h("h4",{class:"vh",text:"移動"}),...r.move.filter(a=>a.d).map(a=>row(a.k,a.d+" 日"))]:null,
+      (r.log||[]).length?[h("h4",{class:"vh",text:"毎日の記録"}),h("ul",{class:"visits"},r.log.map(l=>h("li",null,h("b",{text:md(l.d)}),h("span",{text:l.who+"（"+l.n+"人）"}),(l.mv||[]).length?h("span",{class:"memo",text:l.mv.join("・")}):null)))]:null];
+    // 金額は西崎さんの携帯だけ
+    const mo=(matomeMoney[x.id]||[]).find(a=>a.no===r.no);
+    if(editor==="西崎剣"&&mo){
+      const mr=(k,a,b,red)=>h("div",{class:"mrow3"+(red?" red":"")},h("span",{text:k}),h("b",{text:a}),h("b",{text:b}));
+      kids.push(h("h4",{class:"vh",text:"金額（税抜・西崎さんだけに表示）"}),h("div",{class:"mrow3 hd"},h("span"),h("b",{text:"予定"}),h("b",{text:"実績"})),
+        mr("売上",yen(mo.plan.sales),yen(mo.act.sales)),mr("材料費",yen(mo.plan.mat),yen(mo.act.mat)),mr("人件費",yen(mo.plan.labor),yen(mo.act.labor)),
+        mr("交通費",yen(mo.plan.trans),yen(mo.act.trans)),mr("残り",yen(mo.plan.rest),yen(mo.act.rest),true),
+        mr("残りの割合",mo.plan.rate==null?"−":(mo.plan.rate*100).toFixed(1)+"%",mo.act.rate==null?"−":(mo.act.rate*100).toFixed(1)+"%",true));
+    }
+    box.replaceChildren(...kids.flat().filter(Boolean));
+  };
+  draw();
+  if(editor==="西崎剣"&&!matomeMoney[x.id])getDoc(doc(fs,"matomeMoney",x.id)).then(d=>{if(d.exists()){matomeMoney[x.id]=d.data().rounds||[];draw();}}).catch(()=>{});
+  return box;
+}
+/* ---------- 配管ごとの網の色（中防不燃など）sites.ami：{pipe:[{chips,total,rows:[{n,m,s,memo}]}],duct:[...],pipeNotes,ductNotes} ---------- */
+const AMI_C={"青":["#2068d6","#fff"],"紫":["#893cb4","#fff"],"赤":["#d62828","#fff"],"白":["#fff","#191919"],"亜鉛":["#b2b6ba","#191919"],"要確認":["#fff4d6","#965a00"]};
+function amiBox(x){
+  const a=x.ami;
+  const grp=g=>h("div",{class:"amig"},
+    h("div",{class:"amih"},(g.chips||[]).map(c=>h("span",{class:"amic",style:{background:(AMI_C[c]||AMI_C["要確認"])[0],color:(AMI_C[c]||AMI_C["要確認"])[1]},text:c})),h("b",{text:g.total||""})),
+    (g.rows||[]).map(({n:name,m,s:sz,memo})=>h("div",{class:"amir"},h("b",{text:"◇"+name+"　"+m}),sz?h("span",{text:sz}):null,memo?h("small",{class:/^【注意】/.test(memo)?"warn":"",text:memo.replace(/／/g,"\n")}):null)));
+  return h("section",{class:"panel ami"},h("div",{class:"sec"},h("h3",{text:"配管ごとの網の色"})),
+    a.sub?h("p",{class:"hint",text:a.sub}):null,
+    a.pipeTitle?h("h4",{class:"vh",text:a.pipeTitle}):null,(a.pipe||[]).map(grp),
+    (a.pipeNotes||[]).map(t=>h("p",{class:"hint",text:t})),
+    a.ductTitle?h("h4",{class:"vh",text:a.ductTitle}):null,(a.duct||[]).map(grp),
+    (a.ductNotes||[]).map(t=>h("p",{class:"hint",text:t})));
+}
 function renderSite(){
   const box=$("vSite"), x=sites.find(s=>s.id===siteId);
   if(!x){box.replaceChildren(h("div",{class:"panel empty",text:fs?"この現場は見つかりません":"読み込んでいます…"}));return;}
@@ -1055,6 +1122,8 @@ function renderSite(){
       h("p",{class:"hint",id:"photoHint",style:{marginBottom:"8px"},text:"材料置き場・搬入口など、次に行く人が助かる写真を入れておけます。状況が変わったら、だれでも取り替え・消しができます。"}),
       (()=>{const g=h("div",{class:"phgrid",id:"photoGrid"});fillPhotos(g,x);return g;})(),
       h("button",{type:"button",class:"btn ghost",onclick:()=>openPhoto(x,null)},"＋ 写真を入れる")),
+    (x.matome||[]).length?matomeBox(x):null,
+    x.ami?amiBox(x):null,
     (()=>{const vb=h("section",{class:"panel",id:"visitBox"});fillVisits(vb,x);return vb;})(),
     h("section",{class:"panel"},h("div",{class:"sec"},h("h3",{text:"この現場の注文履歴（新しい順）"})),
       siteOrders.length?siteOrders.slice(0,20).map(orderRow):h("p",{class:"empty",text:"まだ注文はありません"})));

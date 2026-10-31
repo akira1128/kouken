@@ -50,6 +50,8 @@ service cloud.firestore {
     // 工程表の写真（社員が送る）：送る・見るのは社員だれでも。保存済みにする・消すのは編集する人（西崎・原田）だけ（2026/10/31）
     match /koutei/{id} { allow read, create: if member(); allow update, delete: if editor(); }
     match /kouteiFull/{id} { allow read, create: if member(); allow update, delete: if editor(); }
+    // 回ごとのまとめの金額（中防不燃など）：西崎さんだけ（2026/10/31）
+    match /matomeMoney/{id} { allow read, write: if boss(); }
     // 履歴は足すだけ（直したり消したりはできない）
     match /logs/{id} { allow read, create: if member(); allow update, delete: if false; }
   }
