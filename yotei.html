@@ -725,7 +725,9 @@ function sitePicker(site0,kako0){
 }
 function openEdit(ev,copy,preset){
   const isNew=!ev||copy;
-  const e=ev||{date:sel,end:"",people:preset||(person!=="すべて"?[person]:[]),site:"",memo:""};
+  // 西崎さんが入れるとき、自分の名前は最初から入れない（気づかずに社員に見える予定になるので。だれもえらばなければ自分だけのメモ 2026/11/01 ユーザー）
+  const pre=(preset||(person!=="すべて"?[person]:[])).filter(n=>!(isBoss()&&n==="西崎剣"));
+  const e=ev||{date:sel,end:"",people:pre,site:"",memo:""};
   const picked=new Set(e.people||[]);
   const dIn=h("input",{class:"inp",type:"date",value:copy?addDays(e.date,1):e.date,required:true});
   const eIn=h("input",{class:"inp",type:"date",value:copy?"":(e.end&&e.end!==e.date?e.end:"")});
