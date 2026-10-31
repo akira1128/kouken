@@ -511,6 +511,8 @@ const needWho=then=>{if(me())then();else pickWho(then);};
 
 /* ---------- 画面の切りかえ ---------- */
 function show(v){
+  // ほかの画面（現場・注文の記録・集計）から現場一覧に戻ったら、ウレタン予定は閉じる
+  if(v!==view){uretOpen=false;uretDay="";uretYM=null;}
   view=v;
   for(const id of ["vSites","vSite","vOrders","vSum"])$(id).hidden=id!==v;
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===(v==="vSite"?"vSites":v)?"page":"false"));
@@ -527,7 +529,7 @@ const siteName=id=>{const s=sites.find(x=>x.id===id);return s?s.name:"";};
 /* ---------- 現場の一覧（施工中・これから・そのほか） ---------- */
 /* ---------- ウレタンカレンダー（現場一覧のいちばん上。2026/10/31 ユーザー）
    日にちは元請けの工程表PDFから読んで、現場の urethane:[{label:"A棟1F・B棟3F",from:"2026-11-09",to:"2026-11-10"}] に入れる ---------- */
-let uretYM=null, uretDay="", uretOpen=store("kouken-uret-open")==="1";  // 開いているか（携帯に覚える）
+let uretYM=null, uretDay="", uretOpen=false;  // 開いているか。いつも閉じた状態から始める（覚えない 2026/10/31 ユーザー）
 function uretItems(){
   const out=[];
   for(const x of sites)for(const u of (x.urethane||[])){
@@ -560,7 +562,7 @@ function uretCal(){
   const nx=all.filter(e=>e.day>=today).sort((a,b)=>a.day<b.day?-1:1)[0];
   // 見出しを押すと開く・閉じる（高さを滑らかに変える 2026/10/31 ユーザー）
   const sec=h("section",{class:"panel ucal"+(uretOpen?" open":""),style:{marginBottom:"14px"}});
-  const tog=h("button",{type:"button",class:"uc-tog","aria-expanded":String(uretOpen),onclick:()=>{uretOpen=!uretOpen;store("kouken-uret-open",uretOpen?"1":"0");sec.classList.toggle("open",uretOpen);tog.setAttribute("aria-expanded",String(uretOpen));}},
+  const tog=h("button",{type:"button",class:"uc-tog","aria-expanded":String(uretOpen),onclick:()=>{uretOpen=!uretOpen;sec.classList.toggle("open",uretOpen);tog.setAttribute("aria-expanded",String(uretOpen));}},
     h("b",{text:"ウレタン予定"}),h("span",{class:"uc-next",text:nx?"次 "+md2(nx.day)+"　"+nx.short+" "+nx.label:"予定なし"}),h("span",{class:"uc-chev","aria-hidden":"true",text:"⌄"}));
   sec.append(tog,h("div",{class:"uc-body"},h("div",{class:"uc-in"},
     h("div",{class:"uc-head"},h("button",{type:"button",class:"uc-nav","aria-label":"前の月",onclick:()=>move(-1)},"‹"),
