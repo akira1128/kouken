@@ -82,6 +82,9 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0;scrollbar-width:none}
 .chips button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:14px}
 .chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chips button.pbtn{font-weight:700}
+.chips button.pbtn[aria-pressed="true"]{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink)}
+.chips button.pbtn.dim{opacity:.4}
 /* 月：LINE WORKS の作り */
 .cal.lw{display:block;padding:0 0 6px}
 .lwhd{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;font-size:12.5px;color:var(--ink);padding:6px 0 2px}
@@ -371,7 +374,9 @@ const weekly=()=>view==="week"||view==="member";
 /* ---------- 人でしぼる ---------- */
 function renderPeople(){
   $("people").replaceChildren(...[["すべて","すべて"],...PEOPLE].map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===person),
-    style:n!=="すべて"&&n!==person?{borderColor:lwBg(n),color:lwTxt(n)}:n===person&&n!=="すべて"?{background:lwBg(n),borderColor:lwBg(n),color:lwFg(n)}:null,
+    // 名前のボタンは、カレンダーの帯と同じ色でぬる。えらんだ人は太い枠、ほかの人はうすく（2026/10/31 ユーザー「色の統一」）
+    class:n==="すべて"?null:"pbtn"+(person!=="すべて"&&n!==person?" dim":""),
+    style:n!=="すべて"?{background:lwBg(n),borderColor:lwBg(n),color:lwFg(n)}:null,
     onclick:()=>{person=n;store("kouken-yotei-person",n);renderPeople();renderAll();}},k)));
 }
 const shown=()=>person==="すべて"?events:events.filter(e=>(e.people||[]).includes(person));
