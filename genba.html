@@ -63,7 +63,18 @@ a.brandrow:active .back{background:rgba(255,255,255,.3)}
 .banner{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:var(--out-soft);font-size:14px}
 main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* ウレタンカレンダー（紫＝LINE WORKS のウレタンと同じ色の考え方） */
-.ucal{padding:10px 10px 6px}
+.ucal{padding:0;overflow:hidden}
+.uc-tog{font:inherit;width:100%;display:flex;align-items:center;gap:10px;border:0;background:var(--nx-soft);color:var(--ink);padding:12px 14px;text-align:left;cursor:pointer}
+.uc-tog b{color:var(--nx);font-size:15px;flex:none}
+.uc-next{font-size:13px;color:var(--muted);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uc-chev{flex:none;font-size:20px;line-height:1;color:var(--nx);transition:transform .35s ease;transform:translateY(-3px)}
+.ucal.open .uc-chev{transform:rotate(180deg) translateY(-3px)}
+/* 開け閉め：高さ 0→中身 を滑らかに */
+.uc-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .38s ease}
+.ucal.open .uc-body{grid-template-rows:1fr}
+.uc-in{min-height:0;overflow:hidden;padding:0 10px;opacity:0;transition:opacity .3s ease,padding .38s ease}
+.ucal.open .uc-in{opacity:1;padding:10px 10px 6px}
+@media (prefers-reduced-motion:reduce){.uc-body,.uc-in,.uc-chev{transition:none}}
 .uc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
 .uc-head h3{margin:0;font-size:15px;color:var(--nx)}
 .uc-nav{font:inherit;font-size:22px;line-height:1;width:40px;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
@@ -497,7 +508,7 @@ const siteName=id=>{const s=sites.find(x=>x.id===id);return s?s.name:"";};
 /* ---------- 現場の一覧（施工中・これから・そのほか） ---------- */
 /* ---------- ウレタンカレンダー（現場一覧のいちばん上。2026/10/31 ユーザー）
    日にちは元請けの工程表PDFから読んで、現場の urethane:[{label:"A棟1F・B棟3F",from:"2026-11-09",to:"2026-11-10"}] に入れる ---------- */
-let uretYM=null, uretDay="";
+let uretYM=null, uretDay="", uretOpen=store("kouken-uret-open")==="1";  // 開いているか（携帯に覚える）
 function uretItems(){
   const out=[];
   for(const x of sites)for(const u of (x.urethane||[])){
@@ -506,6 +517,7 @@ function uretItems(){
   }
   return out;
 }
+const md2=s=>{const [,mm,dd]=s.split("-");return +mm+"/"+ +dd;};
 function uretCal(){
   const all=uretItems();
   if(!all.length)return h("div");
@@ -526,16 +538,22 @@ function uretCal(){
   const mk=y+"-"+p2(m+1);
   const list=uretDay?(byDay[uretDay]||[]):all.filter(e=>e.day.startsWith(mk));
   const grp={};list.forEach(e=>{const k=e.site.id+"|"+e.label;(grp[k]=grp[k]||{e,days:[]}).days.push(e.day);});
-  const md2=s=>{const [,mm,dd]=s.split("-");return +mm+"/"+ +dd;};
-  return h("section",{class:"panel ucal",style:{marginBottom:"14px"}},
+  // 閉じているときに見出しに出す「次のウレタン」
+  const nx=all.filter(e=>e.day>=today).sort((a,b)=>a.day<b.day?-1:1)[0];
+  // 見出しを押すと開く・閉じる（高さを滑らかに変える 2026/10/31 ユーザー）
+  const sec=h("section",{class:"panel ucal"+(uretOpen?" open":""),style:{marginBottom:"14px"}});
+  const tog=h("button",{type:"button",class:"uc-tog","aria-expanded":String(uretOpen),onclick:()=>{uretOpen=!uretOpen;store("kouken-uret-open",uretOpen?"1":"0");sec.classList.toggle("open",uretOpen);tog.setAttribute("aria-expanded",String(uretOpen));}},
+    h("b",{text:"ウレタン予定"}),h("span",{class:"uc-next",text:nx?"次 "+md2(nx.day)+"　"+nx.short+" "+nx.label:"予定なし"}),h("span",{class:"uc-chev","aria-hidden":"true",text:"⌄"}));
+  sec.append(tog,h("div",{class:"uc-body"},h("div",{class:"uc-in"},
     h("div",{class:"uc-head"},h("button",{type:"button",class:"uc-nav","aria-label":"前の月",onclick:()=>move(-1)},"‹"),
-      h("h3",{text:"ウレタン予定　"+y+"年"+(m+1)+"月"}),h("button",{type:"button",class:"uc-nav","aria-label":"次の月",onclick:()=>move(1)},"›")),
+      h("h3",{text:y+"年"+(m+1)+"月"}),h("button",{type:"button",class:"uc-nav","aria-label":"次の月",onclick:()=>move(1)},"›")),
     h("div",{class:"uc-wk"},..."日月火水木金土".split("").map((w,i)=>h("span",{class:i===0?"sun":i===6?"sat":"",text:w}))),
     h("div",{class:"uc-grid"},...cells),
     h("div",{class:"uc-list"},
       Object.values(grp).length?Object.values(grp).map(({e,days})=>h("button",{type:"button",class:"uc-row",onclick:()=>openSite(e.site.id)},
         h("b",{text:days.length>1?md2(days[0])+"〜"+md2(days[days.length-1]):md2(days[0])}),h("span",{text:shortSite(e.site.name)+"　"+e.label}))):
-        h("p",{class:"empty",text:uretDay?"この日のウレタンはありません":"この月のウレタンはありません"})));
+        h("p",{class:"empty",text:uretDay?"この日のウレタンはありません":"この月のウレタンはありません"})))));
+  return sec;
 }
 function renderSites(){
   const box=$("vSites");
