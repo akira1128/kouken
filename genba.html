@@ -353,8 +353,8 @@ label.fl em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
 </div>
 <nav class="tabs" aria-label="画面の切りかえ">
   <button type="button" data-v="vSites" aria-current="page"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-4 7 4v13"/><path d="M9 21v-6h6v6"/></svg>現場</button>
-  <button type="button" data-v="vOrders"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>注文の記録</button>
-  <button type="button" data-v="vSum"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>集計</button>
+  <button type="button" data-v="vOrders"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>注文の履歴</button>
+  <button type="button" data-v="vSum"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>材料の履歴</button>
 </nav>
 <div class="scrim" id="scrim" hidden></div>
 <div class="toast" id="toast" role="status" hidden></div>
@@ -1265,7 +1265,7 @@ function renderNotice(){
   box.hidden=false;
   box.replaceChildren(h("h3",{text:"新しい材料の注文が"+nw.length+"件あります"}),
     ...nw.slice(0,5).map(o=>h("div",{class:"hint",text:md(o.date)+"　"+shortSite(o.siteName||siteName(o.siteId))+"　"+nick(o.who)+"（"+(o.lines||[]).length+"点）"})),
-    h("div",{class:"rowbtns"},h("button",{type:"button",class:"btn ghost small",onclick:()=>show("vOrders")},"注文の記録を見る"),
+    h("div",{class:"rowbtns"},h("button",{type:"button",class:"btn ghost small",onclick:()=>show("vOrders")},"注文の履歴を見る"),
       h("button",{type:"button",class:"btn ghost small",onclick:()=>{store("kouken-ord-seen",String(Date.now()));renderNotice();}},"確認した")));
 }
 
