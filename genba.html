@@ -68,8 +68,10 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .usrc h4{margin:0 0 2px;font-size:14px;color:var(--nx)}
 .usrc-row{display:flex;gap:10px;font-size:13.5px}
 .usrc-row span{color:var(--muted)}
-.kbox{padding:12px 14px;display:grid;gap:8px}
-.kbox .kh{margin:0;font-size:15px;color:var(--nx)}
+.kbox{display:grid;gap:8px}
+.kbox h2{margin:0}
+.kup{border-top:1px solid var(--line);margin-top:8px;padding:10px 2px 6px;display:grid;gap:8px}
+.kup>.btn{justify-self:start;width:auto}
 .kbox h4,.klist h4{margin:0;font-size:14px;color:var(--nx)}
 .kwarn{margin:0;font-weight:700;color:var(--low);font-size:14px}
 .kbox .btn{justify-self:start;width:auto}
@@ -537,7 +539,6 @@ function uretItems(){
 const md2=s=>{const [,mm,dd]=s.split("-");return +mm+"/"+ +dd;};
 function uretCal(){
   const all=uretItems();
-  if(!all.length)return h("div");
   const now=new Date();
   if(!uretYM)uretYM={y:now.getFullYear(),m:now.getMonth()};
   const {y,m}=uretYM, first=new Date(y,m,1), days=new Date(y,m+1,0).getDate(), lead=first.getDay(), today=ymd(now);
@@ -570,7 +571,10 @@ function uretCal(){
       Object.values(grp).length?Object.values(grp).map(({e,days})=>h("button",{type:"button",class:"uc-row",onclick:()=>openSite(e.site.id)},
         h("b",{text:days.length>1?md2(days[0])+"〜"+md2(days[days.length-1]):md2(days[0])}),h("span",{text:shortSite(e.site.name)+"　"+e.label}))):
         h("p",{class:"empty",text:uretDay?"この日のウレタンはありません":"この月のウレタンはありません"})),
-    uretSrcs())));
+    uretSrcs(),
+    // 工程表のアップロード：ボタンを押すと送る画面が開く（社員全員 2026/10/31 ユーザー）
+    h("div",{class:"kup"},h("button",{type:"button",class:"btn",onclick:()=>{let cl;cl=openSheet(kouteiBox(()=>cl&&cl()));}},"工程表をアップロード"),
+      editor?kouteiList():null))));
   return sec;
 }
 // ウレタン予定に入っている現場と、もとの工程表の更新日（2026/10/31 ユーザー）
@@ -587,7 +591,7 @@ function watchKoutei(){
   if(unKoutei||!fs||!editor)return;
   unKoutei=onSnapshot(query(collection(fs,"koutei"),orderBy("at","desc"),limit(60)),s=>{kouteis=s.docs.map(d=>Object.assign({id:d.id},d.data()));if(view==="vSites")renderSites();},()=>{unKoutei=null;});
 }
-function kouteiBox(){
+function kouteiBox(done){
   const cand=sites.filter(x=>x.status==="施工中"||x.status==="これから");
   const last=store("kouken-koutei-site")||"";
   const sel=h("select",{class:"inp","aria-label":"どの現場の工程表か"},h("option",{value:""},"現場をえらぶ（必ず）"),cand.map(x=>h("option",{value:x.id,selected:x.id===last},shortSite(x.name))),h("option",{value:"_other",selected:last==="_other"},"一覧にない現場（名前を書く）"));
@@ -608,15 +612,14 @@ function kouteiBox(){
             const big=await shrinkPhoto(file,2400,.85), small=await shrinkPhoto(file,360,.6), at=Date.now();
             const ref=await addDoc(collection(fs,"koutei"),{siteId:x.id,siteName:x.name,who:me(),at,thumb:small,n:files.length>1?n+1:0,...(upd&&upd.value?{upd:upd.value}:{})});
             await setDoc(doc(fs,"kouteiFull",ref.id),{siteId:x.id,img:big});n++;}
-          msg.textContent="";msg.hidden=true;toast("工程表の写真を"+n+"枚送りました");}
+          msg.textContent="";msg.hidden=true;toast("工程表の写真を"+n+"枚送りました");if(done)done();}
         catch(e){msg.textContent="送れませんでした（"+n+"枚まで送れました）。電波を確認してください。";msg.hidden=false;}
         go.disabled=false;});
       document.body.append(f);f.click();});}},"写真をえらぶ・撮る");
-  // ウレタン予定の下に、いつも見える形で置く（社員全員が送れる 2026/10/31 ユーザー）
-  return h("section",{class:"panel kbox",style:{marginBottom:"14px"}},h("h3",{class:"kh",text:"工程表をアップロード"}),
+  return h("div",{class:"kbox"},h("h2",{text:"工程表をアップロード"}),
     h("p",{class:"kwarn",text:"一枚ずつ綺麗に撮影してください。"}),
     h("p",{class:"hint",text:"日付と階が読めるように、まっすぐ・明るい所で。紙が何枚もあるときは1枚ずつ撮ってください。"}),
-    sel,other,upd?h("label",{class:"fl"},"工程表の更新日（わかれば）",upd):null,go,msg,editor?kouteiList():null);
+    sel,other,upd?h("label",{class:"fl"},"工程表の更新日（わかれば）",upd):null,go,msg);
 }
 // 西崎さん・原田さんの携帯だけ：届いた工程表（押すと大きく開いて保存できる）
 function kouteiList(){
@@ -645,7 +648,7 @@ function renderSites(){
   const groups=[["施工中","",x=>x.status==="施工中","now"],["これから","",x=>x.status==="これから","next"],["予定","まだ決まっていない",x=>x.status==="予定","plan"],["見積もり","見積を出している",x=>x.status==="見積もり","est"],["そのほか","",x=>!(x.status in STATUS_ORDER),"other"]];
   // 外注が施工している現場は、まとまりのいちばん下に出す（2026/10/28 ユーザー）
   const outs=x=>!!(x.info&&x.info.outsource);
-  box.replaceChildren(uretCal(),kouteiBox(),...groups.filter(([,,f,k])=>k==="est"||sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>outs(a)-outs(b));
+  box.replaceChildren(uretCal(),...groups.filter(([,,f,k])=>k==="est"||sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>outs(a)-outs(b));
     return h("section",{class:"panel grp-"+k,style:{marginBottom:"14px"}},h("h3",{class:"grouph"},t+"　"+arr.length+"件",sub?h("small",{text:"（"+sub+"）"}):null),
       k==="est"&&!arr.length?h("p",{class:"empty",text:"見積もり中の現場はまだありません"}):null,
       // 見積もりの現場は西崎さんの指示でこちらから入れる（アプリに足すボタンは出さない 2026/10/30 ユーザー）
