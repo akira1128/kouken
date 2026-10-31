@@ -435,7 +435,7 @@ $("q").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing&&e.keyC
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scrim").hidden){$("scrim").hidden=true;$("scrim").replaceChildren();}});
 
 /* ---------- タブ ---------- */
-let view=store("kouken-view")||"vStock";
+let view="vStock";   // 開いたときはいつも「在庫」の一覧から（前の画面は覚えない 2026/11/01 ユーザー）
 function show(v){if(ORDER)v="vStock";else{view=v;store("kouken-view",v);}
   for(const id of ["vStock","vLog","vAdd"])$(id).hidden=id!==v;
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===v?"page":"false"));
