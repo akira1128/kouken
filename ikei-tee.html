@@ -148,7 +148,7 @@ td b{font-size:19px}
     </div>
     <div class="panel dev">
       <svg id="hole" viewBox="0 0 340 240"></svg>
-      <p class="cap">本管の上に十字の線を引き、真ん中から 横（本管の向き）と 周り（本管に沿って）を測る。数字は線の番号</p>
+      <p class="cap">本管の上に十字の線を引き、真ん中から 横（本管の向き）と 周り（本管に沿って）を測る。小さい数字は線の番号。表の「−」は十字の反対側</p>
     </div>
     <table class="panel">
       <thead><tr><th>線</th><th>横（mm）</th><th>周り（mm）</th></tr></thead>
@@ -244,32 +244,31 @@ function calc(){
 }
 /* 展開図：横が枝管の円周、縦の線が8等分の線。線の上に寸法、下に線の番号 */
 function drawDev(circ,vals,R,r,al,tmax){
-  const W=340, x0=14, x1=W-14, base=40, sx=(x1-x0)/circ;
+  const W=340, x0=14, x1=W-14, sx=(x1-x0)/circ;
   const vmax=Math.max(...vals,0.0001);
   let sy=sx, big=false;
   if(vmax*sy<70){sy=70/vmax;big=true;}          // 浅いときは高さだけ見やすく大きくする
   if(vmax*sy>130)sy=130/vmax;
-  const H=base+vmax*sy+44;
-  const X=i=>x0+(x1-x0)*i/N, Y=v=>base+v*sy;
+  const base=30+vmax*sy, H=base+30;              // base＝下の線（寸法0）
+  const X=i=>x0+(x1-x0)*i/N, Y=v=>base-v*sy;
   const tt=th=>(Math.sqrt(Math.max(0,R*R-r*r*Math.sin(th)**2))+r*Math.cos(th)*Math.cos(al))/Math.sin(al);
   let path="";for(let k=0;k<=160;k++){const th=2*Math.PI*k/160;path+=(k?"L":"M")+(x0+(x1-x0)*k/160).toFixed(1)+" "+Y(tmax-tt(th)).toFixed(1);}
-  let s=`<rect x="${x0}" y="${base}" width="${x1-x0}" height="${(H-44-base+8).toFixed(1)}" fill="var(--accent-soft)" opacity=".35"/>`+
-    `<path d="M${x0} ${base} H${x1}" stroke="var(--muted)" stroke-width="1.5"/>`+
-    `<text x="${x1}" y="${base-26}" text-anchor="end" font-size="11" fill="var(--muted)">↓ 0の線から下へ測る</text>`;
+  let s=`<path d="${path}L${x1} ${base}L${x0} ${base}Z" fill="var(--accent-soft)" opacity=".5"/>`+
+    `<path d="M${x0} ${base} H${x1}" stroke="var(--ink)" stroke-width="1.5"/>`;
   vals.forEach((v,i)=>{
     const x=X(i).toFixed(1);
     s+=`<path d="M${x} ${base} V${Y(v).toFixed(1)}" stroke="var(--accent)" stroke-width="${v>0?2:1}"/>`+
-       `<text x="${x}" y="${base-8}" text-anchor="middle" font-size="${i%N?13:12}" font-weight="700" fill="var(--ink)">${fmt(v)}</text>`+
-       `<text x="${x}" y="${(H-14).toFixed(1)}" text-anchor="middle" font-size="12" fill="var(--muted)">${i}</text>`;
+       `<text x="${x}" y="${(Y(v)-7).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">${fmt(v)}</text>`+
+       `<text x="${x}" y="${(base+18).toFixed(1)}" text-anchor="middle" font-size="12" fill="var(--muted)">${i}</text>`;
   });
   s+=`<path d="${path}" fill="none" stroke="var(--cut)" stroke-width="2.5"/>`;
   $("dev").setAttribute("viewBox",`0 0 ${W} ${H.toFixed(0)}`);$("dev").innerHTML=s;
-  $("cap").textContent="横：枝管の円周（"+fmt(circ)+"mm）を8等分　赤い線が切り口"+(big?"（高さは見やすく拡大）":"");
+  $("cap").textContent="横：枝管の円周（"+fmt(circ)+"mm）を8等分。下の線から測る。赤い線が切り口"+(big?"（高さは見やすく拡大）":"");
 }
 /* メスの絵：横が本管の向き、縦が本管のまわり。十字の真ん中から各点までの寸法を入れる */
 function drawHole(pts,R,r,al,cxm,t){
   const W=340, mx=Math.max(...pts.map(p=>Math.abs(p.x)),1), my=Math.max(...pts.map(p=>Math.abs(p.s)),1);
-  const sc=Math.min(120/mx,80/my), cx=W/2, cy=110, H=220;
+  const sc=Math.min(140/mx,82/my), cx=W/2, cy=100, H=240;
   const X=x=>cx+x*sc, Y=v=>cy-v*sc;
   let path="";for(let k=0;k<=160;k++){const th=2*Math.PI*k/160;const x=t(th)*Math.cos(al)+r*Math.cos(th)*Math.sin(al)-cxm, v=R*Math.asin(Math.min(1,r*Math.sin(th)/R));path+=(k?"L":"M")+X(x).toFixed(1)+" "+Y(v).toFixed(1);}
   let s=`<path d="M14 ${cy} H${W-14}" stroke="var(--muted)" stroke-dasharray="6 5"/><path d="M${cx} ${cy-100} V${cy+100}" stroke="var(--muted)" stroke-dasharray="6 5"/>`+
@@ -281,7 +280,8 @@ function drawHole(pts,R,r,al,cxm,t){
     if(p.s!==0)s+=`<path d="M${x.toFixed(1)} ${cy} V${y.toFixed(1)}" stroke="var(--accent)" stroke-width="1.5"/>`+
       `<text x="${(x+(p.x>=0?6:-6)).toFixed(1)}" y="${((y+cy)/2+4).toFixed(1)}" text-anchor="${p.x>=0?"start":"end"}" font-size="12.5" font-weight="700" fill="var(--accent)">${fmt(Math.abs(p.s))}</text>`;
     // 横の寸法は十字の線の下に（同じ所は1回だけ）
-    const key=fmt(p.x);if(!seen.has(key)&&p.x!==0){seen.add(key);s+=`<path d="M${x.toFixed(1)} ${cy+100} V${cy+92}" stroke="var(--ink)"/><text x="${x.toFixed(1)}" y="${cy+114}" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">${fmt(Math.abs(p.x))}</text>`;}
+    const key=fmt(p.x);if(!seen.has(key)&&p.x!==0){seen.add(key);const row=Math.abs(p.x)>=mx-1e-6?0:1;
+      s+=`<path d="M${x.toFixed(1)} ${cy+92} V${cy+(row?120:102)}" stroke="var(--ink)" stroke-dasharray="2 2"/><text x="${x.toFixed(1)}" y="${cy+(row?134:116)}" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">${fmt(Math.abs(p.x))}</text>`;}
     s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--cut)"/>`+
       `<text x="${(x+(p.x>0?9:p.x<0?-9:0)).toFixed(1)}" y="${(y+(p.s>0?-8:p.s<0?16:-8)).toFixed(1)}" text-anchor="${p.x>0?"start":p.x<0?"end":"middle"}" font-size="12" fill="var(--muted)">${p.i}</text>`;
   });
