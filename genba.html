@@ -97,6 +97,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .uc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
 .uc-head h3{margin:0;font-size:15px;color:var(--nx)}
 .uc-nav{font:inherit;font-size:22px;line-height:1;width:40px;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+.uc-pane{touch-action:pan-y;will-change:transform}
 .uc-wk,.uc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
 .uc-wk span{text-align:center;font-size:11.5px;font-weight:700;color:var(--muted)}
 .uc-wk .sun,.uc-cell.sun .uc-d{color:var(--low)} .uc-wk .sat,.uc-cell.sat .uc-d{color:#1d5fbf}
@@ -530,6 +531,30 @@ const siteName=id=>{const s=sites.find(x=>x.id===id);return s?s.name:"";};
 /* ---------- 現場の一覧（施工中・これから・そのほか） ---------- */
 /* ---------- ウレタンカレンダー（現場一覧のいちばん上。2026/10/31 ユーザー）
    日にちは元請けの工程表PDFから読んで、現場の urethane:[{label:"A棟1F・B棟3F",from:"2026-11-09",to:"2026-11-10"}] に入れる ---------- */
+let uretSlide=0;
+/* 表を指で横にめくる。指について動き、はなすと次（前）の月へすべって切りかわる。少しだけなら元にもどる */
+function uretPane(wk,grid,move){
+  const pane=h("div",{class:"uc-pane"},wk,grid);
+  let sx=null,sy=0,dx=0,axis="";
+  const EZ="cubic-bezier(.22,.8,.24,1)";
+  pane.addEventListener("touchstart",e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0;axis="";},{passive:true});
+  pane.addEventListener("touchmove",e=>{if(sx==null)return;
+    const x=e.touches[0].clientX-sx,y=e.touches[0].clientY-sy;
+    if(!axis){if(Math.abs(x)<8&&Math.abs(y)<8)return;axis=Math.abs(x)>Math.abs(y)?"x":"y";}
+    if(axis!=="x")return;
+    dx=x;pane.style.transform="translateX("+dx+"px)";pane.style.opacity=String(1-Math.min(.5,Math.abs(dx)/600));},{passive:true});
+  const end=()=>{if(sx==null)return;sx=null;
+    if(axis!=="x"){return;}
+    const w=pane.getBoundingClientRect().width;
+    if(Math.abs(dx)>Math.min(70,w*.2)){const k=dx<0?1:-1;
+      pane.animate([{transform:"translateX("+dx+"px)",opacity:pane.style.opacity},{transform:"translateX("+(-k*w)+"px)",opacity:0}],{duration:180,easing:"ease-in",fill:"forwards"}).finished.then(()=>move(k)).catch(()=>move(k));}
+    else{pane.animate([{transform:"translateX("+dx+"px)"},{transform:"translateX(0)"}],{duration:220,easing:EZ});pane.style.transform="";pane.style.opacity="";}};
+  pane.addEventListener("touchend",end);pane.addEventListener("touchcancel",end);
+  // 新しい月の表が出たら、横からすべりこませる
+  if(uretSlide){const k=uretSlide;uretSlide=0;
+    requestAnimationFrame(()=>{if(!matchMedia("(prefers-reduced-motion: reduce)").matches)pane.animate([{transform:"translateX("+(k*55)+"%)",opacity:0},{transform:"translateX(0)",opacity:1}],{duration:300,easing:EZ});});}
+  return pane;
+}
 let uretYM=null, uretDay="", uretOpen=false;  // 開いているか。いつも閉じた状態から始める（覚えない 2026/10/31 ユーザー）
 function uretItems(){
   const out=[];
@@ -546,7 +571,8 @@ function uretCal(){
   if(!uretYM)uretYM={y:now.getFullYear(),m:now.getMonth()};
   const {y,m}=uretYM, first=new Date(y,m,1), days=new Date(y,m+1,0).getDate(), lead=first.getDay(), today=ymd(now);
   const byDay={};all.forEach(e=>{(byDay[e.day]=byDay[e.day]||[]).push(e);});
-  const move=k=>{const d=new Date(y,m+k,1);uretYM={y:d.getFullYear(),m:d.getMonth()};uretDay="";renderSites();};
+  // 月を変えたら、新しい月の表を横からすべりこませる（ボタンでも指でめくっても 2026/10/31 ユーザー）
+  const move=k=>{const d=new Date(y,m+k,1);uretYM={y:d.getFullYear(),m:d.getMonth()};uretDay="";uretSlide=k;renderSites();};
   const cells=[];
   for(let i=0;i<lead;i++)cells.push(h("div",{class:"uc-cell empty"}));
   for(let d=1;d<=days;d++){
@@ -568,8 +594,8 @@ function uretCal(){
   sec.append(tog,h("div",{class:"uc-body"},h("div",{class:"uc-in"},
     h("div",{class:"uc-head"},h("button",{type:"button",class:"uc-nav","aria-label":"前の月",onclick:()=>move(-1)},"‹"),
       h("h3",{text:y+"年"+(m+1)+"月"}),h("button",{type:"button",class:"uc-nav","aria-label":"次の月",onclick:()=>move(1)},"›")),
-    h("div",{class:"uc-wk"},..."日月火水木金土".split("").map((w,i)=>h("span",{class:i===0?"sun":i===6?"sat":"",text:w}))),
-    h("div",{class:"uc-grid"},...cells),
+    uretPane(h("div",{class:"uc-wk"},..."日月火水木金土".split("").map((w,i)=>h("span",{class:i===0?"sun":i===6?"sat":"",text:w}))),
+      h("div",{class:"uc-grid"},...cells),move),
     h("div",{class:"uc-list"},
       Object.values(grp).length?Object.values(grp).map(({e,days})=>h("button",{type:"button",class:"uc-row",onclick:()=>openSite(e.site.id)},
         h("b",{text:days.length>1?md2(days[0])+"〜"+md2(days[days.length-1]):md2(days[0])}),h("span",{text:shortSite(e.site.name)+"　"+e.label}))):
