@@ -598,8 +598,6 @@ function kouteiBox(done){
   // 一覧にない現場は名前を手で書く
   const other=h("input",{class:"inp",maxlength:"60",placeholder:"現場名（例：○○マンション）",hidden:last!=="_other"});
   sel.addEventListener("change",()=>{other.hidden=sel.value!=="_other";});
-  // 西崎さん・原田さんが送るときは、工程表の更新日も入れる（2026/10/31 ユーザー）
-  const upd=editor?h("input",{class:"inp",type:"date","aria-label":"工程表の更新日"}):null;
   const msg=h("p",{class:"hint",hidden:true});
   const go=h("button",{type:"button",class:"btn",onclick:()=>{
     if(!sel.value||(sel.value==="_other"&&!other.value.trim())){msg.textContent="先に現場名をえらぶか、書いてください。";msg.hidden=false;return;}
@@ -610,7 +608,7 @@ function kouteiBox(done){
         const x=sel.value==="_other"?{id:"",name:other.value.trim()}:sites.find(y=>y.id===sel.value);go.disabled=true;let n=0;
         try{for(const file of files){msg.textContent="送っています… "+(n+1)+"/"+files.length+"枚";msg.hidden=false;
             const big=await shrinkPhoto(file,2400,.85), small=await shrinkPhoto(file,360,.6), at=Date.now();
-            const ref=await addDoc(collection(fs,"koutei"),{siteId:x.id,siteName:x.name,who:me(),at,thumb:small,n:files.length>1?n+1:0,...(upd&&upd.value?{upd:upd.value}:{})});
+            const ref=await addDoc(collection(fs,"koutei"),{siteId:x.id,siteName:x.name,who:me(),at,thumb:small,n:files.length>1?n+1:0});
             await setDoc(doc(fs,"kouteiFull",ref.id),{siteId:x.id,img:big});n++;}
           msg.textContent="";msg.hidden=true;toast("工程表の写真を"+n+"枚送りました");if(done)done();}
         catch(e){msg.textContent="送れませんでした（"+n+"枚まで送れました）。電波を確認してください。";msg.hidden=false;}
@@ -619,7 +617,7 @@ function kouteiBox(done){
   return h("div",{class:"kbox"},h("h2",{text:"工程表をアップロード"}),
     h("p",{class:"kwarn",text:"一枚ずつ綺麗に撮影してください。"}),
     h("p",{class:"hint",text:"日付と階が読めるように、まっすぐ・明るい所で。紙が何枚もあるときは1枚ずつ撮ってください。"}),
-    sel,other,upd?h("label",{class:"fl"},"工程表の更新日（わかれば）",upd):null,go,msg);
+    sel,other,go,msg);
 }
 // 届いた工程表：社員全員が見られる（押すと大きく開いて保存できる）。「保存した」「消す」は西崎さん・原田さんだけ（2026/10/31 ユーザー）
 function kouteiList(){
@@ -627,11 +625,13 @@ function kouteiList(){
   const nw=kouteis.filter(k=>!k.saved), old=kouteis.filter(k=>k.saved).slice(0,6);
   const row=k=>h("div",{class:"krow"+(k.saved?" saved":"")},
     h("button",{type:"button",class:"kth",onclick:()=>openKoutei(k),"aria-label":"大きく見る"},h("img",{src:k.thumb,alt:""})),
-    h("div",{class:"kmeta"},h("b",{text:shortSite(k.siteName||siteName(k.siteId))+(k.n?"（"+k.n+"枚目）":"")+(k.upd?"　"+md2(k.upd)+"更新":"")}),
-      h("span",{text:(new Date(k.at).getMonth()+1)+"/"+new Date(k.at).getDate()+" "+hm(k.at)+"　"+nick(k.who)+(k.saved?"　保存済み":"")})));
+    h("div",{class:"kmeta"},h("b",{text:shortSite(k.siteName||siteName(k.siteId))+(k.n?"（"+k.n+"枚目）":"")}),
+      // アップロードした日にちと時間（2026/10/31 ユーザー）
+      h("span",{text:"アップロード "+upAt(k.at)+"　"+nick(k.who)+(k.saved?"　保存済み":"")})));
   return h("div",{class:"klist"},h("h4",{text:"届いた工程表"+(nw.length?"（新しい "+nw.length+"枚）":"")}),
     nw.length?nw.map(row):h("p",{class:"empty",text:"新しく届いた工程表はありません"}),...old.map(row));
 }
+const upAt=t=>{const d=new Date(t);return d.getFullYear()+"/"+(d.getMonth()+1)+"/"+d.getDate()+" "+hm(t);};
 function openKoutei(k){
   const big=h("img",{class:"kbig",src:k.thumb,alt:"工程表"});
   const dl=h("a",{class:"btn",download:"工程表_"+(k.siteName||"").replace(/[（）()\s]/g,"")+"_"+new Date(k.at).toISOString().slice(0,10).replace(/-/g,"")+(k.n?"_"+k.n:"")+".jpg",href:k.thumb},"写真を保存する");
@@ -640,7 +640,7 @@ function openKoutei(k){
   const done=h("button",{type:"button",class:"btn ghost",onclick:async()=>{try{await updateDoc(doc(fs,"koutei",k.id),k.saved?{saved:false}:{saved:true,savedAt:Date.now()});close();}catch(e){toast("変えられませんでした");}}},k.saved?"「保存済み」を外す":"保存した（一覧から外す）");
   const del=h("button",{type:"button",class:"btn ghost",onclick:async()=>{if(!confirm("この工程表の写真を消しますか？"))return;
     try{const b=writeBatch(fs);b.delete(doc(fs,"koutei",k.id));b.delete(doc(fs,"kouteiFull",k.id));await b.commit();close();toast("消しました");}catch(e){toast("消せませんでした");}}},"消す");
-  close=openSheet(h("h2",{text:shortSite(k.siteName||"")+" の工程表"}),h("p",{class:"hint",text:nick(k.who)+"さんが送った写真"+(editor?"。保存したら、Claude に「工程表を読んで」と言ってください。":"")}),big,dl,editor?done:null,editor?del:null);
+  close=openSheet(h("h2",{text:shortSite(k.siteName||"")+" の工程表"}),h("p",{class:"hint",text:"アップロード "+upAt(k.at)+"　"+nick(k.who)+"さんが送った写真"+(editor?"。保存したら、Claude に「工程表を読んで」と言ってください。":"")}),big,dl,editor?done:null,editor?del:null);
 }
 function renderSites(){
   const box=$("vSites");
