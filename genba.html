@@ -1142,8 +1142,9 @@ function renderSite(){
       h("p",{class:"hint",id:"photoHint",style:{marginBottom:"8px"},text:"材料置き場・搬入口など、次に行く人が助かる写真を入れておけます。状況が変わったら、だれでも取り替え・消しができます。"}),
       (()=>{const g=h("div",{class:"phgrid",id:"photoGrid"});fillPhotos(g,x);return g;})(),
       h("button",{type:"button",class:"btn ghost",onclick:()=>openPhoto(x,null)},"＋ 写真を入れる")),
-    (x.matome||[]).length?matomeBox(x):null,
-    x.ami?amiBox(x):null,
+    // ないときは何も出さない（null を並べると「null」と字が出るので、配列で足す）
+    ...((x.matome||[]).length?[matomeBox(x)]:[]),
+    ...(x.ami?[amiBox(x)]:[]),
     ...(x.tables||[]).map(tableBox),
     (()=>{const vb=h("section",{class:"panel",id:"visitBox"});fillVisits(vb,x);return vb;})(),
     h("section",{class:"panel"},h("div",{class:"sec"},h("h3",{text:"この現場の注文履歴（新しい順）"})),
