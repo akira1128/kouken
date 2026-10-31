@@ -748,7 +748,9 @@ function openEdit(ev,copy,preset){
     const people=ASSIGN.map(s=>s[0]).filter(n=>picked.has(n));
     if(!people.length&&!isBoss())return fail("「だれが」をえらんでください。");
     if(sp.check())return fail(sp.check());
-    const col=people.length?"events":"memos", was=isNew?"":(e.col||"events");
+    // 西崎さんだけの予定（だれもえらばない・西崎だけ）は自分だけのメモにする。社員には見えない（2026/11/01 ユーザー）
+    const onlyMe=isBoss()&&people.length===1&&people[0]===BOSS;
+    const col=people.length&&!onlyMe?"events":"memos", was=isNew?"":(e.col||"events");
     const data={date,end,people,prevPeople:isNew?[]:(e.people||[]),site,kako:sp.kako(),memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
     save.disabled=true;err.hidden=true;
     try{
@@ -769,7 +771,7 @@ function openEdit(ev,copy,preset){
     !isNew&&e.col!=="memos"&&((e.people||[]).length>1||(e.end&&e.end!==e.date))?
       h("button",{class:"btn change",type:"button",onclick:()=>{close();openChange(e);}},"この日だけ・一部の人だけ 変える"):null,
     h("div",{class:"two"},h("label",{class:"fl"},"日にち",dIn),h("label",{class:"fl"},h("span",null,"終わりの日 ",h("em",{text:"何日か続くとき"})),eIn)),
-    h("div",{class:"fl"},h("span",null,"だれが ",h("em",{text:isBoss()?"だれもえらばないと、西崎さんだけが見られるメモになります":"何人でもえらべます"})),names),
+    h("div",{class:"fl"},h("span",null,"だれが ",h("em",{text:isBoss()?"だれもえらばないか西崎だけにすると、西崎さんだけが見られるメモになります":"何人でもえらべます"})),names),
     sp.el,
     h("label",{class:"fl"},h("span",null,"メモ ",h("em",{text:"なくてもよい"})),mIn),
     err,save,
