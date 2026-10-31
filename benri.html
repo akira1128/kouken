@@ -49,13 +49,16 @@ a.card:active{transform:scale(.98)}
 .card b{font-size:17px}
 .card span{font-size:12.5px;color:var(--muted);line-height:1.45}
 .note{font-size:12px;color:var(--muted);margin-top:18px}
+.lock{max-width:640px;margin:40px auto;padding:0 16px;display:grid;gap:10px;justify-items:center;text-align:center;color:var(--muted)}
+.lock b{font-size:18px;color:var(--ink)}
+.lock a{margin-top:6px;display:inline-block;padding:10px 20px;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:700;text-decoration:none}
 </style>
 </head>
 <body>
 <header class="topbar"><div class="topbar-in">
   <a class="brandrow" href="./" aria-label="メニューにもどる"><span class="back" aria-hidden="true"><b>‹</b><span class="backlbl">TOP</span></span><span class="mark"><img src="logo.png" alt=""></span><div class="brand">便利ツール<small>株式会社コウケン</small></div></a>
 </div></header>
-<main>
+<main id="main" hidden>
   <div class="grid">
     <a class="card" href="ikei-tee.html">
       <span class="ic"><svg viewBox="0 0 28 28"><rect x="3" y="15" width="22" height="8" rx="1.5"/><rect x="10" y="4" width="8" height="11"/><path d="M10 15q4 3 8 0"/></svg></span>
@@ -65,5 +68,6 @@ a.card:active{transform:scale(.98)}
   </div>
   <p class="note">ほかのツールはこれから増やします。</p>
 </main>
+<script type="module" src="boss-only.js"></script>
 </body>
 </html>
