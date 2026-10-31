@@ -131,6 +131,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .pushbox .btn{justify-self:start;width:auto}
 .ecrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
 .ecrow .btn{width:auto;text-decoration:none;display:inline-block}
+.eclist{margin:0 0 6px;padding-left:1.2em;font-size:14.5px}
 /* 現場の一覧 */
 .sitecard{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:13px 14px}
 .sitecard:first-of-type{border-top:0}
@@ -1139,11 +1140,30 @@ const ecSub=l=>{const m=(l.itemId||"").match(/^(?:jk|el)(\d)-/);return m?(["ガ�
 function ecBtn(o){
   const lines=(o.lines||[]).filter(l=>!l.make).map(l=>({n:l.name,q:Number(l.qty)||0,u:l.unit||"",k:ecKeys((l.name||"").trim(),ecSub(l))})).filter(l=>l.q>0);
   const miss=lines.filter(l=>!l.k.length).length;
-  const url="https://ec-tokyog.com/aec/user/cart#kouken="+encodeURIComponent(JSON.stringify({site:o.siteName||siteName(o.siteId),lines}));
-  return h("div",{class:"ecrow"},
-    h("a",{class:"btn small",href:url,target:"_blank",rel:"noopener",onclick:()=>{updateDoc(doc(fs,"orders",o.id),{ecAt:Date.now(),ecBy:editor}).catch(()=>{});}},"グラスロンに注文"),
-    h("a",{class:"hint",href:"glasslon.html",target:"_blank",text:"準備のしかた"}),
+  // 押すとサーバー（Firebase）が西崎さんのアカウントでグラスロンにログインして、現場のお届け先でカートに入れる（2026/10/31）
+  const go=h("button",{type:"button",class:"btn small",onclick:()=>ecSend(o,lines,go)},"グラスロンに注文");
+  return h("div",{class:"ecrow"},go,
     h("span",{class:"hint",text:(o.ecAt?"グラスロンに出した "+(new Date(o.ecAt).getMonth()+1)+"/"+new Date(o.ecAt).getDate()+" "+hm(o.ecAt):"")+(miss?(o.ecAt?"　":"")+"グラスロンにない材料 "+miss+"品":"")}));
+}
+const EC_URL="https://asia-northeast1-kouken-zaiko.cloudfunctions.net/ecCart";
+async function ecSend(o,lines,btn){
+  const x=sites.find(s=>s.id===o.siteId), dl=x&&x.ecDelivery||null;
+  if(o.ecAt&&!confirm("この注文は "+(new Date(o.ecAt).getMonth()+1)+"/"+new Date(o.ecAt).getDate()+" にグラスロンに出しています。もう一度カートに入れますか？"))return;
+  btn.disabled=true;const old=btn.textContent;btn.textContent="カートに入れています…";
+  try{
+    const tok=await getAuth(fbApp).currentUser.getIdToken();
+    const r=await fetch(EC_URL,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+tok},body:JSON.stringify({lines,delivery:dl})});
+    const j=await r.json().catch(()=>({error:"返事が読めませんでした"}));
+    if(!r.ok||j.error)throw new Error(j.error||("エラー "+r.status));
+    if(j.ok.length)updateDoc(doc(fs,"orders",o.id),{ecAt:Date.now(),ecBy:editor}).catch(()=>{});
+    openSheet(h("h2",{text:"グラスロンのカートに入れました"}),
+      h("p",{class:"hint",text:"お届け先："+(j.delivery||"―")+(dl?"":"（この現場のお届け先が決まっていないので会社あて。カートで変えてください）")}),
+      h("ul",{class:"eclist"},j.ok.map(l=>h("li",null,h("b",{text:l.ec}),"　"+l.q+l.u))),
+      j.ng.length?[h("p",{class:"err",text:"グラスロンで見つからなかった材料（自分で入れてください）"}),h("ul",{class:"eclist"},j.ng.map(l=>h("li",{text:l.n+"　"+l.q+l.u})))]:null,
+      (j.msgs||[]).length?h("p",{class:"err",text:j.msgs.join("　")}):null,
+      h("p",{class:"hint",text:"ホーム画面のグラスロンを開いて、お届け先「"+(j.delivery||"")+"」でログインし、カートを見て到着希望日などを入れて注文を確定してください。"}));
+  }catch(e){toast("カートに入れられませんでした："+(e&&e.message||e));}
+  btn.disabled=false;btn.textContent=old;
 }
 
 /* ---------- 注文の記録（日付ごと） ---------- */
