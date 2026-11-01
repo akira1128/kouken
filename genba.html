@@ -992,6 +992,8 @@ function siteKeys(x){
 function eventHits(e,k){
   const t=e.site===FACTORY?e.kako:e.site;if(!t)return false;
   if(k.full.includes(t))return true;
+  // 2025年の予定（LINE WORKS から取り込み）は現場名の付け方がちがう（2025年の「大阪」「両国」「大和」は別の現場）ので、名前が同じときだけ数える（2026/11/01）
+  if(e.date<"2026-01-01")return false;
   return tokens(t).some(w=>k.alias.some(a=>w.includes(a))||w.includes(k.core)||k.core.includes(w));
 }
 function siteVisits(x){
