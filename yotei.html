@@ -289,7 +289,7 @@ import {FIREBASE_CONFIG} from "./firebase-config.js";
 /* 社員：[正式名, 呼び名]。在庫（zaiko.html）と同じ。予定には正式名を残す（あとで人工の集計に使う） */
 const STAFF=[["西崎剣","西崎"],["原田弓子","原田"],["福島正純","福島"],["田中嗣音","嗣穏"],["NGUYEN VAN HIEU","ヒエウ"],["DANG BINH DUONG","ズオン"],["NGUYEN NGOC LONG","ロン"]];
 /* 外注さん（会社名で予定に入れる）。上の「人でしぼる」と「あなたはだれ」には出さない（2026/10/28 ユーザー） */
-const OUTS=[["竹内工業","竹内工業"],["高橋断熱","高橋断熱"]];
+const OUTS=[["竹内工業","竹内工業"],["高橋断熱","高橋断熱"],["小原興業","小原興業"],["コウケン板金","コウケン板金"]];   // 小原興業・コウケン板金は 2026/11/01 追加
 const NICK=Object.fromEntries([...STAFF,...OUTS]);
 /* 予定表に出す人。原田さんは予定に入れない（2026/10/28 ユーザー）。予定を入れる人としては残る */
 const PEOPLE=STAFF.filter(([n])=>n!=="原田弓子");
@@ -338,7 +338,7 @@ const SHORT={"中防不燃・粗大ごみ処理施設整備工事":"中防不燃
 const siteText=e=>e.site===FACTORY&&e.kako?"工場→"+shortSite(e.kako):(shortSite(e.site)||e.memo||"予定");
 const shortSite=s=>{const t=(s||"").replace(/[（(]仮称[）)]\s*/g,"").replace(/\s*新築工事$/,"").replace(/^株式会社|株式会社$/g,"").replace(/[（(][^（）()]*[）)]$/,"").trim();return SHORT[t]||t;};
 /* 人の色。LINE WORKSと同じく、カレンダーは人ごとに色を分ける。人のいない予定は灰色 */
-const PCOLOR={"西崎剣":"#0b5cab","原田弓子":"#be185d","福島正純":"#c2410c","田中嗣音":"#0e7490","NGUYEN VAN HIEU":"#15803d","DANG BINH DUONG":"#7c3aed","NGUYEN NGOC LONG":"#a16207","竹内工業":"#be123c","高橋断熱":"#4d7c0f"};
+const PCOLOR={"西崎剣":"#0b5cab","原田弓子":"#be185d","福島正純":"#c2410c","田中嗣音":"#0e7490","NGUYEN VAN HIEU":"#15803d","DANG BINH DUONG":"#7c3aed","NGUYEN NGOC LONG":"#a16207","竹内工業":"#be123c","高橋断熱":"#4d7c0f","小原興業":"#1f3b70","コウケン板金":"#7a8a1e"};
 const NOONE="#64748b";
 const pcolor=n=>PCOLOR[n]||NOONE;
 /* LINE WORKS の色合い（月の帯と同じ）を、ほかの表示でも使う（2026/10/31 ユーザー「他のも全て変更」） */
@@ -487,7 +487,7 @@ function calCells(){
    ふだんは1週に2段まで出して、あふれた分は日ごとに「＋数」。週を押すと広がって全部出る ---------- */
 /* 人の色：6人＋西崎がはっきり分かれる色。紫はウレタン予定で使うので人には使わない（西崎はこい灰色）（2026/10/31 ユーザー「ズオンと福島、ヒエウと嗣穏が被る」）。白い字が読める濃さ */
 const LWC={"西崎剣":["#3b4452","#fff"],"福島正純":["#f07f22","#fff"],"DANG BINH DUONG":["#d6337a","#fff"],"NGUYEN VAN HIEU":["#2b62d9","#fff"],
-  "田中嗣音":["#0ea5a5","#fff"],"NGUYEN NGOC LONG":["#3f9b3a","#fff"],"原田弓子":["#9a6a3a","#fff"],"竹内工業":["#c49a12","#fff"],"高橋断熱":["#a8322a","#fff"]};
+  "田中嗣音":["#0ea5a5","#fff"],"NGUYEN NGOC LONG":["#3f9b3a","#fff"],"原田弓子":["#9a6a3a","#fff"],"竹内工業":["#c49a12","#fff"],"高橋断熱":["#a8322a","#fff"],"小原興業":["#1f3b70","#fff"],"コウケン板金":["#7a8a1e","#fff"]};
 const LW_NONE=["#9aa3b2","#fff"];
 const lwc=n=>LWC[n]||LW_NONE;
 const LW_LANES=2;
