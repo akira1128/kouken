@@ -529,7 +529,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scrim").hidden&
 function renderWho(){$("whoName").textContent=editor?nick(editor):who?nick(who):"名前をえらぶ";}
 function pickWho(then){
   const close=openSheet(h("h2",{text:"あなたはだれですか？"}),h("p",{class:"hint",text:"書いたメモや頼んだ材料に、この名前が残ります。この携帯に覚えておきます。"}),
-    h("div",{class:"names"},STAFF.map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===who),onclick:()=>{who=n;store("kouken-who",n);renderWho();close();then&&then();}},k))));
+    h("div",{class:"names"},STAFF.filter(([n])=>n!=="西崎剣"||editor==="西崎剣").map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===who),onclick:()=>{who=n;store("kouken-who",n);renderWho();close();then&&then();}},k))));
 }
 $("whoBtn").addEventListener("click",()=>{if(!editor)pickWho();});
 const me=()=>editor||who;
@@ -1424,7 +1424,8 @@ function askPin(){
     const form=h("form",{class:"f",onsubmit:async e=>{e.preventDefault();
       const v=inp.value.trim();if(!v)return;
       go.disabled=true;err.hidden=true;
-      try{await setDoc(doc(fs,"members",uid),{pin:v,at:Date.now()});$("scrim").hidden=true;$("scrim").replaceChildren();resolve();}
+      try{await setDoc(doc(fs,"members",uid),{pin:v,at:Date.now()});try{await setDoc(doc(fs,"editors",uid),{pin:v,name:"西崎剣",via:"boss",at:Date.now()});}catch(x){}  // 西崎専用の番号なら、そのまま西崎（編集する人）にする（2026/11/01）
+      $("scrim").hidden=true;$("scrim").replaceChildren();resolve();}
       catch(x){err.textContent=x&&x.code==="permission-denied"?"番号がちがいます。":"確認できませんでした。電波を確認してください。";err.hidden=false;go.disabled=false;inp.select();}
     }},h("h2",{text:"会社の暗証番号"}),h("p",{class:"hint",text:"最初の1回だけ入れてください。この携帯に覚えておきます。"}),inp,err,go);
     openSheet(form);
@@ -1451,6 +1452,7 @@ if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みまし
     if(!m.exists())await askPin();
   }catch(e){fs=null;setBanner("つながりません。電波を確認して、ページを開き直してください。");return;}
   try{const ed=await getDoc(doc(fs,"editors",uid));if(ed.exists())editor=ed.data().name||"";}catch(e){}
+  if(who==="西崎剣"&&editor!=="西崎剣"){who="";store("kouken-who","");renderWho();}  // 西崎の携帯でなければ「西崎」はえらべない
   renderWho();renderPush();
   if(me()==="西崎剣")importEstSites().catch(()=>{});  // 見積もりの現場を1回だけ入れる（使う人が西崎でも）
   const facesP=loadFaces();

@@ -388,6 +388,7 @@ const cartKey="kouken-cart-"+ORDER;
 let cart=(()=>{try{return JSON.parse(sessionStorage.getItem(cartKey)||"{}")||{};}catch(e){return {};}})();   // { 材料のID: 数 }。「一覧にない材料」は x+番号
 const saveCart=()=>{try{sessionStorage.setItem(cartKey,JSON.stringify(cart));}catch(e){}renderCartBar();renderList();};
 let who=store("kouken-who")||"";
+let editor="";   // この携帯が「編集する人」なら名前（西崎の名前は西崎の携帯にだけ出す 2026/11/01）
 if(who&&!NICK[who])who="";              // 前の版の名前の書き方だったら選び直してもらう
 let logSite="すべて";
 // 工場在庫も材料を頼む画面も、開いたときはいつも「ALK（P）保温筒」から始める（選んだ種類は覚えない 2026/10/31 ユーザー）
@@ -415,7 +416,7 @@ const isLow=it=>lowS(it)||lowE(it);
 /* ---------- だれが入力するか ---------- */
 function renderWho(){$("whoName").textContent=who?nick(who):"名前をえらぶ";}
 function pickWho(then){
-  const box=h("div",{class:"names"},STAFF.map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===who),onclick:()=>{who=n;store("kouken-who",n);renderWho();close();then&&then();}},k,h("small",{class:"full",text:n}))));
+  const box=h("div",{class:"names"},STAFF.filter(([n])=>n!=="西崎剣"||editor==="西崎剣").map(([n,k])=>h("button",{type:"button","aria-pressed":String(n===who),onclick:()=>{who=n;store("kouken-who",n);renderWho();close();then&&then();}},k,h("small",{class:"full",text:n}))));
   const close=openSheet(h("h2",{text:"あなたはだれですか？"}),h("p",{class:"hint",text:"えらんだ名前で入庫・持ち出しを記録します。この携帯に覚えておきます。"}),box);
 }
 $("whoBtn").addEventListener("click",()=>pickWho());
@@ -864,7 +865,8 @@ function askPin(){
     const form=h("form",{class:"f",style:"padding:0",onsubmit:async e=>{e.preventDefault();
       const v=inp.value.trim();if(!v)return;
       go.disabled=true;go.textContent="確認しています…";err.hidden=true;
-      try{await setDoc(doc(fs,"members",uid),{pin:v,at:Date.now()});$("scrim").onclick=null;$("scrim").hidden=true;$("scrim").replaceChildren();resolve();}
+      try{await setDoc(doc(fs,"members",uid),{pin:v,at:Date.now()});try{await setDoc(doc(fs,"editors",uid),{pin:v,name:"西崎剣",via:"boss",at:Date.now()});}catch(x){}  // 西崎専用の番号なら、そのまま西崎（編集する人）にする（2026/11/01）
+      $("scrim").onclick=null;$("scrim").hidden=true;$("scrim").replaceChildren();resolve();}
       catch(x){err.textContent=x&&x.code==="permission-denied"?"番号がちがいます。":"確認できませんでした。電波を確認してください。";err.hidden=false;go.disabled=false;go.textContent="はじめる";inp.select();}
     }},h("h2",{text:"会社の暗証番号"}),h("p",{class:"hint",text:"最初の1回だけ入れてください。この携帯に覚えておきます。"}),inp,err,go);
     openSheet(form);
@@ -1030,6 +1032,8 @@ renderWho();renderCats();renderList();renderLog();show(view);
     await signInAnonymously(auth);uid=auth.currentUser.uid;
     const m=await getDoc(doc(fs,"members",uid));
     if(!m.exists())await askPin();
+    try{const ed=await getDoc(doc(fs,"editors",uid));if(ed.exists())editor=ed.data().name||"";}catch(x){}
+    if(who==="西崎剣"&&editor!=="西崎剣"){who="";store("kouken-who","");renderWho();}  // 西崎の携帯でなければ「西崎」はえらべない
   }catch(e){setBanner("在庫データにつながりません。電波を確認して、ページを開き直してください。");renderList();return;}
   // 前の版と同じ呼び方で使えるよう、Firestore を包む
   db={doc:p=>{const r=doc(fs,p);return{update:d=>updateDoc(r,d),delete:()=>deleteDoc(r)};},

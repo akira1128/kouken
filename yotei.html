@@ -908,7 +908,8 @@ function askPin(){
     const form=h("form",{class:"f",onsubmit:async e=>{e.preventDefault();
       const v=inp.value.trim();if(!v)return;
       go.disabled=true;go.textContent="確認しています…";err.hidden=true;
-      try{await setDoc(doc(fs,"members",uid),{pin:v,at:Date.now()});$("scrim").hidden=true;$("scrim").replaceChildren();resolve();}
+      try{await setDoc(doc(fs,"members",uid),{pin:v,at:Date.now()});try{await setDoc(doc(fs,"editors",uid),{pin:v,name:"西崎剣",via:"boss",at:Date.now()});}catch(x){}  // 西崎専用の番号なら、そのまま西崎（編集する人）にする（2026/11/01）
+      $("scrim").hidden=true;$("scrim").replaceChildren();resolve();}
       catch(x){err.textContent=x&&x.code==="permission-denied"?"番号がちがいます。":"確認できませんでした。電波を確認してください。";err.hidden=false;go.disabled=false;go.textContent="はじめる";inp.select();}
     }},h("h2",{text:"会社の暗証番号"}),h("p",{class:"hint",text:"最初の1回だけ入れてください。この携帯に覚えておきます。"}),inp,err,go);
     openSheet(form);
