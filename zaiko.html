@@ -319,11 +319,11 @@ const FACTORY="工場（加工）", OTHER="その他（メモに書く）";
 const facLbl=n=>n===FACTORY?"工場":n;
 /* 種類の中をさらに分ける（色・材質）。ジャケット・エルボとフランジカバー */
 const COLORS=["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"];
-const SUBS={"ジャケット・エルボ":COLORS,"GV・キャップ":COLORS,"フランジカバー":COLORS,"BOXカバー":COLORS,"トランクカバー":COLORS,"PF保温筒":["直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
+const SUBS={"ジャケット・エルボ":COLORS,"GV・キャップ":COLORS,"フランジカバー":COLORS,"片フランジ":COLORS,"BOXカバー":COLORS,"トランクカバー":COLORS,"PF保温筒":["直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
 const SUBLABEL=c=>c==="PF保温筒"?"直管・エルボ":"色・材質";
 const NOSUB="分けていない";
 /* 2段目に「すべて」を出さない種類（2026/10/28 ユーザー） */
-const SUB_NOALL=new Set(["ジャケット・エルボ","GV・キャップ","フランジカバー","BOXカバー","トランクカバー"]);  // BOX・トランクカバーも色で分ける（2026/10/31 ユーザー）
+const SUB_NOALL=new Set(["ジャケット・エルボ","GV・キャップ","フランジカバー","片フランジ","BOXカバー","トランクカバー"]);  // BOX・トランクカバーも色で分ける（2026/10/31 ユーザー）
 const subBtns=c=>SUBS[c]?(SUB_NOALL.has(c)?SUBS[c]:["すべて",...SUBS[c]]):[];
 const fixSub=()=>{const l=subBtns(cat);if(l.length&&!l.includes(sub)&&!(sub===NOSUB&&SUBS[cat]))sub=l[0];if(!l.length)sub="すべて";};
 /* 1つの材料に複数の数を持たせる仕組み（今は使っていない。2026/10/28 PF保温筒は2段目で直管・エルボを分ける形に変更） */
@@ -359,7 +359,7 @@ const ROLL_LEN={"ALKロール 24K×25t":22,"ALKロール 24K×50t":16,"ALKロー
 const EPARTS=[["ws","溶接ショートエルボ","wsqty"],["wl","溶接ロングエルボ","wlqty"]];
 const partField=p=>p==="s"?"qty":(EPARTS.find(x=>x[0]===p)||[])[2]||"qty";
 const partName=p=>p==="s"?"直管":(EPARTS.find(x=>x[0]===p)||[])[1]||"直管";
-const CATS=["ALK（P）保温筒","ALGC（P）保温筒","PF保温筒","ロール","セラカバー","遮音シート","金網","テープ・副資材","ジャケット・エルボ","フランジカバー","BOXカバー","トランクカバー","GV・キャップ","コイル","板","その他"];
+const CATS=["ALK（P）保温筒","ALGC（P）保温筒","PF保温筒","ロール","セラカバー","遮音シート","金網","テープ・副資材","ジャケット・エルボ","フランジカバー","片フランジ","BOXカバー","トランクカバー","GV・キャップ","コイル","板","その他"];
 const UNITS=["本","個","巻","枚","ケース","箱","m","kg"];
 /* 動きの種類。back＝戻し（現場で余って工場に戻す。入庫＝買ったものと分ける 2026/10/28） */
 const KIND={in:"入庫",out:"持ち出し",back:"戻し",set:"数を直す",new:"登録",del:"削除"};
@@ -449,7 +449,7 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("clic
 
 /* ---------- 在庫一覧 ---------- */
 /* フランジカバー・BOXカバー・トランクカバーは、上の段は「フランジカバー」1つにまとめ、その下の段で3つから選ぶ（2026/10/31 ユーザー） */
-const FLK=["フランジカバー","BOXカバー","トランクカバー"];
+const FLK=["フランジカバー","片フランジ","BOXカバー","トランクカバー"];   // 片フランジはフランジカバーの右（2026/11/03 ユーザー）
 function renderCats(){
   const pick=c=>{cat=c;keepCS("kouken-cat",c);sub="すべて";fixSub();keepCS("kouken-sub",sub);renderCats();renderList();};
   $("cats").replaceChildren(...CAT_BTNS.filter(c=>c==="フランジカバー"||!FLK.includes(c)).map(c=>h("button",{type:"button","aria-pressed":String(c===cat||(c==="フランジカバー"&&FLK.includes(cat))),onclick:()=>pick(c==="フランジカバー"&&FLK.includes(cat)?cat:c)},c)));
@@ -514,7 +514,7 @@ function renderList(){
   const qs2=/エルボ/.test(q)&&!/ジャケット/.test(q)?"エルボ":/ジャケット/.test(q)&&!/エルボ/.test(q)?"ジャケット":sub2;  // 言葉に「エルボ」があればエルボの中を探す
   let shown=items.filter(it=>(q&&!inSub2||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q&&!inSub2||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===(q?qs2:sub2))&&(q||!SUB2[cat]||sub2!=="エルボ"||sub3Of(it)===sub3)&&(!q||matchQ(it,q)));
   // フランジカバーは色をえらんだあと、φとLをえらんで開く（2026/10/30 ユーザー）
-  const flp=!q?(cat==="フランジカバー"?flPanel():BOXLIKE(cat)?boxPanel():null):null;
+  const flp=!q?(cat==="フランジカバー"||cat==="片フランジ"?flPanel():BOXLIKE(cat)?boxPanel():null):null;
   // フランジカバーの一覧には、在庫が0個の寸法は出さない（寸法は上の欄からひらく 2026/10/30 ユーザー）
   if(flp)shown=shown.filter(it=>!FLK.includes(it.cat)||Number(it.qty)>0);
   // 材料を頼むときの「その他」は手書きの欄だけ出すので、「見つかりません」は出さない
@@ -548,21 +548,21 @@ function orderRow(it){
 /* ---------- 現場に頼む：1つの材料の数 ---------- */
 /* ---------- フランジカバー：φとLをえらぶ（φ140〜600・L80〜1000、10刻み）。色・φ・Lごとに在庫を持つ（2026/10/30） ---------- */
 const FL_PHI=Array.from({length:47},(_,i)=>140+i*10), FL_L=Array.from({length:93},(_,i)=>80+i*10);
-const flName=(p,l)=>"フランジカバー "+p+"φ×"+l+"L";
+const flName=(p,l,c="フランジカバー")=>c+" "+p+"φ×"+l+"L";
 function flPanel(){
   const ph=h("select",{class:"inp","aria-label":"φ"},FL_PHI.map(v=>h("option",{value:v,selected:String(v)===(store("kouken-fl-phi")||"200")},v+"φ")));
   const ln=h("select",{class:"inp","aria-label":"L"},FL_L.map(v=>h("option",{value:v,selected:String(v)===(store("kouken-fl-l")||"300")},v+"L")));
   const err=h("p",{class:"err",hidden:true});
   const go=h("button",{class:"btn",type:"button",onclick:async()=>{
     store("kouken-fl-phi",ph.value);store("kouken-fl-l",ln.value);
-    const color=sub, name=flName(ph.value,ln.value);
-    let it=items.find(x=>x.cat==="フランジカバー"&&x.sub===color&&x.name===name);
+    const color=sub, fc=cat, name=flName(ph.value,ln.value,fc);
+    let it=items.find(x=>x.cat===fc&&x.sub===color&&x.name===name);
     if(!it){
       if(!db){err.textContent="データにつながっていません。";err.hidden=false;return;}
       if(!who){pickWho();return;}
       go.disabled=true;
       try{const now=Date.now();
-        it={name,cat:"フランジカバー",sub:color,unit:"個",qty:0,min:0,phi:Number(ph.value),fl:Number(ln.value),createdAt:now,updatedAt:now,updatedBy:who};
+        it={name,cat:fc,sub:color,unit:"個",qty:0,min:0,phi:Number(ph.value),fl:Number(ln.value),createdAt:now,updatedAt:now,updatedBy:who};
         const ref=await db.collection("items").add(it);it=Object.assign({id:ref.id},it);
         if(!items.some(x=>x.id===it.id))items.push(it);
       }catch(x){err.textContent=errMsg(x);err.hidden=false;go.disabled=false;return;}
@@ -570,7 +570,7 @@ function flPanel(){
     }
     ORDER?openOrderItem(it.id):openItem(it.id);
   }},"この寸法をひらく");
-  return h("section",{class:"panel flbox"},h("h3",{text:sub+"のフランジカバー：寸法をえらぶ"}),
+  return h("section",{class:"panel flbox"},h("h3",{text:sub+"の"+cat+"：寸法をえらぶ"}),
     h("div",{class:"flrow"},h("label",null,h("span",{text:"φ"}),ph),h("label",null,h("span",{text:"L"}),ln)),go,err);
 }
 /* ---------- BOXカバー・トランクカバー：絵を見て H・W・L をえらぶ（10刻み）。色・H・W・Lごとに在庫を持つ（2026/10/31 ユーザー）
