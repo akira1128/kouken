@@ -6,7 +6,7 @@
 <meta name="google" content="notranslate">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>ログイン履歴｜株式会社コウケン</title>
+<title>アプリを見た記録｜株式会社コウケン</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
@@ -70,16 +70,16 @@ h2{font-size:14px;color:var(--muted);margin:16px 2px 8px;letter-spacing:.06em}
 </head>
 <body>
 <header class="topbar"><div class="topbar-in">
-  <a class="brandrow" href="benri.html" aria-label="便利ツールにもどる"><span class="back" aria-hidden="true"><b>‹</b><span class="backlbl">もどる</span></span><span class="mark"><img src="logo.png" alt=""></span><div class="brand">ログイン履歴<small>西崎さんだけ</small></div></a>
+  <a class="brandrow" href="benri.html" aria-label="便利ツールにもどる"><span class="back" aria-hidden="true"><b>‹</b><span class="backlbl">もどる</span></span><span class="mark"><img src="logo.png" alt=""></span><div class="brand">アプリを見た記録<small>西崎さんだけ</small></div></a>
 </div></header>
 <main id="main" hidden>
-  <p class="note" style="margin:0 2px 10px">社員がアプリを開いた日時です（同じ携帯・同じ画面は30分に1回だけ記録）。名前を押すとその人だけ出します。</p>
+  <p class="note" style="margin:0 2px 10px">社員がアプリを見た日時と画面です（同じ携帯・同じ画面は30分に1回だけ記録）。名前を押すとその人だけ出します。</p>
   <div class="sum" id="sum"></div>
   <div id="out"><div class="list"><div class="empty">読み込んでいます…</div></div></div>
 </main>
 <script type="module" src="boss-only.js"></script>
 <script type="module">
-/* ログイン履歴（2026/11/02 ユーザー）。logins を新しい順に500件読む。西崎さんだけ読める（firestore.rules） */
+/* アプリを見た記録（2026/11/02 ユーザー）。logins を新しい順に500件読む。西崎さんだけ読める（firestore.rules） */
 import {getApps} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getFirestore,collection,query,orderBy,limit,getDocs} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 const NICK={"西崎剣":"西崎","原田弓子":"原田","福島正純":"福島","田中嗣音":"嗣穏","NGUYEN VAN HIEU":"ヒエウ","DANG BINH DUONG":"ズオン","NGUYEN NGOC LONG":"ロン"};

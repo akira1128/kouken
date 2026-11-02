@@ -1,4 +1,4 @@
-/* アプリを開いた記録（ログイン履歴）を残す（2026/11/02 ユーザー）
+/* アプリを開いた記録（アプリを見た記録）を残す（2026/11/02 ユーザー）
    logins/{id}：{uid, who（名前）, page（画面）, at, ua, home（ホーム画面のアプリから開いたか）}
    見られるのは西崎さんだけ（firestore.rules）。同じ携帯・同じ画面は30分に1回だけ残す */
 import {getApps} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -7,7 +7,7 @@ import {getFirestore,doc,getDoc,addDoc,collection} from "https://www.gstatic.com
 
 const f=location.pathname.split("/").pop()||"index.html";
 const PAGE={"":"メニュー","index.html":"メニュー","genba.html":"現場一覧","zaiko.html":/order=tanpatsu/.test(location.search)?"材料の注文":/order=/.test(location.search)?"材料を頼む":"工場在庫",
-  "yotei.html":"予定表","shukei.html":"集計","benri.html":"便利ツール","ikei-tee.html":"異形チーズ","rireki.html":"ログイン履歴"}[f]||f;
+  "yotei.html":"予定表","shukei.html":"集計","benri.html":"便利ツール","ikei-tee.html":"異形チーズ","rireki.html":"アプリを見た記録"}[f]||f;
 const KEY="kouken-log-"+PAGE;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
