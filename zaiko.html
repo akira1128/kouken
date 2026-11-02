@@ -319,11 +319,11 @@ const FACTORY="工場（加工）", OTHER="その他（メモに書く）";
 const facLbl=n=>n===FACTORY?"工場":n;
 /* 種類の中をさらに分ける（色・材質）。ジャケット・エルボとフランジカバー */
 const COLORS=["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"];
-const SUBS={"ジャケット・エルボ":COLORS,"GV・キャップ":COLORS,"フランジカバー":COLORS,"片フランジ":COLORS,"BOXカバー":COLORS,"トランクカバー":COLORS,"PF保温筒":["直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
+const SUBS={"ジャケット・エルボ":COLORS,"砲金バルブ・メクラキャップ":COLORS,"フランジカバー":COLORS,"片フランジ":COLORS,"BOXカバー":COLORS,"トランクカバー":COLORS,"PF保温筒":["直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
 const SUBLABEL=c=>c==="PF保温筒"?"直管・エルボ":"色・材質";
 const NOSUB="分けていない";
 /* 2段目に「すべて」を出さない種類（2026/10/28 ユーザー） */
-const SUB_NOALL=new Set(["ジャケット・エルボ","GV・キャップ","フランジカバー","片フランジ","BOXカバー","トランクカバー"]);  // BOX・トランクカバーも色で分ける（2026/10/31 ユーザー）
+const SUB_NOALL=new Set(["ジャケット・エルボ","砲金バルブ・メクラキャップ","フランジカバー","片フランジ","BOXカバー","トランクカバー"]);  // BOX・トランクカバーも色で分ける（2026/10/31 ユーザー）
 const subBtns=c=>SUBS[c]?(SUB_NOALL.has(c)?SUBS[c]:["すべて",...SUBS[c]]):[];
 const fixSub=()=>{const l=subBtns(cat);if(l.length&&!l.includes(sub)&&!(sub===NOSUB&&SUBS[cat]))sub=l[0];if(!l.length)sub="すべて";};
 /* 1つの材料に複数の数を持たせる仕組み（今は使っていない。2026/10/28 PF保温筒は2段目で直管・エルボを分ける形に変更） */
@@ -359,7 +359,7 @@ const ROLL_LEN={"ALKロール 24K×25t":22,"ALKロール 24K×50t":16,"ALKロー
 const EPARTS=[["ws","溶接ショートエルボ","wsqty"],["wl","溶接ロングエルボ","wlqty"]];
 const partField=p=>p==="s"?"qty":(EPARTS.find(x=>x[0]===p)||[])[2]||"qty";
 const partName=p=>p==="s"?"直管":(EPARTS.find(x=>x[0]===p)||[])[1]||"直管";
-const CATS=["ALK（P）保温筒","ALGC（P）保温筒","PF保温筒","ロール","セラカバー","遮音シート","金網","テープ・副資材","ジャケット・エルボ","フランジカバー","片フランジ","BOXカバー","トランクカバー","GV・キャップ","コイル","板","その他"];
+const CATS=["ALK（P）保温筒","ALGC（P）保温筒","PF保温筒","ロール","セラカバー","遮音シート","金網","テープ・副資材","ジャケット・エルボ","フランジカバー","片フランジ","BOXカバー","トランクカバー","砲金バルブ・メクラキャップ","コイル","板","その他"];
 const UNITS=["本","個","巻","枚","ケース","箱","m","kg"];
 /* 動きの種類。back＝戻し（現場で余って工場に戻す。入庫＝買ったものと分ける 2026/10/28） */
 const KIND={in:"入庫",out:"持ち出し",back:"戻し",set:"数を直す",new:"登録",del:"削除"};
@@ -401,8 +401,8 @@ const CAT_BTNS=SHOW_ALL?["すべて",...CATS]:CATS;
 if(!CAT_BTNS.includes(cat))cat=CAT_BTNS[0];
 let sub="すべて";
 /* 3段目：ジャケット・エルボの中を、さらに「ジャケット」「エルボ」で分ける（名前の頭で見分ける 2026/10/28） */
-const SUB2={"ジャケット・エルボ":["ジャケット","エルボ"],"GV・キャップ":["GV","キャップ"]};   // GV・キャップも色の下を GV とキャップに分ける（2026/11/03 ユーザー）
-const sub2Of=it=>it.cat==="GV・キャップ"?(/キャップ/.test(it.name||"")?"キャップ":"GV"):/らくえる|エルボ/.test(it.name||"")?"エルボ":/ジャケット/.test(it.name||"")?"ジャケット":"";
+const SUB2={"ジャケット・エルボ":["ジャケット","エルボ"],"砲金バルブ・メクラキャップ":["砲金バルブ","メクラキャップ"]};   // 色と、砲金バルブ・メクラキャップに分ける（2026/11/03 ユーザー。GV→砲金バルブ、キャップ→メクラキャップ）
+const sub2Of=it=>it.cat==="砲金バルブ・メクラキャップ"?(/キャップ/.test(it.name||"")?"メクラキャップ":"砲金バルブ"):/らくえる|エルボ/.test(it.name||"")?"エルボ":/ジャケット/.test(it.name||"")?"ジャケット":"";
 const SUB3=["90°","45°"];   // エルボの下を90°と45°に分ける（2026/11/03 ユーザー）
 const sub3Of=it=>sub2Of(it)!=="エルボ"?"":/45°/.test(it.name||"")?"45°":"90°";
 let sub2=store("kouken-sub2")||"ジャケット";
@@ -461,6 +461,7 @@ function renderCats(){
   if(l2.length&&!l2.includes(sub2))sub2=l2[0];
   $("subs2").replaceChildren(...l2.map(c=>h("button",{type:"button","aria-pressed":String(c===sub2),onclick:()=>{sub2=c;store("kouken-sub2",c);renderCats();renderList();}},c)));
   $("subs3").hidden=!(l2.length&&sub2==="エルボ");
+  {const a=$("subs"),b=$("subs2"),top=cat==="砲金バルブ・メクラキャップ";if(top&&a.previousElementSibling!==b)a.before(b);else if(!top&&b.previousElementSibling!==a)a.after(b);}
   $("subs3").replaceChildren(...SUB3.map(c=>h("button",{type:"button","aria-pressed":String(c===sub3),onclick:()=>{sub3=c;store("kouken-sub3",c);renderCats();renderList();}},c)));
 }
 $("q").addEventListener("input",()=>renderList());
@@ -519,7 +520,7 @@ function renderList(){
   if(flp)shown=shown.filter(it=>!FLK.includes(it.cat)||Number(it.qty)>0);
   // 材料を頼むときの「その他」は手書きの欄だけ出すので、「見つかりません」は出さない
   if(!shown.length&&(cat==="その他"||flp)&&!q){list.replaceChildren(...(flp?[flp]:[]));return;}
-  if(!shown.length&&!q&&cat==="GV・キャップ"){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"まだ材料がありません"}),h("span",{text:"下の「材料を追加」で、種類を「GV・キャップ」にして登録してください。"})));return;}
+  if(!shown.length&&!q&&cat==="砲金バルブ・メクラキャップ"){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"まだ材料がありません"}),h("span",{text:"下の「材料を追加」で、種類を「砲金バルブ・メクラキャップ」にして登録してください。"})));return;}
   if(!shown.length){list.replaceChildren(h("div",{class:"panel empty"},h("strong",{text:"見つかりません"}),h("span",{text:"ことばや種類を変えてさがしてください。"})));return;}
   const groups=[];
   for(const c of CATS){
