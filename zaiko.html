@@ -573,32 +573,39 @@ function flPanel(){
   return h("section",{class:"panel flbox"},h("h3",{text:sub+"の"+cat+"：寸法をえらぶ"}),
     h("div",{class:"flrow"},h("label",null,h("span",{text:"φ"}),ph),h("label",null,h("span",{text:"L"}),ln)),go,err);
 }
-/* ---------- メクラキャップ：ジャケットの番号と L（50〜1000、10刻み）をえらぶ。色・番号・Lごとに在庫を持つ（2026/11/03 ユーザー） ---------- */
-const MK_L=Array.from({length:96},(_,i)=>50+i*10);
-const mkName=(c,no,l)=>c+"メクラキャップ No."+no+"×"+l+"L";
+/* ---------- メクラキャップ：上の段＝φ（70〜600、10刻み）と L、下の段＝ジャケットの番号と L（Lは50〜1000、10刻み）。色・寸法ごとに在庫を持つ（2026/11/03 ユーザー） ---------- */
+const MK_L=Array.from({length:96},(_,i)=>50+i*10), MK_PHI=Array.from({length:54},(_,i)=>70+i*10);
+const mkName=(c,size,l)=>c+"メクラキャップ "+size+"×"+l+"L";
 function mkPanel(){
-  const no=h("select",{class:"inp","aria-label":"ジャケットの番号"},LAG_NO.map(([n,o,d])=>h("option",{value:n,selected:n===(store("kouken-mk-no")||"2")},"No."+n+"（φ"+d+"）")));
-  const ln=h("select",{class:"inp","aria-label":"L"},MK_L.map(v=>h("option",{value:v,selected:String(v)===(store("kouken-mk-l")||"100")},v+"L")));
   const err=h("p",{class:"err",hidden:true});
-  const go=h("button",{class:"btn",type:"button",onclick:async()=>{
-    store("kouken-mk-no",no.value);store("kouken-mk-l",ln.value);
-    const color=sub, name=mkName(color,no.value,ln.value);
+  const open=async(btn,size,l,extra)=>{
+    const color=sub, name=mkName(color,size,l);
     let it=items.find(x=>x.cat==="砲金バルブ・メクラキャップ"&&x.sub===color&&x.name===name);
     if(!it){
       if(!db){err.textContent="データにつながっていません。";err.hidden=false;return;}
       if(!who){pickWho();return;}
-      go.disabled=true;
+      btn.disabled=true;
       try{const now=Date.now();
-        it={name,cat:"砲金バルブ・メクラキャップ",sub:color,unit:"個",qty:0,min:0,no:no.value,fl:Number(ln.value),createdAt:now,updatedAt:now,updatedBy:who};
+        it={name,cat:"砲金バルブ・メクラキャップ",sub:color,unit:"個",qty:0,min:0,fl:Number(l),...extra,createdAt:now,updatedAt:now,updatedBy:who};
         const ref=await db.collection("items").add(it);it=Object.assign({id:ref.id},it);
         if(!items.some(x=>x.id===it.id))items.push(it);
-      }catch(x){err.textContent=errMsg(x);err.hidden=false;go.disabled=false;return;}
-      go.disabled=false;
+      }catch(x){err.textContent=errMsg(x);err.hidden=false;btn.disabled=false;return;}
+      btn.disabled=false;
     }
     ORDER?openOrderItem(it.id):openItem(it.id);
-  }},"この寸法をひらく");
+  };
+  const lSel=k=>h("select",{class:"inp","aria-label":"L"},MK_L.map(v=>h("option",{value:v,selected:String(v)===(store(k)||"100")},v+"L")));
+  // 上の段：φ と L
+  const ph=h("select",{class:"inp","aria-label":"φ"},MK_PHI.map(v=>h("option",{value:v,selected:String(v)===(store("kouken-mk-phi")||"100")},v+"φ")));
+  const l1=lSel("kouken-mk-l1");
+  const go1=h("button",{class:"btn",type:"button",onclick:()=>{store("kouken-mk-phi",ph.value);store("kouken-mk-l1",l1.value);open(go1,ph.value+"φ",l1.value,{phi:Number(ph.value)});}},"この寸法をひらく（φ）");
+  // 下の段：ジャケットの番号と L
+  const no=h("select",{class:"inp","aria-label":"ジャケットの番号"},LAG_NO.map(([n,o,d])=>h("option",{value:n,selected:n===(store("kouken-mk-no")||"2")},"No."+n+"（φ"+d+"）")));
+  const l2=lSel("kouken-mk-l");
+  const go2=h("button",{class:"btn",type:"button",onclick:()=>{store("kouken-mk-no",no.value);store("kouken-mk-l",l2.value);open(go2,"No."+no.value,l2.value,{no:no.value});}},"この寸法をひらく（ジャケットNo.）");
   return h("section",{class:"panel flbox"},h("h3",{text:sub+"のメクラキャップ：寸法をえらぶ"}),
-    h("div",{class:"flrow"},h("label",null,h("span",{text:"ジャケットNo."}),no),h("label",null,h("span",{text:"L"}),ln)),go,err);
+    h("div",{class:"flrow"},h("label",null,h("span",{text:"φ"}),ph),h("label",null,h("span",{text:"L"}),l1)),go1,
+    h("div",{class:"flrow",style:"margin-top:10px"},h("label",null,h("span",{text:"ジャケットNo."}),no),h("label",null,h("span",{text:"L"}),l2)),go2,err);
 }
 /* ---------- BOXカバー・トランクカバー：絵を見て H・W・L をえらぶ（10刻み）。色・H・W・Lごとに在庫を持つ（2026/10/31 ユーザー）
    トランクカバー＝舟形バルブカバー（底が丸い形）。絵は旭産業さんのカタログの形をまねた線画 ---------- */
