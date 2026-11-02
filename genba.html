@@ -1254,10 +1254,14 @@ function ecKeys(name, sub){
   // ジャケット・らくえる（色は sub）
   if(r=m(/^ジャケット No\.(.+)$/))return COL[sub]?[[COL[sub]+"ｼﾞｬｹｯﾄ (旭)",r[1]]]:[];
   if(r=m(/^エルボ No\.(.+)$/))return COL[sub]?[[COL[sub]+"らくえる (旭)",r[1]]]:[];
+  // グラスロンの請求書の名前（2026/11/03）：〇〇ジャケット (旭)・〇〇らくえる (旭)・〇〇らくえる 45°(旭)
+  if(r=m(/ジャケット \(旭\) No\.(.+)$/))return COL[sub]?[[COL[sub]+"ｼﾞｬｹｯﾄ (旭)",r[1]]]:[];
+  if(r=m(/らくえる 45°\(旭\) No\.(.+)$/))return COL[sub]?[[COL[sub]+"らくえる 45°(旭)",r[1]]]:[];
+  if(r=m(/らくえる \(旭\) No\.(.+)$/))return COL[sub]?[[COL[sub]+"らくえる (旭)",r[1]]]:[];
   return [];
 }
 // ジャケット・エルボの色は材料のID（jk色-番号・el色-番号）から
-const ecSub=l=>{const m=(l.itemId||"").match(/^(?:jk|el)(\d)-/);return m?(["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"][m[1]]||""):"";};
+const ecSub=l=>{const m=(l.itemId||"").match(/^(?:jk|el|e4)(\d)-/);return m?(["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"][m[1]]||""):"";};
 function ecBtn(o){
   const lines=(o.lines||[]).filter(l=>!l.make).map(l=>({n:l.name,q:Number(l.qty)||0,u:l.unit||"",k:ecKeys((l.name||"").trim(),ecSub(l))})).filter(l=>l.q>0);
   const miss=lines.filter(l=>!l.k.length).length;

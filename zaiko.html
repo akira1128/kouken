@@ -223,6 +223,7 @@ details.edit form{padding:12px 0 0}
       <div class="chips subs" id="flk" role="toolbar" aria-label="フランジ・BOX・トランクでしぼる" hidden></div>
       <div class="chips subs" id="subs" role="toolbar" aria-label="色・材質でしぼる" hidden></div>
       <div class="chips subs sub2" id="subs2" role="toolbar" aria-label="ジャケットかエルボかでしぼる" hidden></div>
+      <div class="chips subs sub2" id="subs3" role="toolbar" aria-label="エルボの角度でしぼる" hidden></div>
     </div>
     <div id="list" class="tools"></div>
   </main>
@@ -401,8 +402,11 @@ if(!CAT_BTNS.includes(cat))cat=CAT_BTNS[0];
 let sub="すべて";
 /* 3段目：ジャケット・エルボの中を、さらに「ジャケット」「エルボ」で分ける（名前の頭で見分ける 2026/10/28） */
 const SUB2={"ジャケット・エルボ":["ジャケット","エルボ"]};
-const sub2Of=it=>/^エルボ/.test(it.name||"")?"エルボ":/^ジャケット/.test(it.name||"")?"ジャケット":"";
+const sub2Of=it=>/らくえる|エルボ/.test(it.name||"")?"エルボ":/ジャケット/.test(it.name||"")?"ジャケット":"";
+const SUB3=["90°","45°"];   // エルボの下を90°と45°に分ける（2026/11/03 ユーザー）
+const sub3Of=it=>sub2Of(it)!=="エルボ"?"":/45°/.test(it.name||"")?"45°":"90°";
 let sub2=store("kouken-sub2")||"ジャケット";
+let sub3=store("kouken-sub3")||"90°";
 fixSub();
 
 function setBanner(msg){$("banner").textContent=msg||"";$("banner").hidden=!msg;}
@@ -456,6 +460,8 @@ function renderCats(){
   const l2=SUB2[cat]||[];$("subs2").hidden=!l2.length;
   if(l2.length&&!l2.includes(sub2))sub2=l2[0];
   $("subs2").replaceChildren(...l2.map(c=>h("button",{type:"button","aria-pressed":String(c===sub2),onclick:()=>{sub2=c;store("kouken-sub2",c);renderCats();renderList();}},c)));
+  $("subs3").hidden=!(l2.length&&sub2==="エルボ");
+  $("subs3").replaceChildren(...SUB3.map(c=>h("button",{type:"button","aria-pressed":String(c===sub3),onclick:()=>{sub3=c;store("kouken-sub3",c);renderCats();renderList();}},c)));
 }
 $("q").addEventListener("input",()=>renderList());
 
@@ -475,6 +481,7 @@ function aliases(it){
   if(/アルミ粘着テープ/.test(n))a+=" alk アルミテープ";
   if(/ステン/.test(n+c))a+=" sus";
   if(/SUS|Sus/.test(n+c))a+=" ステン";
+  if(/らくえる/.test(n))a+=" エルボ "+(/45°/.test(n)?"45 45°":"90 90°");
   return a;
 }
 function matchQ(it,q){
@@ -505,7 +512,7 @@ function renderList(){
   // ジャケット・エルボを開いているときは、さがす欄に文字を入れても、選んでいる「ジャケット」か「エルボ」の中だけで探す（色は全部）（2026/10/28）
   const inSub2=!!SUB2[cat];
   const qs2=/エルボ/.test(q)&&!/ジャケット/.test(q)?"エルボ":/ジャケット/.test(q)&&!/エルボ/.test(q)?"ジャケット":sub2;  // 言葉に「エルボ」があればエルボの中を探す
-  let shown=items.filter(it=>(q&&!inSub2||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q&&!inSub2||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===(q?qs2:sub2))&&(!q||matchQ(it,q)));
+  let shown=items.filter(it=>(q&&!inSub2||cat==="すべて"||it.cat===cat)&&(q||!SUBS[cat]||sub==="すべて"||(it.sub||NOSUB)===sub)&&(q&&!inSub2||!SUB2[cat]||!sub2Of(it)||sub2Of(it)===(q?qs2:sub2))&&(q||!SUB2[cat]||sub2!=="エルボ"||sub3Of(it)===sub3)&&(!q||matchQ(it,q)));
   // フランジカバーは色をえらんだあと、φとLをえらんで開く（2026/10/30 ユーザー）
   const flp=!q?(cat==="フランジカバー"?flPanel():BOXLIKE(cat)?boxPanel():null):null;
   // フランジカバーの一覧には、在庫が0個の寸法は出さない（寸法は上の欄からひらく 2026/10/30 ユーザー）
@@ -517,7 +524,9 @@ function renderList(){
   for(const c of CATS){
     const arr=shown.filter(it=>(CATS.includes(it.cat)?it.cat:"その他")===c);
     if(SUBS[c]){for(const sc of [...SUBS[c],NOSUB]){const a2=arr.filter(it=>(SUBS[c].includes(it.sub)?it.sub:NOSUB)===sc);if(!a2.length)continue;
-      if(SUB2[c]){for(const k of [...SUB2[c],""]){const a3=a2.filter(it=>sub2Of(it)===k);if(a3.length)groups.push([c+"／"+sc+(k?"／"+k:""),a3]);}}
+      if(SUB2[c]){for(const k of [...SUB2[c],""]){const a3=a2.filter(it=>sub2Of(it)===k);
+        if(k==="エルボ"){for(const g of SUB3){const a4=a3.filter(it=>sub3Of(it)===g);if(a4.length)groups.push([c+"／"+sc+"／エルボ "+g,a4]);}}
+        else if(a3.length)groups.push([c+"／"+sc+(k?"／"+k:""),a3]);}}
       else groups.push([c+"／"+sc,a2]);}}
     else if(arr.length)groups.push([c,arr]);
   }
@@ -880,7 +889,7 @@ function askPin(){
 const SPECS=[["20t",0,["15A","20A","25A","32A","40A","50A","65A","80A"]],["25t",0,["100A","125A","150A"]],["30t",1,["15A","20A","25A","32A","40A","50A"]],
   ["40t",2,["32A","40A","50A","65A","80A","100A","125A","150A","200A","250A","300A"]],["50t",3,["200A","250A","300A"]]];
 /* 材料を足したり、名前・種類を移す処理を足したときは、この数を1つ上げる（上げないと動かない） */
-const MIGRATE_VER=1;
+const MIGRATE_VER=2;   // 2：ジャケット・エルボをグラスロンの請求書の名前にし、45°を足した（2026/11/03）
 /* あとから足す材料（なければ作る。数は0）。order が大きいほど一覧の下に出る */
 const EXTRA_ITEMS=[
   ...["15A","20A","25A","32A","40A","50A"].map(a=>({id:"alk30-"+a,name:"ALKP保温筒 "+a+"×30t",cat:"ALK（P）保温筒",unit:"本",order:1})), // 2026/10/28 使う頻度が少ないので20tの下に
@@ -904,8 +913,9 @@ const EXTRA_ITEMS=[
       ["GW40K ALGC(S)","50"],["MGボード150 ALGC","25"],["GW32K","25"],["GW32K ALK(S)","25"]]
     .map(([n,t],i)=>({id:"plate"+i,name:n+" "+t+"t",cat:"板",unit:"枚",order:i,thk:t,wid:605,len:910})),
   // ジャケット・エルボ：旭産業の番号 特2〜36 を色ごとに（2026/10/28 ユーザー「番号は36番まで」）
-  ...COLORS.flatMap((col,ci)=>[["jk","ジャケット","本",0],["el","エルボ","個",1]].flatMap(([k,n,u,t])=>
-    LAG_NO.map(([no],ni)=>({id:k+ci+"-"+no,name:n+" No."+no,cat:"ジャケット・エルボ",sub:col,unit:u,order:t*100+ni,no})))),
+  // 名前は東京グラスロンの請求書と同じ（〇〇ジャケット (旭)・〇〇らくえる (旭)＝90°・〇〇らくえる 45°(旭)）（2026/11/03 ユーザー）
+  ...COLORS.flatMap((col,ci)=>[["jk","ジャケット (旭)","本",0],["el","らくえる (旭)","個",1],["e4","らくえる 45°(旭)","個",2]].flatMap(([k,n,u,t])=>
+    LAG_NO.map(([no],ni)=>({id:k+ci+"-"+no,name:col+n+" No."+no,cat:"ジャケット・エルボ",sub:col,unit:u,order:t*100+ni,no})))),
   // テープ類（東京グラスロンの請求書 2024/12〜2026/10 で買ったもの 2026/10/28）。order で種類ごとにまとめる
   ...[[0,"アルミ粘着テープ セパなし",["50×90m","65×90m"]],[0,"アルミ粘着テープ",["50×90m","65×90m"]],
       [1,"ALGC粘着テープ アクリル",["25×20m","50×20m","65×20m","75×20m","100×20m"]],[2,"ALGC粘着テープ",["25×20m","50×20m","65×20m"]],
@@ -959,6 +969,10 @@ function newCat(x){
   if(x.cat==="テープ・副資材"&&/サンダム|遮音/.test(n))return "遮音シート";
   if(x.cat==="テープ・副資材"&&/亀甲|金網/.test(n))return "金網";
   return null;
+}
+async function renameJE(){
+  const list=EXTRA_ITEMS.filter(x=>x.cat==="ジャケット・エルボ"&&!x.id.startsWith("e4"));
+  for(let k=0;k<list.length;k+=400){const b=writeBatch(fs);list.slice(k,k+400).forEach(x=>b.update(doc(fs,"items",x.id),{name:x.name}));try{await b.commit();}catch(e){}}   // 1回に500件までなので分ける
 }
 async function migrateCats(){
   const q=await getDocs(collection(fs,"items"));
@@ -1042,7 +1056,7 @@ renderWho();renderCats();renderList();renderLog();show(view);
   // 材料を作る・名前や種類を移す処理は、版（MIGRATE_VER）が上がったときに1回だけ。毎回やると全部の材料を読むので
   try{
     const m=await getDoc(doc(fs,"items","_meta"));const done=m.exists()?Number(m.data().ver)||0:0;
-    if(done<MIGRATE_VER){await migrateCats();await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
+    if(done<MIGRATE_VER){await migrateCats();if(done<2)await renameJE();await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
   }catch(e){}
   onSnapshot(collection(fs,"items"),s=>{
     items=s.docs.filter(d=>!d.id.startsWith("_")).map(d=>Object.assign({id:d.id},d.data())).filter(x=>!x.deleted).sort((a,b)=>rank(a)-rank(b)||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
