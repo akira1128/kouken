@@ -57,6 +57,8 @@ service cloud.firestore {
     match /koutei/{id} { allow read, create: if member(); allow update, delete: if editor(); }
     match /kouteiFull/{id} { allow read, create: if member(); allow update, delete: if editor(); }
     // 回ごとのまとめの金額（中防不燃など）：西崎さんだけ（2026/10/31）
+    // アプリを開いた記録（ログイン履歴）：社員は自分の分を書くだけ。読めるのは西崎さんだけ（2026/11/02）
+    match /logins/{id} { allow create: if member() && request.resource.data.uid == request.auth.uid; allow read: if boss(); allow update, delete: if false; }
     match /matomeMoney/{id} { allow read, write: if boss(); }
     // 履歴は足すだけ（直したり消したりはできない）
     match /logs/{id} { allow read, create: if member(); allow update, delete: if false; }
