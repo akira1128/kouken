@@ -292,8 +292,8 @@ h4.vh{margin:14px 0 6px;font-size:13px;color:var(--muted)}
 .vwho li{display:flex;gap:6px;align-items:baseline;border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:var(--surface);font-size:13.5px}
 .vwho small{color:var(--muted);font-size:11.5px}
 /* 現場の図面（PDF）：種類ごとに名前を並べて、押すとPDFが開く（2026/11/03） */
-.dwg{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:6px}
-.dwg li{display:flex;align-items:center;gap:8px}
+.dwg{list-style:none;margin:0 0 8px;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+.dwg li{display:flex;align-items:center;gap:8px;min-width:0}   /* 長い名前で画面の外にはみ出さないように */
 .dwg a{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);text-decoration:none;font-size:14.5px}
 .dwg a b{flex:1;min-width:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dwg a small{color:var(--muted);font-size:11.5px;flex:none}
@@ -940,7 +940,7 @@ function fillDrawings(box,x){
   const gi=g=>{const i=DW_GROUPS.indexOf(g);return i<0?99:i;};
   const list=drawings.slice().sort((a,b)=>gi(a.group)-gi(b.group)||(a.group||"").localeCompare(b.group||"")||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
   const groups=[];list.forEach(d=>{const g=d.group||"その他";let k=groups.find(z=>z[0]===g);if(!k)groups.push(k=[g,[]]);k[1].push(d);});
-  box.replaceChildren(...[h("div",{class:"sec"},h("h3",{text:"図面"+(list.length?"（"+list.length+"枚）":"")})),
+  box.replaceChildren(...[h("h3",{text:"図面"+(list.length?"（"+list.length+"枚）":"")}),
     list.length?null:h("p",{class:"hint",text:"まだ図面はありません。"+(editor==="西崎剣"?"「＋ 図面を入れる」からPDFを入れてください。":"")}),
     ...groups.flatMap(([g,ds])=>[h("h4",{class:"vh",text:g}),h("ul",{class:"dwg"},ds.map(d=>h("li",null,
       h("a",{href:d.url,target:"_blank",rel:"noopener"},h("span",{class:"pdf",text:"PDF"}),h("b",{text:d.name}),h("small",{text:d.size?mb(d.size):""})),
@@ -1215,7 +1215,7 @@ function renderSite(){
       h("p",{class:"hint",id:"photoHint",style:{marginBottom:"8px"},text:"材料置き場・搬入口など、次に行く人が助かる写真を入れておけます。状況が変わったら、だれでも取り替え・消しができます。"}),
       (()=>{const g=h("div",{class:"phgrid",id:"photoGrid"});fillPhotos(g,x);return g;})(),
       h("button",{type:"button",class:"btn ghost",onclick:()=>openPhoto(x,null)},"＋ 写真を入れる")),
-    (()=>{const b=h("section",{class:"panel",id:"dwgBox"});fillDrawings(b,x);return b;})(),
+    (()=>{const b=h("section",{class:"panel sec",id:"dwgBox"});fillDrawings(b,x);return b;})(),
     // ないときは何も出さない（null を並べると「null」と字が出るので、配列で足す）
     ...((x.matome||[]).length?[matomeBox(x)]:[]),
     ...(x.ami?[amiBox(x)]:[]),
