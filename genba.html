@@ -160,6 +160,12 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* 現場の一覧 */
 .sitecard{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:13px 14px}
 .sitecard:first-of-type{border-top:0}
+/* 新しく入った現場の目印（2026/11/03 ユーザー）。開くか、入れてから14日たつと消える */
+.sitecard.isnew{background:var(--low-soft)}
+.newb{display:inline-block;margin-right:6px;padding:1px 7px;border-radius:999px;background:var(--low);color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.04em;vertical-align:2px}
+.newbar{display:flex;align-items:center;gap:10px;width:100%;margin:0 0 12px;padding:12px 14px;border:2px solid var(--low);border-radius:12px;background:var(--low-soft);color:var(--ink);text-align:left;font-size:15px}
+.newbar b{font-weight:700}
+.newbar .go{margin-left:auto;color:var(--low);font-size:22px}
 .sitecard b{font-size:16px;overflow-wrap:anywhere}
 .sitecard .sub{grid-column:1/2;font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
 .sitecard .go{grid-row:1/3;grid-column:2;color:var(--muted);font-size:22px}
@@ -555,7 +561,11 @@ function show(v){
   render();window.scrollTo(0,0);
 }
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.v==="vSites")siteId="";show(b.dataset.v);}));
-function openSite(id){rollRunFace();for(const k in meterW)if(k.startsWith(id+"/"))delete meterW[k];siteId=id;history.replaceState(null,"","?site="+encodeURIComponent(id));show("vSite");}
+// 新しい現場：「施工中」「これから」で、入れてから14日以内、この携帯でまだ開いていないもの
+const NEW_DAYS=14;
+const seenNew=()=>{try{return new Set(JSON.parse(store("kouken-seen-new")||"[]"));}catch(e){return new Set();}};
+const isNewSite=x=>(x.status==="施工中"||x.status==="これから")&&x.createdAt&&Date.now()-x.createdAt<NEW_DAYS*86400000&&!seenNew().has(x.id);
+function openSite(id){{const sn=seenNew();if(!sn.has(id)){sn.add(id);store("kouken-seen-new",JSON.stringify([...sn]));}}rollRunFace();for(const k in meterW)if(k.startsWith(id+"/"))delete meterW[k];siteId=id;history.replaceState(null,"","?site="+encodeURIComponent(id));show("vSite");}
 function render(){
   if(view==="vSites")renderSites();else if(view==="vSite")renderSite();else if(view==="vOrders")renderOrders();else renderSum();
   renderNotice();
@@ -711,14 +721,17 @@ function renderSites(){
   const groups=[["施工中","",x=>x.status==="施工中","now"],["これから","",x=>x.status==="これから","next"],["予定","まだ決まっていない",x=>x.status==="予定","plan"],["見積もり","見積を出している",x=>x.status==="見積もり","est"],["そのほか","",x=>!(x.status in STATUS_ORDER),"other"]];
   // 外注が施工している現場は、まとまりのいちばん下に出す（2026/10/28 ユーザー）
   const outs=x=>!!(x.info&&x.info.outsource);
-  box.replaceChildren(uretCal(),...groups.filter(([,,f,k])=>k==="est"||sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>outs(a)-outs(b));
+  const nw=sites.filter(isNewSite);
+  const bar=nw.length?h("button",{type:"button",class:"newbar",onclick:()=>openSite(nw[0].id)},h("span",{class:"newb",text:"NEW"}),
+    h("span",null,"新しい現場が入りました：",h("b",{text:nw.map(x=>shortSite(x.name)).join("、")})),h("span",{class:"go",text:"›"})):null;
+  box.replaceChildren(...[bar,uretCal()].filter(Boolean),...groups.filter(([,,f,k])=>k==="est"||sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>outs(a)-outs(b));
     return h("section",{class:"panel grp-"+k,style:{marginBottom:"14px"}},h("h3",{class:"grouph"},t+"　"+arr.length+"件",sub?h("small",{text:"（"+sub+"）"}):null),
       k==="est"&&!arr.length?h("p",{class:"empty",text:"見積もり中の現場はまだありません"}):null,
       // 見積もりの現場は西崎さんの指示でこちらから入れる（アプリに足すボタンは出さない 2026/10/30 ユーザー）
 arr.map(x=>{
       const inf=x.info||{}, nNote=(x.notes||[]).length;  // 注文の回数は出さない（2026/10/30 ユーザー）
-      return h("button",{type:"button",class:"sitecard",onclick:()=>openSite(x.id)},
-        h("b",null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),shortSite(x.name)),
+      return h("button",{type:"button",class:"sitecard"+(isNewSite(x)?" isnew":""),onclick:()=>openSite(x.id)},
+        h("b",null,isNewSite(x)?h("span",{class:"newb",text:"NEW"}):null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),shortSite(x.name)),
         h("span",{class:"go",text:"›"}),
         h("span",{class:"sub"},inf.outsource?h("span",{class:"outs",text:inf.outsource+"が"+(x.status==="施工中"?"施工中":"施工")}):null,
           [inf.address||"住所はまだ",nNote?"メモ "+nNote+"件":""].filter(Boolean).join("　")));
