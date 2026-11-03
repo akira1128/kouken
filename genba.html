@@ -939,7 +939,7 @@ function meter(x){
    PDFはファイル置き場（Firebase Storage の drawings/現場ID/）に入れ、drawings/{id} には名前・種類・場所だけ。
    開いたときに読むのは一覧だけなので、100枚あっても重くならない。入れる・消すのは西崎さんだけ ---------- */
 let drawings=[], drawingsFor="", unDw=null;
-const DW_GROUPS=["施工図","設計図","系統図","仕様書","工程表","案内図","その他"];   // 「設備図」は「設計図」（2026/11/03 ユーザー）
+const DW_GROUPS=["図面　西崎作成","施工図","設計図","系統図","仕様書","工程表","案内図","その他"];   // 「設備図」は「設計図」（2026/11/03 ユーザー）
 function watchDrawings(x){
   if(drawingsFor===x.id||!fs)return;
   if(unDw)unDw();drawingsFor=x.id;drawings=[];
