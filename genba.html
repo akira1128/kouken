@@ -1128,7 +1128,10 @@ function renderSite(){
     h("section",{class:"panel sec"},
       h("h3",null,"現場の情報",h("button",{type:"button",class:"btn ghost small",onclick:()=>needWho(()=>editInfo(x))},"書きかえる")),
       h("dl",{class:"info"},FIELDS.flatMap(([k,l])=>[h("dt",{text:l}),val(k,inf[k])])),
-      x.infoAt?h("p",{class:"hint",text:"最後に書きかえた人："+nick(x.infoBy)+"（"+md(ymd(new Date(x.infoAt)))+"）"}):null),
+      x.infoAt?h("p",{class:"hint",text:"最後に書きかえた人："+nick(x.infoBy)+"（"+md(ymd(new Date(x.infoAt)))+"）"}):null,
+      // 準備ができたら、社員みんなの携帯に知らせる（西崎さんだけ 2026/11/03 ユーザー）
+      editor==="西崎剣"?h("div",{class:"mtog"},h("button",{type:"button",class:"btn ghost small",onclick:()=>announceSite(x)},"みんなに知らせる"),
+        x.announcedAt?h("span",{class:"hint",text:"知らせた日："+md(ymd(new Date(x.announcedAt)))}):null):null),
     h("section",{class:"panel sec"},
       h("h3",{text:"作業のコツ・部屋ごとのメモ"}),
       notes.length?h("ul",{class:"notes"},notes.map(n=>h("li",null,h("span",{class:"tx",text:n.text}),
@@ -1166,6 +1169,22 @@ function editInfo(x){
     try{await updateDoc(doc(fs,"sites",x.id),{info,infoAt:Date.now(),infoBy:me(),...(stSel&&stSel.value!==x.status?{status:stSel.value}:{})});close();toast("現場の情報を保存しました");}
     catch(y){err.textContent=y&&y.code==="permission-denied"?"書く権限がありません。":"保存できませんでした。電波を確認してください。";err.hidden=false;save.disabled=false;}
   }},h("h2",{text:shortSite(x.name)+"の情報"}),stSel?h("label",{class:"fl"},"状態",stSel):null,FIELDS.map(([k,l])=>h("label",{class:"fl"},l,ins[k])),err,save);
+  close=openSheet(form);
+}
+/* 現場の準備ができたことを社員みんなの携帯に知らせる（西崎さんだけ 2026/11/03）。announce に入れると通知の仕組みが送る */
+function announceSite(x){
+  const tx=h("textarea",{class:"inp",rows:"3",maxlength:"200"});
+  tx.value=shortSite(x.name)+"の準備ができました。現場の情報を見てください。";
+  const err=h("p",{class:"err",hidden:true});
+  const save=h("button",{class:"btn",type:"submit"},"送る");
+  let close;
+  const form=h("form",{class:"f",onsubmit:async e=>{e.preventDefault();const text=tx.value.trim();if(!text)return;
+    save.disabled=true;
+    try{await addDoc(collection(fs,"announce"),{siteId:x.id,siteName:x.name,text,by:me(),at:Date.now()});
+      await updateDoc(doc(fs,"sites",x.id),{announcedAt:Date.now()});close();toast("みんなに知らせました");}
+    catch(y){err.textContent=y&&y.code==="permission-denied"?"送る権限がありません。":"送れませんでした。電波を確認してください。";err.hidden=false;save.disabled=false;}
+  }},h("h2",{text:"みんなに知らせる"}),h("p",{class:"hint",text:"通知を受け取る設定をした社員の携帯に届きます。押すとこの現場の画面が開きます。"}),
+    h("label",{class:"fl"},"知らせる文",tx),err,save);
   close=openSheet(form);
 }
 /* 見積もりの現場を足す（編集する人だけ。金額は入れない 2026/10/30） */

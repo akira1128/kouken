@@ -60,6 +60,8 @@ service cloud.firestore {
     // アプリを開いた記録（ログイン履歴）：社員は自分の分を書くだけ。読めるのは西崎さんだけ（2026/11/02）
     match /logins/{id} { allow create: if member() && request.resource.data.uid == request.auth.uid; allow read: if boss(); allow update, delete: if false; }
     match /matomeMoney/{id} { allow read, write: if boss(); }
+    // 現場の準備ができた知らせ（社員みんなの携帯に通知）：送るのは西崎さんだけ（2026/11/03）
+    match /announce/{id} { allow read: if member(); allow create: if boss(); allow update, delete: if false; }
     // 履歴は足すだけ（直したり消したりはできない）
     match /logs/{id} { allow read, create: if member(); allow update, delete: if false; }
   }
