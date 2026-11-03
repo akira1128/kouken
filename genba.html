@@ -564,7 +564,7 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("clic
 // 新しい現場：「施工中」「これから」で、入れてから14日以内、この携帯でまだ開いていないもの
 const NEW_DAYS=14;
 const seenNew=()=>{try{return new Set(JSON.parse(store("kouken-seen-new")||"[]"));}catch(e){return new Set();}};
-const isNewSite=x=>(x.status==="施工中"||x.status==="これから")&&x.createdAt&&Date.now()-x.createdAt<NEW_DAYS*86400000&&!seenNew().has(x.id);
+const isNewSite=x=>!!((x.status==="施工中"||x.status==="これから")&&x.createdAt&&Date.now()-x.createdAt<NEW_DAYS*86400000&&!seenNew().has(x.id));   // 並べ替えで数として使うので true/false にする
 function openSite(id){{const sn=seenNew();if(!sn.has(id)){sn.add(id);store("kouken-seen-new",JSON.stringify([...sn]));}}rollRunFace();for(const k in meterW)if(k.startsWith(id+"/"))delete meterW[k];siteId=id;history.replaceState(null,"","?site="+encodeURIComponent(id));show("vSite");}
 function render(){
   if(view==="vSites")renderSites();else if(view==="vSite")renderSite();else if(view==="vOrders")renderOrders();else renderSum();
@@ -953,7 +953,7 @@ function fillDrawings(box,x){
   const gi=g=>{const i=DW_GROUPS.indexOf(g);return i<0?99:i;};
   const list=drawings.slice().sort((a,b)=>gi(a.group)-gi(b.group)||(a.group||"").localeCompare(b.group||"")||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
   const groups=[];list.forEach(d=>{const g=d.group||"その他";let k=groups.find(z=>z[0]===g);if(!k)groups.push(k=[g,[]]);k[1].push(d);});
-  box.replaceChildren(...[h("h3",{text:"施工図・設計図・工程表"+(list.length?"（"+list.length+"枚）":"")}),   // 見出し（2026/11/03 ユーザー）
+  box.replaceChildren(...[h("h3",{text:"施工図・設計図・工程表"}),   // 見出し。枚数は出さない（2026/11/03 ユーザー）
     list.length?null:h("p",{class:"hint",text:"まだ図面はありません。"+(editor==="西崎剣"?"「＋ 施工図・設計図・工程表を入れる」からPDFを入れてください。":"")}),
     ...groups.flatMap(([g,ds])=>[h("h4",{class:"vh",text:g}),h("ul",{class:"dwg"},ds.map(d=>h("li",null,
       h("a",{href:d.url,target:"_blank",rel:"noopener"},h("span",{class:"pdf",text:"PDF"}),h("b",{text:d.name}),h("small",{text:d.size?mb(d.size):""})),
