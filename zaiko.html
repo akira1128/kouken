@@ -935,7 +935,7 @@ function askPin(){
 const SPECS=[["20t",0,["15A","20A","25A","32A","40A","50A","65A","80A"]],["25t",0,["100A","125A","150A"]],["30t",1,["15A","20A","25A","32A","40A","50A"]],
   ["40t",2,["32A","40A","50A","65A","80A","100A","125A","150A","200A","250A","300A"]],["50t",3,["200A","250A","300A"]]];
 /* 材料を足したり、名前・種類を移す処理を足したときは、この数を1つ上げる（上げないと動かない） */
-const MIGRATE_VER=9;   // 9：砲金バルブにもダルエース黒・ブラック（2026/11/03）   // 8：ジャケット・エルボにダルエース黒・ブラック（2026/11/03）   // 7：ビニールテープをペフチューブのテープへ（2026/11/03）   // 6：ペフチューブを足した（2026/11/03）   // 5：スチロールカバーをグラスロンの請求書の名前に（2026/11/03）   // 2：ジャケット・エルボをグラスロンの請求書の名前にし、45°を足した（2026/11/03）
+const MIGRATE_VER=10;   // 10：黒艶消しテープをアクリルの下へ（2026/11/03）   // 9：砲金バルブにもダルエース黒・ブラック（2026/11/03）   // 8：ジャケット・エルボにダルエース黒・ブラック（2026/11/03）   // 7：ビニールテープをペフチューブのテープへ（2026/11/03）   // 6：ペフチューブを足した（2026/11/03）   // 5：スチロールカバーをグラスロンの請求書の名前に（2026/11/03）   // 2：ジャケット・エルボをグラスロンの請求書の名前にし、45°を足した（2026/11/03）
 /* あとから足す材料（なければ作る。数は0）。order が大きいほど一覧の下に出る */
 const EXTRA_ITEMS=[
   ...["15A","20A","25A","32A","40A","50A"].map(a=>({id:"alk30-"+a,name:"ALKP保温筒 "+a+"×30t",cat:"ALK（P）保温筒",unit:"本",order:1})), // 2026/10/28 使う頻度が少ないので20tの下に
@@ -969,7 +969,7 @@ const EXTRA_ITEMS=[
   // テープ類（東京グラスロンの請求書 2024/12〜2026/10 で買ったもの 2026/10/28）。order で種類ごとにまとめる
   ...[[0,"アルミ粘着テープ セパなし",["50×90m","65×90m"]],[0,"アルミ粘着テープ",["50×90m","65×90m"]],
       [1,"ALGC粘着テープ アクリル",["25×20m","50×20m","65×20m","75×20m","100×20m"]],[2,"ALGC粘着テープ",["25×20m","50×20m","65×20m"]],
-      [3,"ALGC粘着テープ 黒艶消し",["50×20m","65×20m"]],[3,"ALGC粘着テープ クリーム",["50×20m","65×20m"]],
+      [1.5,"ALGC粘着テープ 黒艶消し",["50×20m","65×20m"]],[3,"ALGC粘着テープ クリーム",["50×20m","65×20m"]],
       [3,"ALGC粘着テープ アイボリー",["65×20m"]],[3,"ALGC粘着テープ シルキーホワイト",["65×20m"]],
       [4,"ポリテープ",["100mm×50m","125mm×50m","150mm×50m","300mm×50m"]],
       [5,"粘着ビニールテープ 茶",["30×10m","50×10m"]],[5,"粘着ビニールテープ グレー",["30×10m","50×10m"]],
@@ -1117,7 +1117,7 @@ renderWho();renderCats();renderList();renderLog();show(view);
   // 材料を作る・名前や種類を移す処理は、版（MIGRATE_VER）が上がったときに1回だけ。毎回やると全部の材料を読むので
   try{
     const m=await getDoc(doc(fs,"items","_meta"));const done=m.exists()?Number(m.data().ver)||0:0;
-    if(done<MIGRATE_VER){await migrateCats();if(done<2)await renameJE();if(done<5)await renamePF();if(done<7)await moveTape();await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
+    if(done<MIGRATE_VER){await migrateCats();if(done<2)await renameJE();if(done<5)await renamePF();if(done<7)await moveTape();if(done<10)for(const id of ["tape4-0","tape4-1"])try{await updateDoc(doc(fs,"items",id),{order:1.5});}catch(e){}await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
   }catch(e){}
   onSnapshot(collection(fs,"items"),s=>{
     items=s.docs.filter(d=>!d.id.startsWith("_")).map(d=>Object.assign({id:d.id},d.data())).filter(x=>!x.deleted).sort((a,b)=>rank(a)-rank(b)||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
