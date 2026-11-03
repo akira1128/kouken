@@ -319,11 +319,16 @@ const FACTORY="工場（加工）", OTHER="その他（メモに書く）";
 const facLbl=n=>n===FACTORY?"工場":n;
 /* 種類の中をさらに分ける（色・材質）。ジャケット・エルボとフランジカバー */
 const COLORS=["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"];
-const SUBS={"ジャケット・エルボ":COLORS,"砲金バルブ・メクラキャップ":COLORS,"フランジカバー":COLORS,"片フランジ":COLORS,"BOXカバー":COLORS,"トランクカバー":COLORS,"ペフチューブ":["ライトチューブ","耐熱チューブ"],"PF保温筒":["直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
+const SUBS={"ジャケット・エルボ":COLORS,"砲金バルブ・メクラキャップ":COLORS,"フランジカバー":COLORS,"片フランジ":COLORS,"BOXカバー":COLORS,"トランクカバー":COLORS,"ペフチューブ":["ライトチューブ","耐熱チューブ","テープ"],"PF保温筒":["直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
+/* ペフチューブに巻くビニールテープ（チューブと同じ日に買っていたもの）。前は「テープ・副資材」にあった。名前は東京グラスロンの請求書と同じ（2026/11/03 ユーザー） */
+const PEF_TAPE={"tape9-0":{name:"粘着ビニールテープ 茶 (ミリオン) 30×10",order:0},"tape9-1":{name:"粘着ビニールテープ 茶 (ミリオン) 50×10",order:1},
+  "tape10-0":{name:"粘着ビニールテープ グレー (ミリオン) 30×10",order:2},"tape10-1":{name:"粘着ビニールテープ グレー (ミリオン) 50×10",order:3},
+  "tape11-0":{name:"粘着ビニールテープ 透明 (ミリオン) 19×10",order:4},"tape12-0":{name:"ビニールテープ No.470 赤 (オカモト) 19×10m",order:5,unit:"個"},
+  "tape13-0":{name:"東レペフビニール粘着テープ 30×20m",order:6}};
 /* スチロールカバー（PF保温筒）の名前は東京グラスロンの請求書と同じ（2026/11/03 ユーザー）。買ったことのないものも同じ付け方 */
 const PF_GL={"直管":"スチロールカバー FP-CL (アディア)","鉄管エルボ":"スチロールエルボ(N) (アディア)","塩ビエルボ":"塩ビ用スチロールエルボ FP-E (アディア)",
   "Susエルボ":"ステン管用スチロールエルボ FP-SUE (アディア)","溶接Sエルボ":"スチロール溶接ショートエルボ FP-YES (アディア)","溶接Lエルボ":"スチロール溶接ロングエルボ FP-YEL (アディア)"};
-const SUBLABEL=c=>c==="ペフチューブ"?"ライト・耐熱":c==="PF保温筒"?"直管・エルボ":"色・材質";
+const SUBLABEL=c=>c==="ペフチューブ"?"ライト・耐熱・テープ":c==="PF保温筒"?"直管・エルボ":"色・材質";
 const NOSUB="分けていない";
 /* 2段目に「すべて」を出さない種類（2026/10/28 ユーザー） */
 const SUB_NOALL=new Set(["ジャケット・エルボ","砲金バルブ・メクラキャップ","フランジカバー","片フランジ","BOXカバー","トランクカバー"]);  // BOX・トランクカバーも色で分ける（2026/10/31 ユーザー）
@@ -929,7 +934,7 @@ function askPin(){
 const SPECS=[["20t",0,["15A","20A","25A","32A","40A","50A","65A","80A"]],["25t",0,["100A","125A","150A"]],["30t",1,["15A","20A","25A","32A","40A","50A"]],
   ["40t",2,["32A","40A","50A","65A","80A","100A","125A","150A","200A","250A","300A"]],["50t",3,["200A","250A","300A"]]];
 /* 材料を足したり、名前・種類を移す処理を足したときは、この数を1つ上げる（上げないと動かない） */
-const MIGRATE_VER=6;   // 6：ペフチューブを足した（2026/11/03）   // 5：スチロールカバーをグラスロンの請求書の名前に（2026/11/03）   // 2：ジャケット・エルボをグラスロンの請求書の名前にし、45°を足した（2026/11/03）
+const MIGRATE_VER=7;   // 7：ビニールテープをペフチューブのテープへ（2026/11/03）   // 6：ペフチューブを足した（2026/11/03）   // 5：スチロールカバーをグラスロンの請求書の名前に（2026/11/03）   // 2：ジャケット・エルボをグラスロンの請求書の名前にし、45°を足した（2026/11/03）
 /* あとから足す材料（なければ作る。数は0）。order が大きいほど一覧の下に出る */
 const EXTRA_ITEMS=[
   ...["15A","20A","25A","32A","40A","50A"].map(a=>({id:"alk30-"+a,name:"ALKP保温筒 "+a+"×30t",cat:"ALK（P）保温筒",unit:"本",order:1})), // 2026/10/28 使う頻度が少ないので20tの下に
@@ -969,7 +974,8 @@ const EXTRA_ITEMS=[
       [5,"粘着ビニールテープ 茶",["30×10m","50×10m"]],[5,"粘着ビニールテープ グレー",["30×10m","50×10m"]],
       [5,"粘着ビニールテープ 透明",["19×10m"]],[5,"ビニールテープ 赤",["19×10m"]],[5,"東レペフ ビニール粘着テープ",["30×20m"]],
       [6,"エアロテープ",["3×50×10m","3×50×15m"]],[7,"非粘着テープ アイボリー",["HN-50-I"]]]
-    .flatMap(([o,n,list],gi)=>list.map((z,zi)=>({id:"tape"+gi+"-"+zi,name:n+" "+z,cat:"テープ・副資材",unit:"巻",order:o}))),
+    .flatMap(([o,n,list],gi)=>list.map((z,zi)=>({id:"tape"+gi+"-"+zi,name:n+" "+z,cat:"テープ・副資材",unit:"巻",order:o})))
+    .map(x=>PEF_TAPE[x.id]?{...x,cat:"ペフチューブ",sub:"テープ",...PEF_TAPE[x.id]}:x),
   // 金網（過去の請求書・受領書で買ったもの 2026/10/28）
   {id:"ami-zn3",name:"亀甲金網（亜鉛・3分目）",cat:"金網",unit:"本",order:0},
   {id:"ami-pu3",name:"ビニール亀甲（紫・3分目）",cat:"金網",unit:"本",order:0},
@@ -1020,6 +1026,9 @@ async function renamePF(){
   for(const d of ds){const m=(d.data().name||"").match(/^PF保温筒 (?:(鉄管エルボ|塩ビエルボ|Susエルボ|溶接Sエルボ|溶接Lエルボ) )?(\d+A)×(\d+t)$/);
     if(m)up.push([d.ref,PF_GL[m[1]||"直管"]+" "+m[2]+"×"+m[3]]);}
   for(let k=0;k<up.length;k+=400){const b=writeBatch(fs);up.slice(k,k+400).forEach(([r,n])=>b.update(r,{name:n}));try{await b.commit();}catch(e){}}
+}
+async function moveTape(){
+  for(const x of EXTRA_ITEMS.filter(x=>PEF_TAPE[x.id]))try{await updateDoc(doc(fs,"items",x.id),{name:x.name,cat:x.cat,sub:x.sub,order:x.order,unit:x.unit});}catch(e){}
 }
 async function renameJE(){
   const list=EXTRA_ITEMS.filter(x=>x.cat==="ジャケット・エルボ"&&!x.id.startsWith("e4"));
@@ -1107,7 +1116,7 @@ renderWho();renderCats();renderList();renderLog();show(view);
   // 材料を作る・名前や種類を移す処理は、版（MIGRATE_VER）が上がったときに1回だけ。毎回やると全部の材料を読むので
   try{
     const m=await getDoc(doc(fs,"items","_meta"));const done=m.exists()?Number(m.data().ver)||0:0;
-    if(done<MIGRATE_VER){await migrateCats();if(done<2)await renameJE();if(done<5)await renamePF();await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
+    if(done<MIGRATE_VER){await migrateCats();if(done<2)await renameJE();if(done<5)await renamePF();if(done<7)await moveTape();await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
   }catch(e){}
   onSnapshot(collection(fs,"items"),s=>{
     items=s.docs.filter(d=>!d.id.startsWith("_")).map(d=>Object.assign({id:d.id},d.data())).filter(x=>!x.deleted).sort((a,b)=>rank(a)-rank(b)||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
