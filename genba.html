@@ -724,7 +724,7 @@ function renderSites(){
   const nw=sites.filter(isNewSite);
   const bar=nw.length?h("button",{type:"button",class:"newbar",onclick:()=>openSite(nw[0].id)},h("span",{class:"newb",text:"NEW"}),
     h("span",null,"新しい現場が入りました：",h("b",{text:nw.map(x=>shortSite(x.name)).join("、")})),h("span",{class:"go",text:"›"})):null;
-  box.replaceChildren(...[bar,uretCal()].filter(Boolean),...groups.filter(([,,f,k])=>k==="est"||sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>outs(a)-outs(b));
+  box.replaceChildren(...[bar,uretCal()].filter(Boolean),...groups.filter(([,,f,k])=>k==="est"||sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>isNewSite(b)-isNewSite(a)||outs(a)-outs(b));   // 新しい現場はいちばん上
     return h("section",{class:"panel grp-"+k,style:{marginBottom:"14px"}},h("h3",{class:"grouph"},t+"　"+arr.length+"件",sub?h("small",{text:"（"+sub+"）"}):null),
       k==="est"&&!arr.length?h("p",{class:"empty",text:"見積もり中の現場はまだありません"}):null,
       // 見積もりの現場は西崎さんの指示でこちらから入れる（アプリに足すボタンは出さない 2026/10/30 ユーザー）
