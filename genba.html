@@ -304,7 +304,7 @@ h4.vh{margin:14px 0 6px;font-size:13px;color:var(--muted)}
 .dwg a b{flex:1;min-width:0;font-weight:500;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all}   /* 名前は2行まで折り返す */
 .dwg a small{color:var(--muted);font-size:11.5px;flex:none}
 .dwg .pdf{flex:none;font-size:10.5px;font-weight:700;color:#fff;background:var(--low);border-radius:4px;padding:2px 5px}
-.dwg .dtag{flex:none;font-size:11.5px;font-weight:700;color:#fff;border-radius:999px;padding:2px 9px}   /* 図面の中身の札（ダクト・衛生配管など）2026/11/03 */
+.dwg .dtag{flex:none;font-size:13.5px;font-weight:700;color:#fff;border-radius:999px;padding:3px 11px;letter-spacing:.04em}   /* 図面の中身の札（ダクト・衛生配管など）2026/11/03 */
 .dwg .del{flex:none}
 /* 現場の写真（材料置き場など）：小さく並べて、タップで大きく */
 .phgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:4px 0 10px}
@@ -960,7 +960,7 @@ function fillDrawings(box,x,mine){
   box.replaceChildren(...[h("h3",{text:title}),   // 見出し。枚数は出さない（2026/11/03 ユーザー）
     list.length?null:h("p",{class:"hint",text:"まだ図面はありません。"+(editor==="西崎剣"?"「＋ "+title+"を入れる」からPDFを入れてください。":"")}),
     ...groups.flatMap(([g,ds])=>[mine?null:h("h4",{class:"vh",text:g}),h("ul",{class:"dwg"},ds.map(d=>h("li",null,
-      h("a",{href:d.url,target:"_blank",rel:"noopener"},h("span",{class:"pdf",text:"PDF"}),d.tag?h("span",{class:"dtag",text:d.tag,style:{background:d.tagColor||"#0b5cab"}}):null,h("b",{text:d.name}),h("small",{text:d.size?mb(d.size):""})),
+      h("a",{href:d.url,target:"_blank",rel:"noopener",style:d.tag?{borderLeft:"6px solid "+(d.tagColor||"#0b5cab"),background:(d.tagColor||"#0b5cab")+"14"}:null},h("span",{class:"pdf",text:"PDF"}),d.tag?h("span",{class:"dtag",text:d.tag,style:{background:d.tagColor||"#0b5cab"}}):null,h("b",{text:d.name}),h("small",{text:d.size?mb(d.size):""})),
       editor==="西崎剣"?h("button",{type:"button",class:"btn ghost small del",onclick:async e=>{const t=e.currentTarget;
         if(t.dataset.ok!=="1"){t.dataset.ok="1";t.textContent="本当に消す";return;}
         try{try{await deleteObject(sref(getStorage(fbApp),d.path));}catch(y){}await deleteDoc(doc(fs,"drawings",d.id));toast("図面を消しました");}catch(y){toast("消せませんでした");}}},"消す"):null)))]),
