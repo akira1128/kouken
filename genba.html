@@ -1269,7 +1269,7 @@ function ecKeys(name, sub){
   return [];
 }
 // ジャケット・エルボの色は材料のID（jk色-番号・el色-番号）から
-const ecSub=l=>{const m=(l.itemId||"").match(/^(?:jk|el|e4)(\d)-/);return m?(["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"][m[1]]||""):"";};
+const ecSub=l=>{const m=(l.itemId||"").match(/^(?:jk|el|e4)(\d+)-/);return m?(["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル","ダルエース黒","ブラック"][m[1]]||""):"";};
 function ecBtn(o){
   const lines=(o.lines||[]).filter(l=>!l.make).map(l=>({n:l.name,q:Number(l.qty)||0,u:l.unit||"",k:ecKeys((l.name||"").trim(),ecSub(l))})).filter(l=>l.q>0);
   const miss=lines.filter(l=>!l.k.length).length;
