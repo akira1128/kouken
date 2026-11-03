@@ -295,7 +295,7 @@ h4.vh{margin:14px 0 6px;font-size:13px;color:var(--muted)}
 .dwg{list-style:none;margin:0 0 8px;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
 .dwg li{display:flex;align-items:center;gap:8px;min-width:0}   /* 長い名前で画面の外にはみ出さないように */
 .dwg a{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);text-decoration:none;font-size:14.5px}
-.dwg a b{flex:1;min-width:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dwg a b{flex:1;min-width:0;font-weight:500;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-all}   /* 名前は2行まで折り返す */
 .dwg a small{color:var(--muted);font-size:11.5px;flex:none}
 .dwg .pdf{flex:none;font-size:10.5px;font-weight:700;color:#fff;background:var(--low);border-radius:4px;padding:2px 5px}
 .dwg .del{flex:none}
