@@ -320,6 +320,9 @@ const facLbl=n=>n===FACTORY?"工場":n;
 /* 種類の中をさらに分ける（色・材質）。ジャケット・エルボとフランジカバー */
 const COLORS=["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"];
 const SUBS={"ジャケット・エルボ":COLORS,"砲金バルブ・メクラキャップ":COLORS,"フランジカバー":COLORS,"片フランジ":COLORS,"BOXカバー":COLORS,"トランクカバー":COLORS,"PF保温筒":["直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
+/* スチロールカバー（PF保温筒）の名前は東京グラスロンの請求書と同じ（2026/11/03 ユーザー）。買ったことのないものも同じ付け方 */
+const PF_GL={"直管":"スチロールカバー FP-CL (アディア)","鉄管エルボ":"スチロールエルボ(N) (アディア)","塩ビエルボ":"塩ビ用スチロールエルボ FP-E (アディア)",
+  "Susエルボ":"ステン管用スチロールエルボ FP-SUE (アディア)","溶接Sエルボ":"スチロール溶接ショートエルボ FP-YES (アディア)","溶接Lエルボ":"スチロール溶接ロングエルボ FP-YEL (アディア)"};
 const SUBLABEL=c=>c==="PF保温筒"?"直管・エルボ":"色・材質";
 const NOSUB="分けていない";
 /* 2段目に「すべて」を出さない種類（2026/10/28 ユーザー） */
@@ -482,6 +485,7 @@ function aliases(it){
   if(/アルミ粘着テープ/.test(n))a+=" alk アルミテープ";
   if(/ステン/.test(n+c))a+=" sus";
   if(/SUS|Sus/.test(n+c))a+=" ステン";
+  if(it.cat==="PF保温筒")a+=" pf pf保温筒 スチロール "+(it.sub||"");
   if(/らくえる/.test(n))a+=" エルボ "+(/45°/.test(n)?"45 45°":"90 90°");
   return a;
 }
@@ -925,7 +929,7 @@ function askPin(){
 const SPECS=[["20t",0,["15A","20A","25A","32A","40A","50A","65A","80A"]],["25t",0,["100A","125A","150A"]],["30t",1,["15A","20A","25A","32A","40A","50A"]],
   ["40t",2,["32A","40A","50A","65A","80A","100A","125A","150A","200A","250A","300A"]],["50t",3,["200A","250A","300A"]]];
 /* 材料を足したり、名前・種類を移す処理を足したときは、この数を1つ上げる（上げないと動かない） */
-const MIGRATE_VER=4;   // 2：ジャケット・エルボをグラスロンの請求書の名前にし、45°を足した（2026/11/03）
+const MIGRATE_VER=5;   // 5：スチロールカバーをグラスロンの請求書の名前に（2026/11/03）   // 2：ジャケット・エルボをグラスロンの請求書の名前にし、45°を足した（2026/11/03）
 /* あとから足す材料（なければ作る。数は0）。order が大きいほど一覧の下に出る */
 const EXTRA_ITEMS=[
   ...["15A","20A","25A","32A","40A","50A"].map(a=>({id:"alk30-"+a,name:"ALKP保温筒 "+a+"×30t",cat:"ALK（P）保温筒",unit:"本",order:1})), // 2026/10/28 使う頻度が少ないので20tの下に
@@ -934,7 +938,7 @@ const EXTRA_ITEMS=[
   // ALGC保温筒もALKと同じ規格（2026/10/28）
   ...SPECS.flatMap(([t,o,list])=>list.map(a=>({id:"algc"+t.replace("t","")+"-"+a,name:(o>0?"ALGCP保温筒 ":"ALGC保温筒 ")+a+"×"+t,cat:"ALGC（P）保温筒",unit:"本",order:o}))),
   // PF保温筒の直管もALKと同じ規格（2026/10/28）
-  ...SPECS.flatMap(([t,o,list])=>list.map(a=>({id:"pf"+t.replace("t","")+"-"+a,name:"PF保温筒 "+a+"×"+t,cat:"PF保温筒",sub:"直管",unit:"本",order:o}))),
+  ...SPECS.flatMap(([t,o,list])=>list.map(a=>({id:"pf"+t.replace("t","")+"-"+a,name:PF_GL["直管"]+" "+a+"×"+t,cat:"PF保温筒",sub:"直管",unit:"本",order:o}))),
   {id:"sheet-cz12",name:"CZ-12",cat:"遮音シート",unit:"巻",order:0},
   // コイル（東京グラスロンの請求書で買ったもの 2026/10/28）。[並び, 名前, 厚み, 幅mm, 長さm]
   ...[[0,"ガルバリウムコイル","0.27",914,20],[0,"ガルバリウムコイル","0.3",914,20],[0,"ガルバリウムコイル","0.35",914,20],[0,"ガルバリウムコイル","0.27",1000,20],
@@ -976,7 +980,7 @@ const EXTRA_ITEMS=[
   {id:"roll-algcm40-50",name:"ALGCマイティロール 40K×50t",cat:"ロール",unit:"巻",order:0},
   // PF保温筒の各エルボも同じ規格（数え方は個）
   ...[["tk","鉄管エルボ"],["vp","塩ビエルボ"],["su","Susエルボ"],["ws","溶接Sエルボ"],["wl","溶接Lエルボ"]].flatMap(([k,e])=>
-    SPECS.flatMap(([t,o,list])=>list.map(a=>({id:"pf"+k+t.replace("t","")+"-"+a,name:"PF保温筒 "+e+" "+a+"×"+t,cat:"PF保温筒",sub:e,unit:"個",order:o}))))
+    SPECS.flatMap(([t,o,list])=>list.map(a=>({id:"pf"+k+t.replace("t","")+"-"+a,name:PF_GL[e]+" "+a+"×"+t,cat:"PF保温筒",sub:e,unit:"個",order:o}))))
 ];
 async function ensureItems(){
   const have=new Set((await getDocs(collection(fs,"items"))).docs.map(d=>d.id));
@@ -1007,6 +1011,13 @@ function newCat(x){
   if(x.cat==="テープ・副資材"&&/サンダム|遮音/.test(n))return "遮音シート";
   if(x.cat==="テープ・副資材"&&/亀甲|金網/.test(n))return "金網";
   return null;
+}
+async function renamePF(){
+  const ds=(await getDocs(collection(fs,"items"))).docs.filter(d=>d.data().cat==="PF保温筒");
+  const up=[];
+  for(const d of ds){const m=(d.data().name||"").match(/^PF保温筒 (?:(鉄管エルボ|塩ビエルボ|Susエルボ|溶接Sエルボ|溶接Lエルボ) )?(\d+A)×(\d+t)$/);
+    if(m)up.push([d.ref,PF_GL[m[1]||"直管"]+" "+m[2]+"×"+m[3]]);}
+  for(let k=0;k<up.length;k+=400){const b=writeBatch(fs);up.slice(k,k+400).forEach(([r,n])=>b.update(r,{name:n}));try{await b.commit();}catch(e){}}
 }
 async function renameJE(){
   const list=EXTRA_ITEMS.filter(x=>x.cat==="ジャケット・エルボ"&&!x.id.startsWith("e4"));
@@ -1094,7 +1105,7 @@ renderWho();renderCats();renderList();renderLog();show(view);
   // 材料を作る・名前や種類を移す処理は、版（MIGRATE_VER）が上がったときに1回だけ。毎回やると全部の材料を読むので
   try{
     const m=await getDoc(doc(fs,"items","_meta"));const done=m.exists()?Number(m.data().ver)||0:0;
-    if(done<MIGRATE_VER){await migrateCats();if(done<2)await renameJE();await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
+    if(done<MIGRATE_VER){await migrateCats();if(done<2)await renameJE();if(done<5)await renamePF();await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
   }catch(e){}
   onSnapshot(collection(fs,"items"),s=>{
     items=s.docs.filter(d=>!d.id.startsWith("_")).map(d=>Object.assign({id:d.id},d.data())).filter(x=>!x.deleted).sort((a,b)=>rank(a)-rank(b)||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
