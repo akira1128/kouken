@@ -939,33 +939,36 @@ function meter(x){
    PDFはファイル置き場（Firebase Storage の drawings/現場ID/）に入れ、drawings/{id} には名前・種類・場所だけ。
    開いたときに読むのは一覧だけなので、100枚あっても重くならない。入れる・消すのは西崎さんだけ ---------- */
 let drawings=[], drawingsFor="", unDw=null;
-const DW_GROUPS=["図面　西崎作成","施工図","設計図","系統図","仕様書","工程表","案内図","その他"];   // 「設備図」は「設計図」（2026/11/03 ユーザー）
+const MINE="図面　西崎作成";   // 西崎さんが作った図面は、施工図・設計図・工程表とは別の枠（2026/11/03 ユーザー）
+const DW_GROUPS=["施工図","設計図","系統図","仕様書","工程表","案内図","その他"];   // 「設備図」は「設計図」（2026/11/03 ユーザー）
 function watchDrawings(x){
   if(drawingsFor===x.id||!fs)return;
   if(unDw)unDw();drawingsFor=x.id;drawings=[];
   unDw=onSnapshot(query(collection(fs,"drawings"),where("siteId","==",x.id)),s=>{
     drawings=s.docs.map(d=>Object.assign({id:d.id},d.data()));
-    const b=$("dwgBox");if(b&&view==="vSite"&&siteId===x.id)fillDrawings(b,x);
+    const b=$("dwgBox"), m=$("dwgMine");if(view==="vSite"&&siteId===x.id){if(b)fillDrawings(b,x);if(m)fillDrawings(m,x,true);}
   },()=>{});
 }
 const mb=n=>n>=1048576?(n/1048576).toFixed(1)+"MB":Math.max(1,Math.round(n/1024))+"KB";
-function fillDrawings(box,x){
+function fillDrawings(box,x,mine){
   const gi=g=>{const i=DW_GROUPS.indexOf(g);return i<0?99:i;};
-  const list=drawings.slice().sort((a,b)=>gi(a.group)-gi(b.group)||(a.group||"").localeCompare(b.group||"")||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
+  const list=drawings.filter(d=>(d.group===MINE)===!!mine).sort((a,b)=>gi(a.group)-gi(b.group)||(a.group||"").localeCompare(b.group||"")||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
   const groups=[];list.forEach(d=>{const g=d.group||"その他";let k=groups.find(z=>z[0]===g);if(!k)groups.push(k=[g,[]]);k[1].push(d);});
-  box.replaceChildren(...[h("h3",{text:"施工図・設計図・工程表"}),   // 見出し。枚数は出さない（2026/11/03 ユーザー）
-    list.length?null:h("p",{class:"hint",text:"まだ図面はありません。"+(editor==="西崎剣"?"「＋ 施工図・設計図・工程表を入れる」からPDFを入れてください。":"")}),
-    ...groups.flatMap(([g,ds])=>[h("h4",{class:"vh",text:g}),h("ul",{class:"dwg"},ds.map(d=>h("li",null,
+  box.hidden=!!mine&&!list.length&&editor!=="西崎剣";   // 西崎作成の枠は、まだ何もなければ社員には出さない
+  const title=mine?MINE:"施工図・設計図・工程表";
+  box.replaceChildren(...[h("h3",{text:title}),   // 見出し。枚数は出さない（2026/11/03 ユーザー）
+    list.length?null:h("p",{class:"hint",text:"まだ図面はありません。"+(editor==="西崎剣"?"「＋ "+title+"を入れる」からPDFを入れてください。":"")}),
+    ...groups.flatMap(([g,ds])=>[mine?null:h("h4",{class:"vh",text:g}),h("ul",{class:"dwg"},ds.map(d=>h("li",null,
       h("a",{href:d.url,target:"_blank",rel:"noopener"},h("span",{class:"pdf",text:"PDF"}),h("b",{text:d.name}),h("small",{text:d.size?mb(d.size):""})),
       editor==="西崎剣"?h("button",{type:"button",class:"btn ghost small del",onclick:async e=>{const t=e.currentTarget;
         if(t.dataset.ok!=="1"){t.dataset.ok="1";t.textContent="本当に消す";return;}
         try{try{await deleteObject(sref(getStorage(fbApp),d.path));}catch(y){}await deleteDoc(doc(fs,"drawings",d.id));toast("図面を消しました");}catch(y){toast("消せませんでした");}}},"消す"):null)))]),
-    editor==="西崎剣"?h("button",{type:"button",class:"btn ghost",onclick:()=>addDrawings(x)},"＋ 施工図・設計図・工程表を入れる"):null].filter(Boolean));   // null は「null」と字が出るので外す
+    editor==="西崎剣"?h("button",{type:"button",class:"btn ghost",onclick:()=>addDrawings(x,mine)},"＋ "+title+"を入れる"):null].filter(Boolean));   // null は「null」と字が出るので外す
 }
 // 図面を入れる（西崎さんだけ）。PDFをいくつでもえらべる。種類（施工図・設備図など）をえらんでから入れる
-function addDrawings(x){
+function addDrawings(x,mine){
   const files=h("input",{type:"file",accept:"application/pdf,.pdf",multiple:true,class:"inp"});
-  const grp=h("select",{class:"inp"},DW_GROUPS.map(g=>h("option",{value:g},g)));
+  const grp=h("select",{class:"inp"},(mine?[MINE]:DW_GROUPS).map(g=>h("option",{value:g},g)));
   const err=h("p",{class:"err",hidden:true}), info=h("p",{class:"hint"});
   const save=h("button",{class:"btn",type:"submit"},"入れる");
   let close;
@@ -986,7 +989,7 @@ function addDrawings(x){
       }
       close();toast(fl.length+"枚の図面を入れました");
     }catch(y){err.textContent=(y&&/unauthorized|permission/.test(y.code||"")?"入れる権限がありません。":"入れられませんでした。電波を確認してください。")+"（"+(n-1)+"枚まで入りました）";err.hidden=false;save.disabled=false;}
-  }},h("h2",{text:"施工図・設計図・工程表を入れる"}),h("label",{class:"fl"},"種類",grp),h("label",{class:"fl"},"PDF（いくつでもえらべます）",files),
+  }},h("h2",{text:mine?MINE+"を入れる":"施工図・設計図・工程表を入れる"}),h("label",{class:"fl"},"種類",grp),h("label",{class:"fl"},"PDF（いくつでもえらべます）",files),
     h("p",{class:"hint",text:"PDFのまま入れます。社員は押すとPDFで開いて、拡大して見られます。"}),info,err,save);
   close=openSheet(form);
 }
@@ -1228,6 +1231,7 @@ function renderSite(){
       h("p",{class:"hint",id:"photoHint",style:{marginBottom:"8px"},text:"材料置き場・搬入口など、次に行く人が助かる写真を入れておけます。状況が変わったら、だれでも取り替え・消しができます。"}),
       (()=>{const g=h("div",{class:"phgrid",id:"photoGrid"});fillPhotos(g,x);return g;})(),
       h("button",{type:"button",class:"btn ghost",onclick:()=>openPhoto(x,null)},"＋ 写真を入れる")),
+    (()=>{const b=h("section",{class:"panel sec",id:"dwgMine"});fillDrawings(b,x,true);return b;})(),
     (()=>{const b=h("section",{class:"panel sec",id:"dwgBox"});fillDrawings(b,x);return b;})(),
     // ないときは何も出さない（null を並べると「null」と字が出るので、配列で足す）
     ...((x.matome||[]).length?[matomeBox(x)]:[]),
