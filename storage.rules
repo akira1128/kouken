@@ -1,0 +1,19 @@
+rules_version = '2';
+// ファイル置き場（Firebase Storage）のルール（2026/11/03 現場の図面）
+// 見るのは暗証番号を入れた社員、入れる・消すのは西崎さんだけ。PDFだけ、1つ50MBまで
+service firebase.storage {
+  match /b/{bucket}/o {
+    function member() {
+      return request.auth != null && firestore.exists(/databases/(default)/documents/members/$(request.auth.uid));
+    }
+    function boss() {
+      return request.auth != null && firestore.exists(/databases/(default)/documents/editors/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/editors/$(request.auth.uid)).data.name == "西崎剣";
+    }
+    match /drawings/{siteId}/{file} {
+      allow read: if member();
+      allow create: if boss() && request.resource.size < 50 * 1024 * 1024 && request.resource.contentType == "application/pdf";
+      allow delete: if boss();
+    }
+  }
+}

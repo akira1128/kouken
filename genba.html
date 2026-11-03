@@ -291,6 +291,14 @@ h4.vh{margin:14px 0 6px;font-size:13px;color:var(--muted)}
 .vwho{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
 .vwho li{display:flex;gap:6px;align-items:baseline;border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:var(--surface);font-size:13.5px}
 .vwho small{color:var(--muted);font-size:11.5px}
+/* 現場の図面（PDF）：種類ごとに名前を並べて、押すとPDFが開く（2026/11/03） */
+.dwg{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:6px}
+.dwg li{display:flex;align-items:center;gap:8px}
+.dwg a{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);text-decoration:none;font-size:14.5px}
+.dwg a b{flex:1;min-width:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dwg a small{color:var(--muted);font-size:11.5px;flex:none}
+.dwg .pdf{flex:none;font-size:10.5px;font-weight:700;color:#fff;background:var(--low);border-radius:4px;padding:2px 5px}
+.dwg .del{flex:none}
 /* 現場の写真（材料置き場など）：小さく並べて、タップで大きく */
 .phgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:4px 0 10px}
 .phgrid button{position:relative;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;aspect-ratio:1;background:var(--bg)}
@@ -393,8 +401,9 @@ chkOpen();document.addEventListener("visibilitychange",()=>{if(!document.hidden)
 if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.type==="open")chkOpen();});
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {renderPushBox} from "./push.js";
+import {getStorage,ref as sref,uploadBytes,getDownloadURL,deleteObject} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,getDoc,setDoc,onSnapshot,query,where,orderBy,limit,arrayUnion,arrayRemove,writeBatch,deleteField,getDocsFromServer} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,addDoc,updateDoc,deleteDoc,getDoc,setDoc,onSnapshot,query,where,orderBy,limit,arrayUnion,arrayRemove,writeBatch,deleteField,getDocsFromServer} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {FIREBASE_CONFIG} from "./firebase-config.js";
 (function(){
 /* 社員：[正式名, 呼び名]。在庫・予定表と同じ。「使う人」は在庫で選んだ名前（kouken-who）と同じものを使う */
@@ -913,6 +922,62 @@ function meter(x){
 
 
 /* ---------- 現場の詳しい画面 ---------- */
+/* ---------- 現場の図面（2026/11/03 ユーザー。まず銀座一丁目で試す）
+   PDFはファイル置き場（Firebase Storage の drawings/現場ID/）に入れ、drawings/{id} には名前・種類・場所だけ。
+   開いたときに読むのは一覧だけなので、100枚あっても重くならない。入れる・消すのは西崎さんだけ ---------- */
+let drawings=[], drawingsFor="", unDw=null;
+const DW_GROUPS=["施工図","設備図","系統図","仕様書","工程表","案内図","その他"];
+function watchDrawings(x){
+  if(drawingsFor===x.id||!fs)return;
+  if(unDw)unDw();drawingsFor=x.id;drawings=[];
+  unDw=onSnapshot(query(collection(fs,"drawings"),where("siteId","==",x.id)),s=>{
+    drawings=s.docs.map(d=>Object.assign({id:d.id},d.data()));
+    const b=$("dwgBox");if(b&&view==="vSite"&&siteId===x.id)fillDrawings(b,x);
+  },()=>{});
+}
+const mb=n=>n>=1048576?(n/1048576).toFixed(1)+"MB":Math.max(1,Math.round(n/1024))+"KB";
+function fillDrawings(box,x){
+  const gi=g=>{const i=DW_GROUPS.indexOf(g);return i<0?99:i;};
+  const list=drawings.slice().sort((a,b)=>gi(a.group)-gi(b.group)||(a.group||"").localeCompare(b.group||"")||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
+  const groups=[];list.forEach(d=>{const g=d.group||"その他";let k=groups.find(z=>z[0]===g);if(!k)groups.push(k=[g,[]]);k[1].push(d);});
+  box.replaceChildren(...[h("div",{class:"sec"},h("h3",{text:"図面"+(list.length?"（"+list.length+"枚）":"")})),
+    list.length?null:h("p",{class:"hint",text:"まだ図面はありません。"+(editor==="西崎剣"?"「＋ 図面を入れる」からPDFを入れてください。":"")}),
+    ...groups.flatMap(([g,ds])=>[h("h4",{class:"vh",text:g}),h("ul",{class:"dwg"},ds.map(d=>h("li",null,
+      h("a",{href:d.url,target:"_blank",rel:"noopener"},h("span",{class:"pdf",text:"PDF"}),h("b",{text:d.name}),h("small",{text:d.size?mb(d.size):""})),
+      editor==="西崎剣"?h("button",{type:"button",class:"btn ghost small del",onclick:async e=>{const t=e.currentTarget;
+        if(t.dataset.ok!=="1"){t.dataset.ok="1";t.textContent="本当に消す";return;}
+        try{try{await deleteObject(sref(getStorage(fbApp),d.path));}catch(y){}await deleteDoc(doc(fs,"drawings",d.id));toast("図面を消しました");}catch(y){toast("消せませんでした");}}},"消す"):null)))]),
+    editor==="西崎剣"?h("button",{type:"button",class:"btn ghost",onclick:()=>addDrawings(x)},"＋ 図面を入れる"):null].filter(Boolean));   // null は「null」と字が出るので外す
+}
+// 図面を入れる（西崎さんだけ）。PDFをいくつでもえらべる。種類（施工図・設備図など）をえらんでから入れる
+function addDrawings(x){
+  const files=h("input",{type:"file",accept:"application/pdf,.pdf",multiple:true,class:"inp"});
+  const grp=h("select",{class:"inp"},DW_GROUPS.map(g=>h("option",{value:g},g)));
+  const err=h("p",{class:"err",hidden:true}), info=h("p",{class:"hint"});
+  const save=h("button",{class:"btn",type:"submit"},"入れる");
+  let close;
+  const form=h("form",{class:"f",onsubmit:async e=>{e.preventDefault();
+    const fl=[...files.files].filter(f=>/\.pdf$/i.test(f.name)||f.type==="application/pdf");
+    if(!fl.length){err.textContent="PDFをえらんでください。";err.hidden=false;return;}
+    if(fl.some(f=>f.size>=50*1024*1024)){err.textContent="50MBより大きいPDFは入れられません。";err.hidden=false;return;}
+    save.disabled=true;err.hidden=true;
+    const st=getStorage(fbApp);let n=0;
+    try{
+      for(const f of fl){
+        info.textContent="入れています… "+(++n)+"／"+fl.length+"　"+f.name;
+        const path="drawings/"+x.id+"/"+Date.now()+"_"+f.name.replace(/[\\/#?%*:|"<>]/g,"_");
+        const r=sref(st,path);
+        await uploadBytes(r,f,{contentType:"application/pdf"});
+        const url=await getDownloadURL(r);
+        await addDoc(collection(fs,"drawings"),{siteId:x.id,name:f.name.replace(/\.pdf$/i,""),group:grp.value,path,url,size:f.size,by:me(),at:Date.now()});
+      }
+      close();toast(fl.length+"枚の図面を入れました");
+    }catch(y){err.textContent=(y&&/unauthorized|permission/.test(y.code||"")?"入れる権限がありません。":"入れられませんでした。電波を確認してください。")+"（"+(n-1)+"枚まで入りました）";err.hidden=false;save.disabled=false;}
+  }},h("h2",{text:"図面を入れる"}),h("label",{class:"fl"},"種類",grp),h("label",{class:"fl"},"PDF（いくつでもえらべます）",files),
+    h("p",{class:"hint",text:"PDFのまま入れます。社員は押すとPDFで開いて、拡大して見られます。"}),info,err,save);
+  close=openSheet(form);
+}
+
 /* ---------- 現場の写真（材料置き場など）。社員だれでも足す・書きかえる・取り替える・消すができる（2026/10/29 ユーザー）
    photos/{id}：小さい写真＋説明（一覧用）、photoFull/{id}：大きい写真（タップしたときだけ読む） ---------- */
 let photos=[], photosFor="", unPhotos=null;
@@ -1106,7 +1171,7 @@ function tableBox(t){
 function renderSite(){
   const box=$("vSite"), x=sites.find(s=>s.id===siteId);
   if(!x){box.replaceChildren(h("div",{class:"panel empty",text:fs?"この現場は見つかりません":"読み込んでいます…"}));return;}
-  watchPhotos(x);
+  watchPhotos(x);watchDrawings(x);
   const inf=x.info||{};
   const val=(k,v)=>{
     if(!v)return h("dd",{class:"none",text:"―"});
@@ -1150,6 +1215,7 @@ function renderSite(){
       h("p",{class:"hint",id:"photoHint",style:{marginBottom:"8px"},text:"材料置き場・搬入口など、次に行く人が助かる写真を入れておけます。状況が変わったら、だれでも取り替え・消しができます。"}),
       (()=>{const g=h("div",{class:"phgrid",id:"photoGrid"});fillPhotos(g,x);return g;})(),
       h("button",{type:"button",class:"btn ghost",onclick:()=>openPhoto(x,null)},"＋ 写真を入れる")),
+    (()=>{const b=h("section",{class:"panel",id:"dwgBox"});fillDrawings(b,x);return b;})(),
     // ないときは何も出さない（null を並べると「null」と字が出るので、配列で足す）
     ...((x.matome||[]).length?[matomeBox(x)]:[]),
     ...(x.ami?[amiBox(x)]:[]),

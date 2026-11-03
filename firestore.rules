@@ -61,6 +61,8 @@ service cloud.firestore {
     match /logins/{id} { allow create: if member() && request.resource.data.uid == request.auth.uid; allow read: if boss(); allow update, delete: if false; }
     match /matomeMoney/{id} { allow read, write: if boss(); }
     // 現場の準備ができた知らせ（社員みんなの携帯に通知）：送るのは西崎さんだけ（2026/11/03）
+    // 現場の図面の一覧（PDF本体はファイル置き場）：見るのは社員、入れる・消すのは西崎さんだけ（2026/11/03）
+    match /drawings/{id} { allow read: if member(); allow create, update, delete: if boss(); }
     match /announce/{id} { allow read: if member(); allow create: if boss(); allow update, delete: if false; }
     // 履歴は足すだけ（直したり消したりはできない）
     match /logs/{id} { allow read, create: if member(); allow update, delete: if false; }
