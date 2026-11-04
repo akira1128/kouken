@@ -76,6 +76,7 @@ main{display:grid;gap:16px;padding-top:14px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--in);flex:none}
 .alert.has .dot{background:var(--low)}
 .lowlist{display:flex;flex-wrap:wrap;gap:6px}
+.lowlist .linebtn{flex-basis:100%;margin-top:4px;border:0;background:#06c755;color:#fff;font-weight:800;font-size:15px;padding:10px;border-radius:10px}
 .lowlist button{border:1px solid var(--low);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 10px;font-size:13px}
 .tools{display:grid;gap:10px}
 .search{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
@@ -488,7 +489,11 @@ function renderAlert(){
   const a=$("alert");a.classList.toggle("has",low.length>0);
   if(!loaded){$("alertTitle").textContent="読み込み中…";$("lowList").replaceChildren();return;}
   $("alertTitle").textContent=low.length?("少ないもの "+low.length+"件"):(items.length?"少ないものはありません":"まだ材料がありません");
-  $("lowList").replaceChildren(...low.map(it=>h("button",{type:"button",onclick:()=>openItem(it.id)},it.name+"  "+(lowS(it)||!lowE(it)?fmtN(it.qty)+(it.unit||""):"")+(lowE(it)?(lowS(it)?"・":"")+"エルボ":""))));
+  $("lowList").replaceChildren(...low.map(it=>h("button",{type:"button",onclick:()=>openItem(it.id)},it.name+"  "+(lowS(it)||!lowE(it)?fmtN(it.qty)+(it.unit||""):"")+(lowE(it)?(lowS(it)?"・":"")+"エルボ":""))),
+    // 少ないものをLINEで送る（LINEが開いて、送る相手をえらぶ 2026/11/04 ユーザー）
+    ...(low.length?[h("button",{type:"button",class:"linebtn",onclick:()=>{const d=new Date();
+      const t="【工場在庫 少ないもの "+(d.getMonth()+1)+"/"+d.getDate()+"】\n"+low.map(it=>"・"+it.name+"　"+fmtN(it.qty)+(it.unit||"")+(Number(it.min)>0?"（目安"+fmtN(it.min)+(it.unit||"")+"）":"")).join("\n");
+      location.href="https://line.me/R/share?text="+encodeURIComponent(t);}},"LINEで送る")]:[]));
 }
 /* さがす：スペース（全角も）で区切った言葉が全部入っている材料を出す。
    数字はかたまりで比べ（25 は 25A に当たり 125A には当たらない）、数字は書いた順に並んでいるものだけ（「25 20」→ 25A×20t）（2026/10/28） */
