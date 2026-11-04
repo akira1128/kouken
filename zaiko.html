@@ -168,7 +168,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
 .incart{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--accent);color:var(--accent-ink);margin-left:6px;vertical-align:2px}
 .ordernote{margin:8px 2px 0}
 .spotbox{display:grid;gap:6px}
-.facrow{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:13px;color:var(--muted);font-weight:700}
+.facrow{display:flex;align-items:center;gap:10px;margin-top:2px;font-size:13px;color:var(--muted);font-weight:700}
 .facbtn{border:1.5px solid var(--accent);color:var(--accent);background:var(--surface);border-radius:999px;padding:8px 22px;font-size:16px;font-weight:800}
 .facbtn[aria-pressed="true"]{background:var(--accent);color:#fff}
 .flbox{padding:12px 14px;display:grid;gap:10px}
@@ -1121,7 +1121,7 @@ if(ORDER){document.documentElement.classList.add("ordermode");
   if(SPOT){const sn=$("spotName");
     const fb=h("button",{type:"button",class:"facbtn","aria-pressed":String(sn.value==="工場"),onclick:()=>{sn.value="工場";store("kouken-spot-name","工場");fb.setAttribute("aria-pressed","true");}},"工場");
     sn.addEventListener("input",()=>fb.setAttribute("aria-pressed",String(sn.value==="工場")));
-    $("orderSite").insertAdjacentElement("afterend",h("div",{class:"facrow"},h("span",{text:"工場あてに頼むときは"}),fb));}
+    $("orderSite").append(h("div",{class:"facrow"},h("span",{text:"工場あてに頼むときは"}),fb));}   // 現場名の欄のすぐ下
   if(SPOT&&new URLSearchParams(location.search).get("sent"))setTimeout(()=>toast("西崎へ送りました"),300);
   // 一覧にない材料の手書きの欄
   const xName=h("input",{class:"inp",placeholder:"材料の名前（例：アルミテープ 50mm）"}),
