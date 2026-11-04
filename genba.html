@@ -1504,11 +1504,14 @@ function siteFilter(val,on){
 }
 function renderOrders(){
   const box=$("vOrders");
-  const list=orders.filter(o=>!ordSite||o.siteId===ordSite);
-  const days=[...new Set(list.map(o=>o.date))];
+  // 配達日の新しい順に並べる。配達日が入っていない注文は注文日の所に置く（2026/11/04 ユーザー）
+  const dk=o=>(o.ddate?o.ddate+"|d":o.date+"|o");
+  const list=orders.filter(o=>!ordSite||o.siteId===ordSite).slice().sort((a,b)=>(b.ddate||b.date||"").localeCompare(a.ddate||a.date||"")||(b.at||0)-(a.at||0));
+  const days=[...new Set(list.map(dk))];
   box.replaceChildren(h("section",{class:"panel"},
     h("div",{class:"tools",style:{gridTemplateColumns:"1fr"}},siteFilter(ordSite,v=>{ordSite=v;renderOrders();})),
-    list.length?days.flatMap(d=>[h("h4",{class:"dayh",text:md(d)+"　"+list.filter(o=>o.date===d).length+"件"}),...list.filter(o=>o.date===d).map(orderRow)]):
+    list.length?days.flatMap(k=>{const [d,t]=k.split("|"),g=list.filter(o=>dk(o)===k);
+      return [h("h4",{class:"dayh",text:(t==="d"?"配達 "+md(d):"注文 "+md(d)+"（配達日なし）")+"　"+g.length+"件"}),...g.map(orderRow)];}):
       h("p",{class:"empty",text:"まだ注文はありません。現場の画面の「この現場の材料を頼む」から頼めます。"})));
 }
 
