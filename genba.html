@@ -271,6 +271,11 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .lastv{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin:2px 0 8px;font-size:14px}
 .lastv .lvl{font-size:12px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 7px}
 .lastv:empty{display:none}
+/* 注文の配達予定（注文日・配達日・時間・受け取り） */
+.dlv{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;margin:8px 0 2px;padding:8px 10px;border-radius:10px;background:var(--bg)}
+.dlv dl{display:grid;grid-template-columns:repeat(4,auto);gap:2px 14px;margin:0;flex:1}
+.dlv dt{font-size:11px;color:var(--muted)}.dlv dd{margin:0;font-weight:700;font-size:14px}
+.dlv .btn{margin-left:auto}
 .mtog{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:2px}
 /* 現場の脚立（何尺を何丁置いてあるか 2026/11/04 ユーザー） */
 .lad{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
@@ -1356,8 +1361,31 @@ function orderRow(o){
     // 工場で作るもの（フランジカバー）は「製作もの」として分けて出す（2026/10/30）
     lines.some(l=>l.make)?h("div",{class:"makebox"},h("b",{text:"製作もの"}),h("ul",null,lines.filter(l=>l.make).map(l=>h("li",{text:l.name+"　"+fmtN(l.qty)+(l.unit||"")})))):null,
     o.memo?h("div",{class:"mm",text:"メモ："+o.memo}):null,
+    delivLine(o),
     editor==="西崎剣"?doneBtn(o):(o.done?h("div",{class:"donemark",text:"✓ 注文済み"}):null),
     editor==="西崎剣"?ecBtn(o):null);
+}
+/* 注文日・配達日・配達時間・受け取りの人（2026/11/04 ユーザー）。orders/{id} の ddate・dtime・recv。書くのは編集する人 */
+function delivLine(o){
+  const t=[["注文日",md(o.date)],["配達日",o.ddate?md(o.ddate):"―"],["時間",o.dtime||"―"],["受け取り",o.recv||"―"]];
+  return h("div",{class:"dlv"},h("dl",null,t.map(([k,v])=>h("div",null,h("dt",{text:k}),h("dd",{text:v})))),
+    editor?h("button",{type:"button",class:"btn ghost small",onclick:()=>delivSheet(o)},o.ddate||o.recv?"配達を直す":"配達を書く"):null);
+}
+function delivSheet(o){
+  const dd=h("input",{class:"inp",type:"date",value:o.ddate||""});
+  const tm=h("input",{class:"inp",placeholder:"例 10:00-10:30",value:o.dtime||""});
+  const rv=h("input",{class:"inp",placeholder:"名前",value:o.recv||""});
+  const chips=h("div",{class:"names",style:{gridTemplateColumns:"repeat(4,1fr)"}},STAFF.map(([,n])=>h("button",{type:"button",onclick:()=>{rv.value=n;}},n)));
+  const err=h("p",{class:"err",hidden:true});
+  const save=h("button",{class:"btn",type:"submit"},"保存する");
+  let close;
+  const form=h("form",{class:"f",onsubmit:async e=>{e.preventDefault();save.disabled=true;
+    try{await updateDoc(doc(fs,"orders",o.id),{ddate:dd.value,dtime:tm.value.trim(),recv:rv.value.trim()});close();toast("配達の予定を保存しました");}
+    catch(y){err.textContent=y&&y.code==="permission-denied"?"書く権限がありません。":"保存できませんでした。電波を確認してください。";err.hidden=false;save.disabled=false;}
+  }},h("h2",{text:"配達の予定（注文日 "+md(o.date)+"）"}),
+    h("label",{class:"fl"},"配達日",dd),h("label",{class:"fl"},"配達時間",tm),
+    h("label",{class:"fl"},"受け取りの人",chips,rv),err,save);
+  close=openSheet(form);
 }
 /* 注文済みのチェック（西崎さんだけ押せる。もう一度押すと外れる 2026/10/30） */
 function doneBtn(o){
