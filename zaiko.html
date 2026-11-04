@@ -172,6 +172,10 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
 .flbox h3{margin:0;font-size:14px}
 .flrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .flrow.three{grid-template-columns:1fr 1fr 1fr}
+/* ジャケット・エルボ：No.36の下の「外周を入れて登録」欄（2026/11/04 ユーザー） */
+.gsbox{display:grid;gap:8px;margin-top:8px;padding:12px;border:1px dashed var(--line);border-radius:12px;background:var(--bg)}
+.gsbox h4{margin:0;font-size:13.5px}
+.gsbox .flrow input{font-size:18px;font-weight:700}
 .bxpic{display:grid;place-items:center;background:#f7f8fa;border:1px solid var(--line);border-radius:10px;padding:8px}
 .bxpic svg{width:100%;max-width:300px;height:auto;display:block}
 .flrow label{display:grid;gap:4px;font-weight:700;font-size:13px}
@@ -353,7 +357,7 @@ const LAG_NO=[["特2",170,54],["特1",190,61],["0",215,68],["1",230,73],["2S",24
   ["22S",715,228],["22",730,232],["23",780,248],["24",795,253],["25",830,264],["26",860,274],["27",900,287],["28",935,298],["29",960,306],["30",990,315],
   ["31",1020,325],["32",1050,334],["33",1120,357],["34",1150,366],["35",1200,382],["36",1250,398]];
 const LAG=Object.fromEntries(LAG_NO.map(([n,o,d])=>[n,[o,d]]));
-const sizeText=it=>it.no&&LAG[it.no]?"No."+it.no+"（外周"+LAG[it.no][0]+"・φ"+LAG[it.no][1]+"）":ISPLATE(it.cat)?(Number(it.thk)>0&&Number(it.wid)>0&&Number(it.len)>0?String(it.thk)+"×"+fmtN(it.wid)+"×"+fmtN(it.len):""):Number(it.len)>0?((HASTHK(it.cat)&&Number(it.thk)>0?String(it.thk)+"×":"")+(HASWID(it.cat)&&Number(it.wid)>0?fmtN(it.wid)+"×"+fmtN(it.len)+"m":"1巻 "+fmtN(it.len)+"m")):"";
+const sizeText=it=>Number(it.gaishu)>0?"外周"+fmtN(it.gaishu)+"mm":it.no&&LAG[it.no]?"No."+it.no+"（外周"+LAG[it.no][0]+"・φ"+LAG[it.no][1]+"）":ISPLATE(it.cat)?(Number(it.thk)>0&&Number(it.wid)>0&&Number(it.len)>0?String(it.thk)+"×"+fmtN(it.wid)+"×"+fmtN(it.len):""):Number(it.len)>0?((HASTHK(it.cat)&&Number(it.thk)>0?String(it.thk)+"×":"")+(HASWID(it.cat)&&Number(it.wid)>0?fmtN(it.wid)+"×"+fmtN(it.len)+"m":"1巻 "+fmtN(it.len)+"m")):"";
 /* 一覧の並び：order が小さい順。ロールは ALKロール → ALGCロール → ALKマイティ → ALGCマイティ → その他（2026/10/28） */
 function rank(it){
   if(it.cat==="ロール"){const n=it.name||"";return /^ALKロール/.test(n)?0:/^ALGCロール/.test(n)?1:/^ALKマイティ/.test(n)?2:/^ALGCマイティ/.test(n)?3:4;}
@@ -538,16 +542,50 @@ function renderList(){
     const arr=shown.filter(it=>(CATS.includes(it.cat)?it.cat:"その他")===c);
     if(SUBS[c]){for(const sc of [...SUBS[c],NOSUB]){const a2=arr.filter(it=>(SUBS[c].includes(it.sub)?it.sub:NOSUB)===sc);if(!a2.length)continue;
       if(SUB2[c]){for(const k of [...SUB2[c],""]){const a3=a2.filter(it=>sub2Of(it)===k);
-        if(k==="エルボ"){for(const g of SUB3){const a4=a3.filter(it=>sub3Of(it)===g);if(a4.length)groups.push([c+"／"+sc+"／エルボ "+g,a4]);}}
-        else if(a3.length)groups.push([c+"／"+sc+(k?"／"+k:""),a3]);}}
+        if(k==="エルボ"){for(const g of SUB3){const a4=a3.filter(it=>sub3Of(it)===g);if(a4.length)groups.push([c+"／"+sc+"／エルボ "+g,a4,c==="ジャケット・エルボ"?{kind:g==="45°"?"e4":"el",col:sc}:null]);}}
+        else if(a3.length)groups.push([c+"／"+sc+(k?"／"+k:""),a3,c==="ジャケット・エルボ"&&k==="ジャケット"?{kind:"jk",col:sc}:null]);}}
       else groups.push([c+"／"+sc,a2]);}}
     else if(arr.length)groups.push([c,arr]);
   }
-  list.replaceChildren(...(flp?[flp]:[]),...groups.map(([c,arr])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
+  list.replaceChildren(...(flp?[flp]:[]),...groups.map(([c,arr,gs])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
     arr.map(it=>ORDER?orderRow(it):h("button",{type:"button",class:"row"+(isLow(it)?" low":"")+(Number(it.qty)>0?" has":" zero"),onclick:()=>openItem(it.id)},
       h("span",{class:"nm"},it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
         h("span",{class:"sub",text:((HASLEN(it.cat)||it.no)&&sizeText(it)?(sizeText(it)+" ・ "):"")+(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
-      h("span",{class:"qty"+(lowS(it)?" lowtxt":"")},fmtN(it.qty),h("small",{text:it.unit||""}),ELBOW(it.cat)?EPARTS.map(([k,l,f])=>h("span",{class:"eq",text:l.replace("溶接","").replace("エルボ","")+" "+fmtN(it[f]||0)+"個"})):null))))));
+      h("span",{class:"qty"+(lowS(it)?" lowtxt":"")},fmtN(it.qty),h("small",{text:it.unit||""}),ELBOW(it.cat)?EPARTS.map(([k,l,f])=>h("span",{class:"eq",text:l.replace("溶接","").replace("エルボ","")+" "+fmtN(it[f]||0)+"個"})):null))),
+    gs&&!q&&!ORDER&&!readOnly?gsForm(gs):null)));
+}
+/* ---------- ジャケット・エルボ：No.36の下で、外周（mm・手入力）と本数（個数）を入れて在庫にする（2026/11/04 ユーザー）
+   色・種類（ジャケット／らくえる90°／45°）・外周ごとに1つの材料を作り、在庫の数をその数にする ---------- */
+const GS_KIND={jk:["ジャケット","本"],el:["らくえる","個"],e4:["らくえる 45°","個"]};
+const gsName=(col,kind,g)=>col+GS_KIND[kind][0]+" 外周"+g+"mm";
+function gsForm({kind,col}){
+  const [nm,u]=GS_KIND[kind], lbl=kind==="jk"?"ジャケット":kind==="el"?"エルボ（90°）":"エルボ（45°）";
+  const g=h("input",{class:"inp",type:"number",inputmode:"numeric",min:"1",step:"1",placeholder:"例 420","aria-label":"外周（mm）"});
+  const n=h("input",{class:"inp",type:"number",inputmode:"numeric",min:"0",step:"1",placeholder:"例 5","aria-label":u==="本"?"何本":"何個"});
+  const err=h("p",{class:"err",hidden:true});
+  const go=h("button",{class:"btn",type:"button",onclick:async()=>{
+    const gv=Math.round(Number(g.value)), nv=Number(n.value);
+    err.hidden=true;
+    if(!(gv>0)){err.textContent="外周を数字で入れてください（mm）。";err.hidden=false;g.focus();return;}
+    if(n.value===""||!(nv>=0)){err.textContent=(u==="本"?"何本":"何個")+"あるかを入れてください。";err.hidden=false;n.focus();return;}
+    if(!db){err.textContent="データにつながっていません。";err.hidden=false;return;}
+    if(!who){pickWho();return;}
+    const name=gsName(col,kind,gv);
+    go.disabled=true;
+    try{
+      let it=items.find(x=>x.cat==="ジャケット・エルボ"&&x.sub===col&&x.name===name);
+      if(!it){const now=Date.now(), base=kind==="jk"?0:kind==="el"?100:200;
+        it={name,cat:"ジャケット・エルボ",sub:col,unit:u,qty:0,min:0,gaishu:gv,order:base+90+gv/100000,createdAt:now,updatedAt:now,updatedBy:who};
+        const ref=await db.collection("items").add(it);it=Object.assign({id:ref.id},it);
+        await db.collection("logs").add({at:now,kind:"new",itemId:ref.id,itemName:name,unit:u,n:0,after:0,who,memo:"外周を入れて登録"});
+        if(!items.some(x=>x.id===it.id))items.push(it);}
+      await moveStock(it.id,"set",nv,"外周を入れて登録","","s");
+      toast(name+" を "+fmtN(nv)+u+" にしました");g.value="";n.value="";
+    }catch(x){err.textContent=errMsg(x);err.hidden=false;}
+    go.disabled=false;
+  }},"在庫に入れる");
+  return h("div",{class:"gsbox"},h("h4",{text:"No.にない"+lbl+"（外周を入れる）"}),
+    h("div",{class:"flrow"},h("label",null,h("span",{text:"外周（mm）"}),g),h("label",null,h("span",{text:u==="本"?"何本ある":"何個ある"}),n)),go,err);
 }
 
 /* ---------- 現場に頼む：一覧の1行（工場の在庫は出さず、頼む数を出す。頼んでいなければ0） ---------- */
