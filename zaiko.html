@@ -76,6 +76,13 @@ main{display:grid;gap:16px;padding-top:14px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--in);flex:none}
 .alert.has .dot{background:var(--low)}
 .lowlist{display:flex;flex-wrap:wrap;gap:6px}
+.lowrow{flex-basis:100%;display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--low);border-radius:10px;padding:5px 6px 5px 10px}
+.lowrow.ord{border-color:var(--line);opacity:.85}
+.lowlist .lowrow button.lownm{border:0;background:none;padding:4px 0;text-align:left;flex:1;font-size:14px;font-weight:700;color:var(--ink)}
+.lowlist .lowrow .lowbtn{flex:none;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700}
+.lowlist .lowrow .ordb{border:1px solid #0b5cab;color:#0b5cab;background:var(--surface)}
+.lowlist .lowrow .ordb[aria-pressed="true"]{background:#0b5cab;color:#fff}
+.lowlist .lowrow .delb{border:1px solid var(--line);color:var(--muted);background:var(--surface)}
 .lowlist .linebtn{flex-basis:100%;margin-top:4px;border:0;background:#06c755;color:#fff;font-weight:800;font-size:15px;padding:10px;border-radius:10px}
 .lowlist button{border:1px solid var(--low);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 10px;font-size:13px}
 .tools{display:grid;gap:10px}
@@ -485,15 +492,31 @@ function renderCats(){
 $("q").addEventListener("input",()=>renderList());
 
 function renderAlert(){
-  const low=items.filter(isLow);
+  // 「削除」した材料は知らせに出さない（在庫が目安を超えたら印は自動で消え、また少なくなれば出る 2026/11/04 ユーザー）
+  const low=items.filter(it=>isLow(it)&&!it.lowHide);
   const a=$("alert");a.classList.toggle("has",low.length>0);
   if(!loaded){$("alertTitle").textContent="読み込み中…";$("lowList").replaceChildren();return;}
   $("alertTitle").textContent=low.length?("少ないもの "+low.length+"件"):(items.length?"少ないものはありません":"まだ材料がありません");
-  $("lowList").replaceChildren(...low.map(it=>h("button",{type:"button",onclick:()=>openItem(it.id)},it.name+"  "+(lowS(it)||!lowE(it)?fmtN(it.qty)+(it.unit||""):"")+(lowE(it)?(lowS(it)?"・":"")+"エルボ":""))),
+  $("lowList").replaceChildren(...low.map(it=>h("div",{class:"lowrow"+(it.lowOrd?" ord":"")},
+      h("button",{type:"button",class:"lownm",onclick:()=>openItem(it.id)},it.name+"  "+(lowS(it)||!lowE(it)?fmtN(it.qty)+(it.unit||""):"")+(lowE(it)?(lowS(it)?"・":"")+"エルボ":"")),
+      readOnly?null:h("button",{type:"button",class:"lowbtn ordb","aria-pressed":String(!!it.lowOrd),onclick:e=>lowMark(e.currentTarget,it,"ord")},it.lowOrd?"✓ 注文済み "+md2(it.lowOrd):"注文済み"),
+      readOnly?null:h("button",{type:"button",class:"lowbtn delb",onclick:e=>{const b=e.currentTarget;if(b.dataset.ok!=="1"){b.dataset.ok="1";b.textContent="本当に消す";return;}lowMark(b,it,"hide");}},"削除"))),
     // 少ないものをLINEで送る（LINEが開いて、送る相手をえらぶ 2026/11/04 ユーザー）
     ...(low.length?[h("button",{type:"button",class:"linebtn",onclick:()=>{const d=new Date();
-      const t="【工場在庫 少ないもの "+(d.getMonth()+1)+"/"+d.getDate()+"】\n"+low.map(it=>"・"+it.name+"　"+fmtN(it.qty)+(it.unit||"")+(Number(it.min)>0?"（目安"+fmtN(it.min)+(it.unit||"")+"）":"")).join("\n");
+      const t="【工場在庫 少ないもの "+(d.getMonth()+1)+"/"+d.getDate()+"】\n"+low.map(it=>"・"+it.name+"　"+fmtN(it.qty)+(it.unit||"")+(Number(it.min)>0?"（目安"+fmtN(it.min)+(it.unit||"")+"）":"")+(it.lowOrd?"　注文済み":"")).join("\n");
       location.href="https://line.me/R/share?text="+encodeURIComponent(t);}},"LINEで送る")]:[]));
+}
+/* 少ないもの：注文済みの印（もう一度押すと外す）・知らせから削除。items/{id} の lowOrd（押した時刻）・lowHide（2026/11/04 ユーザー） */
+const md2=t=>{const d=new Date(t);return (d.getMonth()+1)+"/"+d.getDate();};
+async function lowMark(btn,it,k){
+  if(!db){toast("データにつながっていません。");return;}
+  if(!who){pickWho();return;}
+  btn.disabled=true;
+  try{
+    if(k==="ord")await db.doc("items/"+it.id).update(it.lowOrd?{lowOrd:deleteField(),lowOrdBy:deleteField()}:{lowOrd:Date.now(),lowOrdBy:who});
+    else await db.doc("items/"+it.id).update({lowHide:Date.now(),lowHideBy:who});
+    toast(k==="ord"?(it.lowOrd?"注文済みを外しました":"注文済みにしました"):"少ないものから消しました（在庫が目安を超えたら元に戻ります）");
+  }catch(x){toast("変えられませんでした。電波を確認してください。");btn.disabled=false;}
 }
 /* さがす：スペース（全角も）で区切った言葉が全部入っている材料を出す。
    数字はかたまりで比べ（25 は 25A に当たり 125A には当たらない）、数字は書いた順に並んでいるものだけ（「25 20」→ 25A×20t）（2026/10/28） */
@@ -899,7 +922,9 @@ async function moveStock(id,kind,n,memo,site,part){
     next=kind==="in"||kind==="back"?cur+n:kind==="out"?cur-n:n;
     next=Math.round(next*100)/100;
     if(next<0)throw Object.assign(new Error("neg"),{code:"neg"});
-    t.update(ref,{[f]:next,updatedAt:Date.now(),updatedBy:who});
+    // 目安より多くなったら「注文済み」「削除」の印を消す（次に少なくなったらまた知らせる 2026/11/04）
+    const clr=f==="qty"&&Number(d.min)>0&&next>Number(d.min)&&(d.lowOrd||d.lowHide)?{lowOrd:deleteField(),lowOrdBy:deleteField(),lowHide:deleteField(),lowHideBy:deleteField()}:{};
+    t.update(ref,{[f]:next,updatedAt:Date.now(),updatedBy:who,...clr});
   });
   const delta=kind==="set"?Math.round((next-cur)*100)/100:n;
   await db.collection("logs").add({at:Date.now(),kind,itemId:id,itemName:d.name+(part&&part!=="s"?" "+partName(part):""),unit:part&&part!=="s"?"個":(d.unit||""),n:delta,after:next,who,memo:memo||"",site:site||"",part:part||"s"});
