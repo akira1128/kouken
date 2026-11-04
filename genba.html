@@ -283,6 +283,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .dlv .k-dest{border-color:#7c3aed;background:#f3edff}.dlv .k-dest dd{color:#6d28d9}
 .dlv .none dd{color:var(--muted);font-weight:700}
 .dlv .btn{justify-self:end}
+.dlv .delord{color:var(--low);border-color:var(--low)}
 .mtog{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:2px}
 /* 現場の脚立（何尺を何丁置いてあるか 2026/11/04 ユーザー） */
 .lad{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
@@ -1380,7 +1381,11 @@ function orderRow(o){
 function delivLine(o){
   const t=[["注文日",md(o.date),""],["配達日",o.ddate?md(o.ddate):"まだ",o.ddate?"k-deliv":"none"],["配達時間",o.dtime||"まだ",o.dtime?"k-deliv":"none"],["受け取り",o.recv||"まだ",o.recv?"k-recv":"none"],["納品先",o.dest||"まだ",o.dest?"k-dest":"none"]];
   return h("div",{class:"dlv"},h("dl",null,t.map(([k,v,c])=>h("div",{class:c},h("dt",{text:k}),h("dd",{text:v})))),
-    editor?h("button",{type:"button",class:"btn ghost small",onclick:()=>delivSheet(o)},o.ddate||o.recv?"配達を直す":"配達を書く"):null);
+    editor?h("button",{type:"button",class:"btn ghost small",onclick:()=>delivSheet(o)},o.ddate||o.recv?"配達を直す":"配達を書く"):null,
+    // 注文を消す（西崎さんだけ。2回押す 2026/11/04 ユーザー）
+    editor==="西崎剣"?h("button",{type:"button",class:"btn ghost small delord",onclick:async e=>{const t=e.currentTarget;
+      if(t.dataset.ok!=="1"){t.dataset.ok="1";t.textContent="本当にこの注文を消す";return;}
+      t.disabled=true;try{await deleteDoc(doc(fs,"orders",o.id));toast("注文を消しました");}catch(y){toast("消せませんでした。電波を確認してください。");t.disabled=false;}}},"この注文を消す"):null);
 }
 function delivSheet(o){
   const dd=h("input",{class:"inp",type:"date",value:o.ddate||""});
