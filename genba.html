@@ -272,6 +272,17 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .lastv .lvl{font-size:12px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 7px}
 .lastv:empty{display:none}
 .mtog{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:2px}
+/* 現場の脚立（何尺を何丁置いてあるか 2026/11/04 ユーザー） */
+.lad{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.lad span{border:1px solid var(--line);border-radius:999px;padding:5px 12px;background:var(--surface);font-size:15px;font-weight:700}
+.ladbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ladlog{list-style:none;margin:10px 0 0;padding:0;font-size:12.5px;color:var(--muted)}
+.ladlog li{display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px dashed var(--line)}
+.ladlog b{font-weight:700}.ladlog .go{color:var(--in)}.ladlog .back{color:var(--low)}
+.ladlog .del{margin-left:auto}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{width:48px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-size:22px;font-weight:700}
+.stepper b{min-width:56px;text-align:center;font-size:26px}
 .pask{display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:700;color:var(--ink)}.pask[hidden]{display:none}.pask:not([hidden]){animation:mappear .3s cubic-bezier(.2,.8,.2,1) both}.pask .btn{min-width:56px}.mtog .btn{font-size:12.5px;padding:6px 10px;width:auto}
 .mstep button{min-width:40px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:15px;font-weight:700;color:var(--ink)}
 /* 現場の詳しい画面 */
@@ -735,7 +746,7 @@ arr.map(x=>{
         h("b",null,isNewSite(x)?h("span",{class:"newb",text:"NEW"}):null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),shortSite(x.name)),
         h("span",{class:"go",text:"›"}),
         h("span",{class:"sub"},inf.outsource?h("span",{class:"outs",text:inf.outsource+"が"+(x.status==="施工中"?"施工中":"施工")}):null,
-          [inf.address||"住所はまだ",nNote?"メモ "+nNote+"件":""].filter(Boolean).join("　")));
+          [inf.address||"住所はまだ",nNote?"メモ "+nNote+"件":"",ladderText(x)?"脚立 "+ladderText(x):""].filter(Boolean).join("　")));
     }));}));
 }
 
@@ -1216,6 +1227,7 @@ function renderSite(){
       // 準備ができたら、社員みんなの携帯に知らせる（西崎さんだけ 2026/11/03 ユーザー）
       editor==="西崎剣"?h("div",{class:"mtog"},h("button",{type:"button",class:"btn danger small",style:{width:"auto"},onclick:()=>announceSite(x)},"みんなに知らせる"),
         x.announcedAt?h("span",{class:"hint",text:"知らせた日："+md(ymd(new Date(x.announcedAt)))}):null):null),
+    ladderBox(x),
     h("section",{class:"panel sec"},
       h("h3",{text:"作業のコツ・部屋ごとのメモ"}),
       notes.length?h("ul",{class:"notes"},notes.map(n=>h("li",null,h("span",{class:"tx",text:n.text}),
@@ -1255,6 +1267,51 @@ function editInfo(x){
     try{await updateDoc(doc(fs,"sites",x.id),{info,infoAt:Date.now(),infoBy:me(),...(stSel&&stSel.value!==x.status?{status:stSel.value}:{})});close();toast("現場の情報を保存しました");}
     catch(y){err.textContent=y&&y.code==="permission-denied"?"書く権限がありません。":"保存できませんでした。電波を確認してください。";err.hidden=false;save.disabled=false;}
   }},h("h2",{text:shortSite(x.name)+"の情報"}),stSel?h("label",{class:"fl"},"状態",stSel):null,FIELDS.map(([k,l])=>h("label",{class:"fl"},l,ins[k])),err,save);
+  close=openSheet(form);
+}
+/* ---------- 脚立：何尺を何丁、持って行った・持って帰ったを記録（社員だれでも 2026/11/04 ユーザー）
+   sites/{id}.ladders に {shaku:尺, n:丁, dir:"in"（持って行った）/"out"（持って帰った）, date, who, at} を足していく。今ある数＝行った−帰った ---------- */
+const SHAKU=[2,3,4,5,6,7,8,9,10,12];
+function ladderNow(x){const c={};(x.ladders||[]).forEach(e=>{c[e.shaku]=(c[e.shaku]||0)+(e.dir==="in"?1:-1)*(Number(e.n)||0);});
+  return Object.entries(c).map(([k,v])=>[Number(k),v]).filter(([,v])=>v>0).sort((a,b)=>a[0]-b[0]);}
+const ladderText=x=>ladderNow(x).map(([k,v])=>k+"尺×"+v+"丁").join("・");
+function ladderBox(x){
+  const now=ladderNow(x), log=(x.ladders||[]).slice().sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,10);
+  return h("section",{class:"panel sec"},
+    h("h3",{text:"脚立（今この現場にあるもの）"}),
+    now.length?h("div",{class:"lad"},now.map(([k,v])=>h("span",{text:k+"尺 × "+v+"丁"}))):h("p",{class:"hint",text:"今この現場に置いてある脚立はありません。"}),
+    h("div",{class:"ladbtns"},
+      h("button",{type:"button",class:"btn",onclick:()=>needWho(()=>ladderSheet(x,"in"))},"持って行った"),
+      h("button",{type:"button",class:"btn ghost",onclick:()=>needWho(()=>ladderSheet(x,"out"))},"持って帰った")),
+    log.length?h("ul",{class:"ladlog"},log.map(e=>h("li",null,
+      h("span",{text:md(e.date)}),h("b",{class:e.dir==="in"?"go":"back",text:e.dir==="in"?"持って行った":"持って帰った"}),
+      h("span",{text:e.shaku+"尺×"+e.n+"丁　"+nick(e.who)}),
+      (editor||e.who===me())?h("button",{type:"button",class:"btn ghost small del",onclick:async ev=>{const t=ev.currentTarget;
+        if(t.dataset.ok!=="1"){t.dataset.ok="1";t.textContent="本当に消す";return;}
+        try{await updateDoc(doc(fs,"sites",x.id),{ladders:arrayRemove(e)});toast("消しました");}catch(y){toast("消せませんでした");}}},"消す"):null))):null);
+}
+function ladderSheet(x,dir){
+  const have=Object.fromEntries(ladderNow(x));
+  let shaku=dir==="out"&&ladderNow(x).length?ladderNow(x)[0][0]:6, n=1;
+  const names=h("div",{class:"names",style:{gridTemplateColumns:"repeat(5,1fr)"}});
+  const drawNames=()=>names.replaceChildren(...SHAKU.map(k=>h("button",{type:"button","aria-pressed":String(k===shaku),onclick:()=>{shaku=k;drawNames();}},k+"尺"+(dir==="out"&&have[k]?"（"+have[k]+"）":""))));
+  drawNames();
+  const num=h("b",{text:"1"});
+  const step=d=>{n=Math.max(1,n+d);num.textContent=String(n);};
+  const date=h("input",{class:"inp",type:"date"});date.value=ymd(new Date());
+  const err=h("p",{class:"err",hidden:true});
+  const save=h("button",{class:"btn",type:"submit"},dir==="in"?"持って行ったを記録":"持って帰ったを記録");
+  let close;
+  const form=h("form",{class:"f",onsubmit:async e=>{e.preventDefault();
+    if(dir==="out"&&n>(have[shaku]||0)){err.textContent="この現場にある"+shaku+"尺は"+(have[shaku]||0)+"丁です。数を確かめてください。";err.hidden=false;return;}
+    save.disabled=true;
+    try{await updateDoc(doc(fs,"sites",x.id),{ladders:arrayUnion({shaku,n,dir,date:date.value||ymd(new Date()),who:me(),at:Date.now()})});close();
+      toast(shaku+"尺×"+n+"丁 "+(dir==="in"?"持って行った":"持って帰った")+"を記録しました");}
+    catch(y){err.textContent=y&&y.code==="permission-denied"?"書く権限がありません。":"記録できませんでした。電波を確認してください。";err.hidden=false;save.disabled=false;}
+  }},h("h2",{text:"脚立を"+(dir==="in"?"持って行った":"持って帰った")}),
+    h("label",{class:"fl"},"何尺",names),
+    h("label",{class:"fl"},"何丁",h("div",{class:"stepper"},h("button",{type:"button",onclick:()=>step(-1)},"−"),num,h("button",{type:"button",onclick:()=>step(1)},"＋"))),
+    h("label",{class:"fl"},"日にち",date),err,save);
   close=openSheet(form);
 }
 /* 現場の準備ができたことを社員みんなの携帯に知らせる（西崎さんだけ 2026/11/03）。announce に入れると通知の仕組みが送る */
