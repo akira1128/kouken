@@ -272,10 +272,16 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .lastv .lvl{font-size:12px;font-weight:700;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 7px}
 .lastv:empty{display:none}
 /* 注文の配達予定（注文日・配達日・時間・受け取り） */
-.dlv{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;margin:8px 0 2px;padding:8px 10px;border-radius:10px;background:var(--bg)}
-.dlv dl{display:grid;grid-template-columns:repeat(4,auto);gap:2px 14px;margin:0;flex:1}
-.dlv dt{font-size:11px;color:var(--muted)}.dlv dd{margin:0;font-weight:700;font-size:14px}
-.dlv .btn{margin-left:auto}
+/* 2026/11/04 ユーザー「少し見やすく」：2列のマスにして、配達日・受け取りを色付きで大きく */
+.dlv{display:grid;gap:8px;margin:8px 0 2px}
+.dlv dl{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0}
+.dlv dl>div{border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:var(--surface)}
+.dlv dt{font-size:12px;color:var(--muted);font-weight:700}
+.dlv dd{margin:2px 0 0;font-weight:800;font-size:17px;line-height:1.3}
+.dlv .k-deliv{border-color:#0b5cab;background:#eaf3ff}.dlv .k-deliv dd{color:#0b5cab}
+.dlv .k-recv{border-color:#0d7a52;background:#e8f6ef}.dlv .k-recv dd{color:#0d7a52}
+.dlv .none dd{color:var(--muted);font-weight:700}
+.dlv .btn{justify-self:end}
 .mtog{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:2px}
 /* 現場の脚立（何尺を何丁置いてあるか 2026/11/04 ユーザー） */
 .lad{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
@@ -1367,8 +1373,8 @@ function orderRow(o){
 }
 /* 注文日・配達日・配達時間・受け取りの人（2026/11/04 ユーザー）。orders/{id} の ddate・dtime・recv。書くのは編集する人 */
 function delivLine(o){
-  const t=[["注文日",md(o.date)],["配達日",o.ddate?md(o.ddate):"―"],["時間",o.dtime||"―"],["受け取り",o.recv||"―"]];
-  return h("div",{class:"dlv"},h("dl",null,t.map(([k,v])=>h("div",null,h("dt",{text:k}),h("dd",{text:v})))),
+  const t=[["注文日",md(o.date),""],["配達日",o.ddate?md(o.ddate):"まだ",o.ddate?"k-deliv":"none"],["配達時間",o.dtime||"まだ",o.dtime?"k-deliv":"none"],["受け取り",o.recv||"まだ",o.recv?"k-recv":"none"]];
+  return h("div",{class:"dlv"},h("dl",null,t.map(([k,v,c])=>h("div",{class:c},h("dt",{text:k}),h("dd",{text:v})))),
     editor?h("button",{type:"button",class:"btn ghost small",onclick:()=>delivSheet(o)},o.ddate||o.recv?"配達を直す":"配達を書く"):null);
 }
 function delivSheet(o){
