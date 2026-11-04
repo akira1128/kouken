@@ -163,8 +163,6 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 /* 新しく入った現場の目印（2026/11/03 ユーザー）。開くか、入れてから14日たつと消える */
 .sitecard.isnew{background:var(--low-soft)}
 .newb{display:inline-block;margin-right:6px;padding:1px 7px;border-radius:999px;background:var(--low);color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.04em;vertical-align:2px}
-/* 現場名の隣の脚立（今その現場にある数 2026/11/04 ユーザー） */
-.ladb{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;border:1px solid #b45309;background:#fff7ed;color:#b45309;font-size:12px;font-weight:700;vertical-align:2px;white-space:nowrap}
 .newbar{display:flex;align-items:center;gap:10px;width:100%;margin:0 0 12px;padding:12px 14px;border:2px solid var(--low);border-radius:12px;background:var(--low-soft);color:var(--ink);text-align:left;font-size:15px}
 .newbar b{font-weight:700}
 .newbar .go{margin-left:auto;color:var(--low);font-size:22px}
@@ -756,7 +754,7 @@ function renderSites(){
 arr.map(x=>{
       const inf=x.info||{}, nNote=(x.notes||[]).length;  // 注文の回数は出さない（2026/10/30 ユーザー）
       return h("button",{type:"button",class:"sitecard"+(isNewSite(x)?" isnew":""),onclick:()=>openSite(x.id)},
-        h("b",null,isNewSite(x)?h("span",{class:"newb",text:"NEW"}):null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),shortSite(x.name),ladderText(x)?h("span",{class:"ladb",text:"脚立 "+ladderText(x)}):null),
+        h("b",null,isNewSite(x)?h("span",{class:"newb",text:"NEW"}):null,mark(x),h("span",{class:"st "+stClass(x.status),text:x.status||"―"}),shortSite(x.name)),
         h("span",{class:"go",text:"›"}),
         h("span",{class:"sub"},inf.outsource?h("span",{class:"outs",text:inf.outsource+"が"+(x.status==="施工中"?"施工中":"施工")}):null,
           [inf.address||"住所はまだ",nNote?"メモ "+nNote+"件":""].filter(Boolean).join("　")));
