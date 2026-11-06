@@ -126,7 +126,7 @@ main{display:grid;gap:16px;padding-top:14px}
 .log .n{font-weight:700;white-space:nowrap}
 .log .meta{grid-column:2/4;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
 form.f{padding:16px;display:grid;gap:14px}
-label.fl{display:grid;gap:6px;font-size:14px;font-weight:700}
+label.fl,div.fl{display:grid;gap:6px;font-size:14px;font-weight:700}
 label.fl em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
 .inp{width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -758,7 +758,7 @@ function openOrderItem(id){
   const step=d=>{num.value=fmtN(Math.max(0,(Number(num.value)||0)+d));};
   let close;
   close=openSheet(h("h2",{text:it.name}),
-    h("label",{class:"fl"},"頼む数",h("div",{class:"stepper"},h("button",{type:"button","aria-label":"1へらす",onclick:()=>step(-1)},"−"),num,h("button",{type:"button","aria-label":"1ふやす",onclick:()=>step(1)},"＋"))),
+    h("div",{class:"fl"},"頼む数",h("div",{class:"stepper"},h("button",{type:"button","aria-label":"1へらす",onclick:()=>step(-1)},"−"),num,h("button",{type:"button","aria-label":"1ふやす",onclick:()=>step(1)},"＋"))),
     h("div",{class:"quick"},[5,10,20].map(n=>h("button",{type:"button",onclick:()=>step(n)},"＋"+n))),
     h("button",{class:"btn",type:"button",onclick:()=>{const n=Number(num.value);
       if(!(n>0)&&!cart[id]){toast("頼む数を入れてください");return;}
