@@ -388,7 +388,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
   padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:grid;gap:12px}
 .sheet h2{margin:0;font-size:19px;overflow-wrap:anywhere}
 form.f{display:grid;gap:12px}
-label.fl{display:grid;gap:5px;font-size:14px;font-weight:700}
+label.fl,div.fl{display:grid;gap:5px;font-size:14px;font-weight:700}   /* ボタンを並べる欄は label だとタップが最初のボタンにも伝わるので div（2026/11/06） */
 label.fl em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
 .err{color:var(--low);font-weight:700;font-size:14px;margin:0}
 .names{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
@@ -1326,8 +1326,8 @@ function ladderSheet(x,dir){
       toast(shakuLbl(shaku)+"×"+n+"丁 "+(dir==="in"?"持って行った":"持って帰った")+"を記録しました");}
     catch(y){err.textContent=y&&y.code==="permission-denied"?"書く権限がありません。":"記録できませんでした。電波を確認してください。";err.hidden=false;save.disabled=false;}
   }},h("h2",{text:"脚立を"+(dir==="in"?"持って行った":"持って帰った")}),
-    h("label",{class:"fl"},"何尺",names),
-    h("label",{class:"fl"},"何丁",h("div",{class:"stepper"},h("button",{type:"button",onclick:()=>step(-1)},"−"),num,h("button",{type:"button",onclick:()=>step(1)},"＋"))),
+    h("div",{class:"fl"},"何尺",names),
+    h("div",{class:"fl"},"何丁",h("div",{class:"stepper"},h("button",{type:"button",onclick:()=>step(-1)},"−"),num,h("button",{type:"button",onclick:()=>step(1)},"＋"))),
     h("label",{class:"fl"},"日にち",date),err,save);
   close=openSheet(form);
 }
@@ -1405,7 +1405,7 @@ function delivSheet(o){
     catch(y){err.textContent=y&&y.code==="permission-denied"?"書く権限がありません。":"保存できませんでした。電波を確認してください。";err.hidden=false;save.disabled=false;}
   }},h("h2",{text:"配達の予定（注文日 "+md(o.date)+"）"}),
     h("label",{class:"fl"},"配達日",dd),h("label",{class:"fl"},"配達時間",tm),
-    h("label",{class:"fl"},"受け取りの人",chips,rv),h("div",{class:"fl"},"納品先",dsw),err,save);
+    h("div",{class:"fl"},"受け取りの人",chips,rv),h("div",{class:"fl"},"納品先",dsw),err,save);
   close=openSheet(form);
 }
 /* 注文済みのチェック（西崎さんだけ押せる。もう一度押すと外れる 2026/10/30） */
