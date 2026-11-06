@@ -335,7 +335,8 @@ const facLbl=n=>n===FACTORY?"工場":n;
 const COLORS=["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル"];
 const JE_COLORS=[...COLORS,"ダルエース黒","ブラック","ニューシルバー","ブラウン","新茶"];   // ニューシルバー・ブラウン・新茶も（2026/11/03 ユーザー）
 //   // キャメルの隣にダルエース黒・ブラック（2026/11/03 ユーザー）。ジャケット・エルボ、フランジカバー・片フランジ、BOX・トランクカバー、砲金バルブ・メクラキャップ
-const SUBS={"ジャケット・エルボ":JE_COLORS,"砲金バルブ・メクラキャップ":JE_COLORS,"フランジカバー":JE_COLORS,"片フランジ":JE_COLORS,"BOXカバー":JE_COLORS,"トランクカバー":JE_COLORS,"ペフチューブ":["ライトチューブ","耐熱チューブ","テープ"],"エアロフレックス":["チューブ","背割れチューブ","シート","テープ・ボンド"],"アーマフレックス":["チューブ","ラウンドチューブ","ボンド"],"PF保温筒":["直管","塩ビ直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
+const SUBS={"ジャケット・エルボ":JE_COLORS,"砲金バルブ・メクラキャップ":JE_COLORS,"フランジカバー":JE_COLORS,"片フランジ":JE_COLORS,"BOXカバー":JE_COLORS,"トランクカバー":JE_COLORS,"ペフチューブ":["ライトチューブ","耐熱チューブ","テープ"],"エアロフレックス":["チューブ","背割れチューブ","シート","テープ・ボンド"],"アーマフレックス":["チューブ","ラウンドチューブ","テープ・ボンド"],"PF保温筒":["直管","塩ビ直管","鉄管エルボ","塩ビエルボ","Susエルボ","溶接Sエルボ","溶接Lエルボ"]};
+const ARMA_TUBES=["M-028","M-035","M-042","R-012","R-015","R-022","R-028","R-035","R-042","R-048","R-060","R-064","R-076","T-020","T-028","T-035","T-048","U-022","U-028","U-035","U-042"];
 const AERO_TAPE=new Set(["tape14-0","tape14-1"]);
 const AERO_TUBES=["M13022","M20006","M20013","M20019","M20022","M20025","M20028","M20035","M20042","M20045","M20048","M20051","M20060","M20076","M20090","M20115","M20127","M20140",
   "M25016","M25019","M25022","M25025","M25028","M25035","M25042","M25048","M25051","M25057","M25064",
@@ -1011,7 +1012,7 @@ function askPin(){
 const SPECS=[["20t",0,["15A","20A","25A","32A","40A","50A","65A","80A"]],["25t",0,["100A","125A","150A"]],["30t",1,["15A","20A","25A","32A","40A","50A"]],
   ["40t",2,["32A","40A","50A","65A","80A","100A","125A","150A","200A","250A","300A"]],["50t",3,["200A","250A","300A"]]];
 /* 材料を足したり、名前・種類を移す処理を足したときは、この数を1つ上げる（上げないと動かない） */
-const MIGRATE_VER=18;   // 18：アーマフレックスの品目（村商の請求書から 2026/11/06）   // 17：エアロフレックス・アーマフレックスのカテゴリ、エアロテープを移す（2026/11/05）   // 16：GWP 生（グラスウール保温筒・外装なし）を足した（2026/11/04）   // 15：ホワイト0.3・ニューシルバー0.27のコイル（2026/11/03）   // 14：PF保温筒に塩ビ直管（2026/11/03）   // 13：ワイヤードブランケット 100×605×2000（2026/11/03）   // 12：ワイヤードブランケットを足した（2026/11/03）   // 11：ニューシルバー・ブラウン・新茶（2026/11/03）   // 10：黒艶消しテープをアクリルの下へ（2026/11/03）   // 9：砲金バルブにもダルエース黒・ブラック（2026/11/03）   // 8：ジャケット・エルボにダルエース黒・ブラック（2026/11/03）   // 7：ビニールテープをペフチューブのテープへ（2026/11/03）   // 6：ペフチューブを足した（2026/11/03）   // 5：スチロールカバーをグラスロンの請求書の名前に（2026/11/03）   // 2：ジャケット・エルボをグラスロンの請求書の名前にし、45°を足した（2026/11/03）
+const MIGRATE_VER=19;   // 19：アーマフレックスを11181の請求書から追加、ボンドを「テープ・ボンド」へ（2026/11/06）   // 18：アーマフレックスの品目（村商の請求書から 2026/11/06）   // 17：エアロフレックス・アーマフレックスのカテゴリ、エアロテープを移す（2026/11/05）   // 16：GWP 生（グラスウール保温筒・外装なし）を足した（2026/11/04）   // 15：ホワイト0.3・ニューシルバー0.27のコイル（2026/11/03）   // 14：PF保温筒に塩ビ直管（2026/11/03）   // 13：ワイヤードブランケット 100×605×2000（2026/11/03）   // 12：ワイヤードブランケットを足した（2026/11/03）   // 11：ニューシルバー・ブラウン・新茶（2026/11/03）   // 10：黒艶消しテープをアクリルの下へ（2026/11/03）   // 9：砲金バルブにもダルエース黒・ブラック（2026/11/03）   // 8：ジャケット・エルボにダルエース黒・ブラック（2026/11/03）   // 7：ビニールテープをペフチューブのテープへ（2026/11/03）   // 6：ペフチューブを足した（2026/11/03）   // 5：スチロールカバーをグラスロンの請求書の名前に（2026/11/03）   // 2：ジャケット・エルボをグラスロンの請求書の名前にし、45°を足した（2026/11/03）
 /* あとから足す材料（なければ作る。数は0）。order が大きいほど一覧の下に出る */
 const EXTRA_ITEMS=[
   ...["15A","20A","25A","32A","40A","50A"].map(a=>({id:"alk30-"+a,name:"ALKP保温筒 "+a+"×30t",cat:"ALK（P）保温筒",unit:"本",order:1})), // 2026/10/28 使う頻度が少ないので20tの下に
@@ -1071,9 +1072,13 @@ const EXTRA_ITEMS=[
   ...AERO_TUBES.map(c=>({id:"aft-"+c,name:"エアロフレックスチューブ "+c+"（"+Number(c.slice(1,3))+"t×"+Number(c.slice(3,6))+"）",cat:"エアロフレックス",sub:c.endsWith("S")?"背割れチューブ":"チューブ",unit:"本",order:Number(c.slice(1,3))*1000+Number(c.slice(3,6))})),
   ...[["MSR06","1000×22m",6],["MSR10","1000×15m",10],["MSR20","1000×7m",20],["MSR25","1000×5m",25],["MSR32","1000×4m",32]].map(([c,z,o])=>({id:"afs-"+c,name:"エアロフレックスシート "+c+"（"+z+"）",cat:"エアロフレックス",sub:"シート",unit:"巻",order:o})),
   // アーマフレックス：村商の請求書（2024/2/29締め）の品名どおり（2026/11/06 ユーザー）
-  ...["M-028","R-035","R-042","R-048","U-028","U-035","U-042","T-048"].map((c,i)=>({id:"amt-"+c,name:"アーマフレックスチューブ "+c,cat:"アーマフレックス",sub:"チューブ",unit:"本",order:i})),
-  ...["50035R","50042R","50050R","50060R"].map((c,i)=>({id:"amr-"+c,name:"アーマラウンドチューブ "+c,cat:"アーマフレックス",sub:"ラウンドチューブ",unit:"本",order:i})),
-  {id:"amb-ck461a",name:"ダイアボンド CK461A クロ 1kg",cat:"アーマフレックス",sub:"ボンド",unit:"缶",order:0},
+  // 11/6 追加：村商の請求書（請求先コード11181、akira2「11181_〜.pdf」20件）にあったもの
+  ...ARMA_TUBES.map(c=>({id:"amt-"+c,name:"アーマフレックスチューブ "+c,cat:"アーマフレックス",sub:"チューブ",unit:"本",order:"MRTU".indexOf(c[0])*1000+Number(c.slice(2))})),
+  ...["50028R","50035R","50042R","50050R","50060R"].map((c,i)=>({id:"amr-"+c,name:"アーマラウンドチューブ "+c,cat:"アーマフレックス",sub:"ラウンドチューブ",unit:"本",order:Number(c.slice(2,5))})),
+  {id:"amb-ck461a",name:"ダイアボンド CK461A クロ 1kg",cat:"アーマフレックス",sub:"テープ・ボンド",unit:"缶",order:10},
+  {id:"amb-ht625",name:"アーマ接着剤 HT625",cat:"アーマフレックス",sub:"テープ・ボンド",unit:"缶",order:11},
+  {id:"amb-ht625s",name:"アーマ接着剤用小分缶 500g 刷毛付",cat:"アーマフレックス",sub:"テープ・ボンド",unit:"缶",order:12},
+  {id:"amb-tape50",name:"アーマ粘着テープ（50幅） AS-ATAPEC1D9M",cat:"アーマフレックス",sub:"テープ・ボンド",unit:"巻",order:1},
   {id:"afs-MS2-06N",name:"エアロシート MS2-06N（1000×2000）",cat:"エアロフレックス",sub:"シート",unit:"枚",order:100},
   ...["180ml","500ml","1000ml（1kg缶）"].map((z,i)=>({id:"afb-"+i,name:"エアロボンド "+z,cat:"エアロフレックス",sub:"テープ・ボンド",unit:"缶",order:10+i})),
   // 金網（過去の請求書・受領書で買ったもの 2026/10/28）
@@ -1221,7 +1226,7 @@ renderWho();renderCats();renderList();renderLog();show(view);
   // 材料を作る・名前や種類を移す処理は、版（MIGRATE_VER）が上がったときに1回だけ。毎回やると全部の材料を読むので
   try{
     const m=await getDoc(doc(fs,"items","_meta"));const done=m.exists()?Number(m.data().ver)||0:0;
-    if(done<MIGRATE_VER){await migrateCats();if(done<2)await renameJE();if(done<5)await renamePF();if(done<7)await moveTape();if(done<17)for(const id of AERO_TAPE)try{await updateDoc(doc(fs,"items",id),{cat:"エアロフレックス",sub:"テープ・ボンド"});}catch(e){}if(done<10)for(const id of ["tape4-0","tape4-1"])try{await updateDoc(doc(fs,"items",id),{order:1.5});}catch(e){}await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
+    if(done<MIGRATE_VER){await migrateCats();if(done<2)await renameJE();if(done<5)await renamePF();if(done<7)await moveTape();if(done<19)try{await updateDoc(doc(fs,"items","amb-ck461a"),{sub:"テープ・ボンド",order:10});}catch(e){}if(done<19)for(const c of ARMA_TUBES)try{await updateDoc(doc(fs,"items","amt-"+c),{order:"MRTU".indexOf(c[0])*1000+Number(c.slice(2))});}catch(e){}if(done<17)for(const id of AERO_TAPE)try{await updateDoc(doc(fs,"items",id),{cat:"エアロフレックス",sub:"テープ・ボンド"});}catch(e){}if(done<10)for(const id of ["tape4-0","tape4-1"])try{await updateDoc(doc(fs,"items",id),{order:1.5});}catch(e){}await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
   }catch(e){}
   onSnapshot(collection(fs,"items"),s=>{
     items=s.docs.filter(d=>!d.id.startsWith("_")).map(d=>Object.assign({id:d.id},d.data())).filter(x=>!x.deleted).sort((a,b)=>rank(a)-rank(b)||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
