@@ -18,6 +18,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Kaku G
 header{background:var(--accent);color:#fff}
 header div{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 header h1{margin:0;font-size:21px}
+.hl{display:flex;align-items:center;gap:14px}
+.back{font:inherit;color:#fff;background:none;cursor:pointer;font-weight:700;font-size:15px;border:1px solid rgba(255,255,255,.5);border-radius:8px;padding:4px 12px}
+.back:hover{background:rgba(255,255,255,.15)}
 select{font:inherit;font-size:16px;padding:6px 10px;border-radius:8px;border:1px solid var(--line)}
 main{max-width:1100px;margin:0 auto;padding:20px}
 .lock{max-width:560px;margin:40px auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;text-align:center}
@@ -42,7 +45,7 @@ tr.grp td{background:#f3f7fb;color:var(--muted);font-size:13px;font-weight:700;t
 </style>
 </head>
 <body>
-<header><div><h1>出勤日数</h1><label>年 <select id="year" aria-label="年"></select></label></div></header>
+<header><div><span class="hl"><button type="button" class="back" id="back">‹ 戻る</button><h1>出勤日数</h1></span><label>年 <select id="year" aria-label="年"></select></label></div></header>
 <main id="main" hidden>
   <section class="panel">
     <h2 id="ttl">月ごとの出勤日数</h2>
@@ -69,6 +72,8 @@ const STAFF=[["西崎剣","西崎"],["福島正純","福島"],["田中嗣音","�
 const OUTS=[["竹内工業","竹内工業"],["高橋断熱","高橋断熱"],["小原興業","小原興業"],["コウケン板金","コウケン板金"]];
 const OFF="休み", BOSS="西崎剣", EDITORS=["西崎剣","原田弓子"];
 const $=id=>document.getElementById(id);
+/* 戻る：原田さんのメニュー（NAS）から別のタブで開くので、前のページがなければこのタブを閉じる */
+$("back").onclick=()=>{if(history.length>1)history.back();else window.close();};
 const p2=n=>String(n).padStart(2,"0");
 const ymd=d=>d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
 const parse=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);};
