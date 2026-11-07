@@ -11,7 +11,7 @@
 <style>
 /* 出勤日数（パソコン用。原田さんのメニュー＝NAS share「⭐️harada（保管）」から開く。アプリのメニューには出さない 2026/11/07 ユーザー）
    予定表（events）から数える。現場が入っている日を1日（「工場（加工）」も1日、「休み」は数えない）。同じ日に2つ入っていても1日。
-   開くのに要るのは会社の暗証番号だけ（1回）。西崎さん一人だけの予定は memos にあり西崎さんしか読めないので、西崎さんが開いたときだけ数に入る。 */
+   開けるのは editors に登録した西崎さん・原田さんだけ。西崎さん一人だけの予定は memos にあり西崎さんしか読めないので、西崎さんが開いたときだけ数に入る。 */
 :root{--bg:#eaf1f8;--surface:#fff;--line:#cbdaea;--ink:#0d1a27;--muted:#465b70;--accent:#0b5cab;--soft:#dceafa;--zero:#9aa9b8}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;font-size:16px;line-height:1.5}
@@ -61,13 +61,13 @@ tr.grp td{background:#f3f7fb;color:var(--muted);font-size:13px;font-weight:700;t
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,collection,doc,getDoc,getDocs,setDoc,query,where,orderBy} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,collection,doc,getDoc,getDocs,query,where,orderBy} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {FIREBASE_CONFIG} from "./firebase-config.js";
 
 /* 予定表（yotei.html）と同じ名前。原田さんは予定に入れないので出さない */
 const STAFF=[["西崎剣","西崎"],["福島正純","福島"],["田中嗣音","嗣穏"],["NGUYEN VAN HIEU","ヒエウ"],["DANG BINH DUONG","ズオン"],["NGUYEN NGOC LONG","ロン"]];
 const OUTS=[["竹内工業","竹内工業"],["高橋断熱","高橋断熱"],["小原興業","小原興業"],["コウケン板金","コウケン板金"]];
-const OFF="休み", BOSS="西崎剣";
+const OFF="休み", BOSS="西崎剣", EDITORS=["西崎剣","原田弓子"];
 const $=id=>document.getElementById(id);
 const p2=n=>String(n).padStart(2,"0");
 const ymd=d=>d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
@@ -133,41 +133,19 @@ async function load(){
 
 const main=$("main");
 const msg=document.createElement("div");msg.className="lock";msg.innerHTML="<b>確かめています…</b>";main.before(msg);
-/* 会社の暗証番号（在庫・予定表と同じ。このパソコンで1回だけ）。編集用の番号はいらない（2026/11/07 ユーザー） */
-function askPin(uid){
-  return new Promise(resolve=>{
-    msg.innerHTML='<b>会社の暗証番号</b><span>このパソコンで最初の1回だけ入れてください。</span>'+
-      '<form id="pf" style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'+
-      '<input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12" aria-label="暗証番号" style="font-size:24px;width:9em;text-align:center;letter-spacing:.3em;padding:6px;border:1px solid var(--line);border-radius:8px">'+
-      '<button id="go" type="submit" style="font:inherit;font-weight:700;padding:8px 18px;border:0;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer">はじめる</button></form>'+
-      '<p id="perr" style="color:#b0322d;margin:8px 0 0" hidden></p>';
-    $("pin").focus();
-    $("pf").onsubmit=async e=>{e.preventDefault();
-      const v=$("pin").value.trim();if(!v)return;
-      $("go").disabled=true;$("perr").hidden=true;
-      try{
-        await setDoc(doc(fs,"members",uid),{pin:v,at:Date.now()});
-        try{await setDoc(doc(fs,"editors",uid),{pin:v,name:BOSS,via:"boss",at:Date.now()});}catch(x){}  // 西崎さん専用の番号なら西崎さんとして登録（予定表と同じ）
-        resolve();
-      }catch(x){
-        $("perr").textContent=x&&x.code==="permission-denied"?"番号がちがいます。":"確認できませんでした。インターネットを確認してください。";
-        $("perr").hidden=false;$("go").disabled=false;$("pin").select();
-      }
-    };
-  });
-}
 try{
   const app=initializeApp(FIREBASE_CONFIG);
   const auth=getAuth(app);await signInAnonymously(auth);
   fs=getFirestore(app);
-  const uid=auth.currentUser.uid;
-  if(!(await getDoc(doc(fs,"members",uid))).exists())await askPin(uid);
-  msg.innerHTML="<b>読み込んでいます…</b>";
-  let name="";
-  try{const ed=await getDoc(doc(fs,"editors",uid));name=ed.exists()?ed.data().name:"";}catch(e){}
-  isBoss=name===BOSS;
-  if(!isBoss)$("foot").insertAdjacentHTML("beforeend","<br>西崎さんが自分一人だけで入れた予定は西崎さんのメモになるため、西崎さん以外の画面では西崎さんの日数に入りません。");
-  await load();msg.remove();main.hidden=false;
+  const ed=await getDoc(doc(fs,"editors",auth.currentUser.uid));
+  const name=ed.exists()?ed.data().name:"";
+  if(!EDITORS.includes(name)){
+    msg.innerHTML='<b>このページは、西崎さんと原田さんだけが開けます</b><span>先にこのパソコンで<a href="yotei.html">予定表</a>を開き、いちばん下の「編集する人はこちら」で名前をえらんで、編集用の番号を入れてください（1回だけ）。そのあと、このページを開き直してください。</span>';
+  }else{
+    isBoss=name===BOSS;
+    if(!isBoss)$("foot").insertAdjacentHTML("beforeend","<br>西崎さんが自分一人だけで入れた予定は西崎さんのメモになるため、原田さんの画面では西崎さんの日数に入りません。");
+    await load();msg.remove();main.hidden=false;
+  }
 }catch(e){
   msg.innerHTML='<b>読み込めませんでした</b><span>インターネットにつながっているか確認して、開き直してください。</span>';
 }
