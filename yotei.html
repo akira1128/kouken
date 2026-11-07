@@ -960,5 +960,16 @@ renderPeople();renderAll();
 })();
 </script>
 <script type="module" src="log.js"></script>
+<script>
+/* 原田さんのパソコンのメニュー（harada）から開いたときだけ、左上の戻るを「harada」にして、押すと harada に戻る。
+   社員の携帯やアプリのメニューから開いたときは今までどおり（2026/11/07 ユーザー） */
+(function(){
+  if(new URLSearchParams(location.search).get("from")!=="harada")return;
+  var a=document.querySelector("a.brandrow.home"); if(!a)return;
+  var l=a.querySelector(".backlbl"); if(l)l.textContent="harada";
+  a.setAttribute("aria-label","harada にもどる");
+  a.addEventListener("click",function(e){e.preventDefault();if(history.length>1)history.back();else window.close();});
+})();
+</script>
 </body>
 </html>
