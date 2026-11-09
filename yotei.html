@@ -209,6 +209,10 @@ textarea.inp{min-height:68px;resize:vertical}
 .names button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:11px 4px;font-size:15px;font-weight:700}
 .names button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
 .names button.out{font-size:13px;border-style:dashed}
+/* 残業（2026/11/09 ユーザー）：名前の前に「1h」など */
+.otrow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;padding:4px 0}
+.otrow b{font-size:15px}
+.otrow select{min-width:96px}
 /* 現場をえらぶ：ボタンを並べ、多いときは中でスクロール */
 .pickcap{font-size:12px;font-weight:400;color:var(--muted)}
 .sitepick{display:flex;flex-wrap:wrap;gap:6px;max-height:168px;overflow-y:auto;padding:2px}
@@ -296,6 +300,9 @@ const PEOPLE=STAFF.filter(([n])=>n!=="原田弓子");
 /* 予定に入れられる人：社員と外注さん */
 const ASSIGN=[...PEOPLE,...OUTS];
 const nick=n=>NICK[n]||n||"";
+/* 残業：e.ot＝{日付:{名前:時間}}。名前の前に「1h」「0.5h」をつける（2026/11/09 ユーザー） */
+const otOf=(e,n,d)=>(e&&e.ot&&e.ot[d]&&e.ot[d][n])||0;
+const otNick=(e,n,d)=>{const v=otOf(e,n,d);return (v?v+"h ":"")+nick(n);};
 /* 予定を入れられる人 */
 const EDITORS=["西崎剣","原田弓子"];
 /* だれもえらばない予定は西崎さんのメモ。memos に分けて置き、西崎さんだけが読める（2026/10/28 ユーザー） */
@@ -425,7 +432,7 @@ function dayItems(s){
   for(const e of sortEv(onDay(shown(),s))){
     const what=siteText(e), off=e.site===OFF;
     const ps=(e.people||[]).filter(n=>person==="すべて"||n===person).sort((a,b)=>(ORDER[a]??50)-(ORDER[b]??50));
-    if(ps.length)for(const n of ps)out.push({n,name:nick(n),what,color:pcolor(n),off});
+    if(ps.length)for(const n of ps)out.push({n,name:otNick(e,n,s),what,color:pcolor(n),off});
     else out.push({n:"",name:"",what,color:NOONE,off});
   }
   return out.sort((a,b)=>(a.n?ORDER[a.n]??50:99)-(b.n?ORDER[b.n]??50:99));
@@ -497,7 +504,7 @@ function weekBars(wa,wb){
     const a=e.date, b=e.end||e.date;if(b<wa||a>wb)continue;
     const ps=(e.people||[]).filter(n=>person==="すべて"||n===person).sort((x,y)=>(ORDER[x]??50)-(ORDER[y]??50));
     const s=a<wa?wa:a, t=b>wb?wb:b, what=siteText(e);
-    for(const n of (ps.length?ps:[""]))bars.push({n,s,t,label:n?nick(n)+"　"+what:what,c:n?lwc(n):LW_NONE,off:e.site===OFF,l:a<wa,r:b>wb});
+    for(const n of (ps.length?ps:[""]))bars.push({n,s,t,label:n?(s===t?otNick(e,n,s):nick(n))+"　"+what:what,c:n?lwc(n):LW_NONE,off:e.site===OFF,l:a<wa,r:b>wb});
   }
   // 長い帯から先に、同じ長さなら社員の順で、上の段から空いている所に入れる
   const len=x=>(parse(x.t)-parse(x.s));
@@ -607,7 +614,7 @@ function evRow(e){
   const body=[h("span",{class:"bar",style:{background:lwBg((e.people||[])[0]||"")}}),
     h("span",{class:"st",text:e.site===FACTORY&&e.kako?FACTORY+"　→ "+e.kako:(e.site||"（現場なし）")}),
     e.end&&e.end!==e.date?h("span",{class:"span",text:md(e.date)+" 〜 "+md(e.end)}):null,
-    (e.people||[]).length?h("span",{class:"pp"},(e.people||[]).map(n=>h("span",{class:"pname"+(n===person?" me":""),style:{background:lwBg(n),color:lwFg(n)},text:nick(n)}))):null,
+    (e.people||[]).length?h("span",{class:"pp"},(e.people||[]).map(n=>h("span",{class:"pname"+(n===person?" me":""),style:{background:lwBg(n),color:lwFg(n)},text:otNick(e,n,e.end&&e.end!==e.date&&sel>=e.date&&sel<=e.end?sel:e.date)}))):null,
     e.memo?h("span",{class:"mm",text:e.memo}):null];
   return h("li",null,editor?h("button",{type:"button",class:"ev","aria-label":"この予定を直す",onclick:()=>openEdit(e)},body):h("div",{class:"ev"},body));
 }
@@ -732,7 +739,19 @@ function openEdit(ev,copy,preset){
   const dIn=h("input",{class:"inp",type:"date",value:copy?addDays(e.date,1):e.date,required:true});
   const eIn=h("input",{class:"inp",type:"date",value:copy?"":(e.end&&e.end!==e.date?e.end:"")});
   const names=h("div",{class:"names",role:"group","aria-label":"だれが"},ASSIGN.map(([n,k])=>h("button",{type:"button",class:OUTS.some(o=>o[0]===n)?"out":null,"aria-pressed":String(picked.has(n)),
-    onclick:ev2=>{picked.has(n)?picked.delete(n):picked.add(n);ev2.currentTarget.setAttribute("aria-pressed",String(picked.has(n)));}},k)));
+    onclick:ev2=>{picked.has(n)?picked.delete(n):picked.add(n);ev2.currentTarget.setAttribute("aria-pressed",String(picked.has(n)));drawOt();}},k)));
+  // 残業：えらんだ人ごとに時間をえらぶ。何日か続く予定は、えらんでいる日の分（2026/11/09 ユーザー）
+  const otDay=()=>{const a=dIn.value, b=eIn.value&&eIn.value>a?eIn.value:a;return sel>=a&&sel<=b?sel:a;};
+  const otv={...((e.ot||{})[otDay()]||{})};
+  const OTS=[0,0.5,1,1.5,2,2.5,3,3.5,4,5,6];
+  const otBox=h("div");
+  function drawOt(){
+    const P=ASSIGN.filter(([n])=>picked.has(n));
+    otBox.replaceChildren(...(P.length?P.map(([n,k])=>h("div",{class:"otrow"},h("b",{text:k}),
+      h("select",{class:"inp","aria-label":k+"の残業",onchange:x=>{const v=Number(x.currentTarget.value);if(v)otv[n]=v;else delete otv[n];}},
+        OTS.map(v=>h("option",{value:String(v),selected:(otv[n]||0)===v},v?v+"h":"なし"))))):[h("p",{class:"hint",text:"「だれが」をえらぶと出ます。"})]));
+  }
+  drawOt();
   const sp=sitePicker(e.site,e.kako);
   const mIn=h("textarea",{class:"inp",placeholder:"例：8時現地集合、車は2台"},e.memo||"");
   const err=h("p",{class:"err",hidden:true});
@@ -751,7 +770,10 @@ function openEdit(ev,copy,preset){
     // 西崎さんだけの予定（だれもえらばない・西崎だけ）は自分だけのメモにする。社員には見えない（2026/11/01 ユーザー）
     const onlyMe=isBoss()&&people.length===1&&people[0]===BOSS;
     const col=people.length&&!onlyMe?"events":"memos", was=isNew?"":(e.col||"events");
-    const data={date,end,people,prevPeople:isNew?[]:(e.people||[]),site,kako:sp.kako(),memo:mIn.value.trim(),updatedAt:Date.now(),updatedBy:editor};
+    const ot={...(copy?{}:(e.ot||{}))}, od=otDay(), ov={};
+    for(const n of people)if(otv[n])ov[n]=otv[n];
+    if(Object.keys(ov).length)ot[od]=ov;else delete ot[od];
+    const data={date,end,people,prevPeople:isNew?[]:(e.people||[]),site,kako:sp.kako(),memo:mIn.value.trim(),ot,updatedAt:Date.now(),updatedBy:editor};
     save.disabled=true;err.hidden=true;
     try{
       if(isNew)await addDoc(collection(fs,col),{...data,createdAt:Date.now(),createdBy:editor});
@@ -773,6 +795,7 @@ function openEdit(ev,copy,preset){
     h("div",{class:"two"},h("label",{class:"fl"},"日にち",dIn),h("label",{class:"fl"},h("span",null,"終わりの日 ",h("em",{text:"何日か続くとき"})),eIn)),
     h("div",{class:"fl"},h("span",null,"だれが ",h("em",{text:isBoss()?"だれもえらばないか西崎だけにすると、西崎さんだけが見られるメモになります":"何人でもえらべます"})),names),
     sp.el,
+    h("div",{class:"fl"},h("span",null,"残業 ",h("em",{text:"した人だけ。予定表の名前の前に「1h」などが出ます"})),otBox),
     h("label",{class:"fl"},h("span",null,"メモ ",h("em",{text:"なくてもよい"})),mIn),
     err,save,
     !isNew?h("div",{class:"rowbtns"},
