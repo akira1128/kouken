@@ -1251,8 +1251,9 @@ function renderSite(){
         h("p",{class:"hint",text:"まだメモはありません。気づいたことを書いておくと、次に行く人が助かります。"}),
       noteIn,
       h("button",{type:"button",class:"btn",onclick:()=>needWho(async()=>{const t=noteIn.value.trim();if(!t)return;
-        try{await updateDoc(doc(fs,"sites",x.id),{notes:arrayUnion({text:t,who:me(),at:Date.now()})});noteIn.value="";toast("メモを書きました");}
+        try{await updateDoc(doc(fs,"sites",x.id),{notes:arrayUnion({text:t,who:me(),at:Date.now()})});noteIn.value="";toast("メモを書きました（みんなに通知が届きます）");}
         catch(e){toast(e&&e.code==="permission-denied"?"書く権限がありません":"書けませんでした。電波を確認してください");}})},"メモを書く"),
+      h("p",{class:"hint",text:"メモを書くと、社員みんなの携帯に通知が届きます。"}),   // 2026/11/11 ユーザー
       h("h4",{class:"vh",text:"写真（材料置き場など）"}),
       h("p",{class:"hint",id:"photoHint",style:{marginBottom:"8px"},text:"材料置き場・搬入口など、次に行く人が助かる写真を入れておけます。状況が変わったら、だれでも取り替え・消しができます。"}),
       (()=>{const g=h("div",{class:"phgrid",id:"photoGrid"});fillPhotos(g,x);return g;})(),
