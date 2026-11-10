@@ -97,6 +97,11 @@ main{display:grid;gap:16px;padding-top:14px}
 .group .row:first-of-type{border-top:0}
 .row .nm{min-width:0;font-weight:700;overflow-wrap:anywhere}
 .row .sub{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+/* 材料の写真（その他など、めったに出ないもの 2026/11/10 ユーザー） */
+.ithumb{float:left;width:56px;height:56px;object-fit:cover;border-radius:8px;margin:0 10px 0 0;border:1px solid var(--line);background:#fff}
+.iphoto{display:block;width:100%;max-height:52vh;object-fit:contain;border-radius:10px;border:1px solid var(--line);background:#fff}
+.phrow{display:flex;gap:8px;flex-wrap:wrap}
+.phrow .btn{flex:1;min-width:120px}
 .qty{font-size:22px;font-weight:700;text-align:right;white-space:nowrap}
 .qty small{font-size:13px;font-weight:400;color:var(--muted);margin-left:2px}
 .qty.lowtxt{color:var(--low)}
@@ -285,6 +290,10 @@ details.edit form{padding:12px 0 0}
           <label class="fl">溶接ロングエルボの今ある数（個）
             <input class="inp" id="aWlQty" type="number" inputmode="decimal" min="0" step="any" value="0">
           </label>
+        </div>
+        <div class="fl" id="aPhBox" hidden><span>写真 <em>めったに出ない材料は写真があると分かりやすい（なくてもOK）</em></span>
+          <input class="inp" id="aPh" type="file" accept="image/*">
+          <img id="aPhPrev" class="iphoto" alt="えらんだ写真" hidden>
         </div>
         <div class="two">
           <label class="fl">今ある数
@@ -584,7 +593,7 @@ function renderList(){
   }
   list.replaceChildren(...(flp?[flp]:[]),...groups.map(([c,arr,gs])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
     arr.map(it=>ORDER?orderRow(it):h("button",{type:"button",class:"row"+(isLow(it)?" low":"")+(Number(it.qty)>0?" has":" zero"),onclick:()=>openItem(it.id)},
-      h("span",{class:"nm"},it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
+      h("span",{class:"nm"},it.thumb?h("img",{class:"ithumb",src:it.thumb,alt:"",loading:"lazy"}):null,it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
         h("span",{class:"sub",text:((HASLEN(it.cat)||it.no)&&sizeText(it)?(sizeText(it)+" ・ "):"")+(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
       h("span",{class:"qty"+(lowS(it)?" lowtxt":"")},fmtN(it.qty),h("small",{text:it.unit||""}),ELBOW(it.cat)?EPARTS.map(([k,l,f])=>h("span",{class:"eq",text:l.replace("溶接","").replace("エルボ","")+" "+fmtN(it[f]||0)+"個"})):null))),
     gs&&!q&&!ORDER&&!readOnly?gsForm(gs):null)));
@@ -892,8 +901,18 @@ function openItem(id){
       h("label",{class:"fl lowonly"},"少ないと知らせる数",eMin),eErr,
       h("button",{class:"btn ghost",type:"submit"},"変更を保存"),delZone));
 
+  // 写真：小さい写真をすぐ出し、大きい写真をあとから読む。その他の材料は「写真を入れる」も出す
+  const phImg=it.thumb?h("img",{class:"iphoto",src:it.thumb,alt:it.name+"の写真"}):null;
+  if(phImg)getDoc(doc(fs,"photoFull",PH_KEY(id))).then(d=>{if(d.exists()&&d.data().img)phImg.src=d.data().img;}).catch(()=>{});
+  const phMsg=h("p",{class:"hint",hidden:true});
+  const phBusy=(t)=>{phMsg.textContent=t;phMsg.hidden=!t;};
+  const phBtns=readOnly||!(it.thumb||it.cat==="その他")?null:h("div",{class:"phrow"},
+    h("button",{class:"btn ghost",type:"button",onclick:async()=>{const f=await pickImage();if(!f)return;phBusy("写真を入れています…");
+      try{await savePhoto(id,f);close();toast(it.thumb?"写真を取り替えました":"写真を入れました");}catch(x){phBusy("写真を入れられませんでした。電波を確認してください。");}}},it.thumb?"写真を取り替える":"写真を入れる"),
+    it.thumb?h("button",{class:"btn ghost",type:"button",onclick:async e=>{const t=e.currentTarget;if(t.dataset.ok!=="1"){t.dataset.ok="1";t.textContent="本当に消す";return;}
+      phBusy("消しています…");try{await dropPhoto(id);close();toast("写真を消しました");}catch(x){phBusy("消せませんでした。");}}},"写真を消す"):null);
   const close=openSheet(
-    h("h2",{text:it.name}),(HASLEN(it.cat)||it.no)&&sizeText(it)?h("p",{class:"hint",text:sizeText(it)}):null,
+    h("h2",{text:it.name}),phImg,phBtns,phMsg,(HASLEN(it.cat)||it.no)&&sizeText(it)?h("p",{class:"hint",text:sizeText(it)}):null,
     h("div",{class:"now"},h("span",{text:"いまの在庫"}),h("span",null,h("b",{text:fmtN(it.qty)})," "+(it.unit||""),hasE?EPARTS.map(([k,l,f])=>h("span",{class:"nowpart"},l+" ",h("b",{text:fmtN(it[f]||0)})," 個")):null)),
     partSeg,
     seg,
@@ -942,9 +961,36 @@ async function removeItem(id){
   await db.collection("logs").add({at:Date.now(),kind:"del",itemId:id,itemName:it?it.name:"",unit:it?it.unit||"":"",n:0,after:0,who,memo:""});
 }
 
+/* ---------- 材料の写真（2026/11/10 ユーザー「その他の、めったに出ないものを写真で。社員全員ができるように」）
+   一覧用の小さい写真は材料（items）に、大きい写真は photoFull/item_材料ID に入れる。だれでも入れる・取り替える・消すができる ---------- */
+const PH_KEY=id=>"item_"+id;
+async function shrinkPhoto(file,max,q){
+  const url=URL.createObjectURL(file);
+  try{
+    const im=await new Promise((ok,ng)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ng;i.src=url;});
+    const sc=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)), c=document.createElement("canvas");
+    c.width=Math.round(im.naturalWidth*sc);c.height=Math.round(im.naturalHeight*sc);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+    let out=c.toDataURL("image/jpeg",q);for(let qq=q-.1;out.length>850000&&qq>.3;qq-=.1)out=c.toDataURL("image/jpeg",qq);
+    return out;
+  }finally{URL.revokeObjectURL(url);}
+}
+async function savePhoto(id,file){
+  const [thumb,img]=await Promise.all([shrinkPhoto(file,240,.6),shrinkPhoto(file,1600,.8)]);
+  await setDoc(doc(fs,"photoFull",PH_KEY(id)),{img,itemId:id,at:Date.now(),by:who});
+  await updateDoc(doc(fs,"items",id),{thumb,photoAt:Date.now(),photoBy:who});
+}
+async function dropPhoto(id){
+  try{await deleteDoc(doc(fs,"photoFull",PH_KEY(id)));}catch(e){}
+  await updateDoc(doc(fs,"items",id),{thumb:deleteField(),photoAt:deleteField(),photoBy:deleteField()});
+}
+const pickImage=()=>new Promise(ok=>{const f=h("input",{type:"file",accept:"image/*",style:"display:none"});
+  f.addEventListener("change",()=>{ok(f.files&&f.files[0]||null);f.remove();});document.body.append(f);f.click();});
+$("aPh").addEventListener("change",()=>{const f=$("aPh").files[0],pv=$("aPhPrev");if(pv.src)URL.revokeObjectURL(pv.src);pv.hidden=!f;if(f)pv.src=URL.createObjectURL(f);});
+
 /* ---------- 材料を追加 ---------- */
 $("aCat").replaceChildren(...CATS.map(c=>h("option",{value:c},c)));
-function syncAddSub(){const c=$("aCat").value,l=SUBS[c];$("aSubBox").hidden=!l;$("aSubLbl").textContent=SUBLABEL(c);$("aSub").replaceChildren(...(l||[]).map(x=>h("option",{value:x},x)));$("aEBox").hidden=!ELBOW(c);$("aLenBox").hidden=!HASLEN(c);$("aLenLbl").textContent=ISPLATE(c)?"長さ（mm）":"1巻の長さ（m）";$("aWidBox").hidden=!HASWID(c);$("aThkBox").hidden=!HASTHK(c);if(l)$("aSub").dispatchEvent(new Event("change"));}
+function syncAddSub(){const c=$("aCat").value,l=SUBS[c];$("aSubBox").hidden=!l;$("aSubLbl").textContent=SUBLABEL(c);$("aSub").replaceChildren(...(l||[]).map(x=>h("option",{value:x},x)));$("aEBox").hidden=!ELBOW(c);$("aLenBox").hidden=!HASLEN(c);$("aLenLbl").textContent=ISPLATE(c)?"長さ（mm）":"1巻の長さ（m）";$("aWidBox").hidden=!HASWID(c);$("aThkBox").hidden=!HASTHK(c);$("aPhBox").hidden=c!=="その他";if(l)$("aSub").dispatchEvent(new Event("change"));}
 $("aCat").addEventListener("change",syncAddSub);syncAddSub();
 $("aSub").addEventListener("change",()=>{const v=$("aSub").value;if(/エルボ$/.test(v))$("aUnit").value="個";else if(/直管$/.test(v))$("aUnit").value="本";});
 $("aUnit").replaceChildren(...unitOpts("本"));
@@ -959,6 +1005,9 @@ $("addForm").addEventListener("submit",async e=>{
   try{const now=Date.now();
     const ref=await db.collection("items").add({name,cat:$("aCat").value,sub:SUBS[$("aCat").value]?$("aSub").value:"",...(HASLEN($("aCat").value)&&Number($("aLen").value)>0?{len:Number($("aLen").value)}:{}),...(HASWID($("aCat").value)&&Number($("aWid").value)>0?{wid:Number($("aWid").value)}:{}),...(HASTHK($("aCat").value)&&Number($("aThk").value)>0?{thk:$("aThk").value.trim()}:{}),unit:$("aUnit").value,qty,min,...(ELBOW($("aCat").value)?{wsqty:Math.max(0,Number($("aWsQty").value)||0),wlqty:Math.max(0,Number($("aWlQty").value)||0)}:{}),createdAt:now,updatedAt:now,updatedBy:who});
     await db.collection("logs").add({at:now,kind:"new",itemId:ref.id,itemName:name,unit:$("aUnit").value,n:qty,after:qty,who,memo:""});
+    const pf=$("aPhBox").hidden?null:$("aPh").files[0];
+    if(pf){try{await savePhoto(ref.id,pf);}catch(x){toast("材料は登録しましたが、写真は入りませんでした");}}
+    $("aPh").value="";$("aPhPrev").hidden=true;
     $("aName").value="";$("aLen").value="";$("aWid").value="";$("aThk").value="";$("aQty").value="0";$("aMin").value="0";$("aWsQty").value="0";$("aWlQty").value="0";
     toast("「"+name+"」を登録しました");
     cat=$("aCat").value;keepCS("kouken-cat",cat);sub=SUBS[cat]?$("aSub").value:"すべて";fixSub();keepCS("kouken-sub",sub);renderCats();show("vStock");renderList();
