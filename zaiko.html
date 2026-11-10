@@ -975,19 +975,20 @@ async function removeItem(id){
 /* ---------- 材料の写真（2026/11/10 ユーザー「その他の、めったに出ないものを写真で。社員全員ができるように」）
    一覧用の小さい写真は材料（items）に、大きい写真は photoFull/item_材料ID に入れる。だれでも入れる・取り替える・消すができる ---------- */
 const PH_KEY=id=>"item_"+id;
-async function shrinkPhoto(file,max,q){
+async function shrinkPhoto(file,max,q,cap){
   const url=URL.createObjectURL(file);
   try{
     const im=await new Promise((ok,ng)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ng;i.src=url;});
     const sc=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)), c=document.createElement("canvas");
     c.width=Math.round(im.naturalWidth*sc);c.height=Math.round(im.naturalHeight*sc);
     c.getContext("2d").drawImage(im,0,0,c.width,c.height);
-    let out=c.toDataURL("image/jpeg",q);for(let qq=q-.1;out.length>850000&&qq>.3;qq-=.1)out=c.toDataURL("image/jpeg",qq);
+    let out=c.toDataURL("image/jpeg",q);for(let qq=q-.1;out.length>cap&&qq>.3;qq-=.1)out=c.toDataURL("image/jpeg",qq);
     return out;
   }finally{URL.revokeObjectURL(url);}
 }
 async function savePhoto(id,file){
-  const [thumb,img]=await Promise.all([shrinkPhoto(file,240,.6),shrinkPhoto(file,1600,.8)]);
+  // 写真は軽く（2026/11/10 ユーザー「なるべく重くしたくない」）：一覧用は160px・約20KBまで、大きい写真は1200px・約250KBまで
+  const [thumb,img]=await Promise.all([shrinkPhoto(file,160,.6,20000),shrinkPhoto(file,1200,.7,250000)]);
   await setDoc(doc(fs,"photoFull",PH_KEY(id)),{img,itemId:id,at:Date.now(),by:who});
   await updateDoc(doc(fs,"items",id),{thumb,photoAt:Date.now(),photoBy:who});
 }
