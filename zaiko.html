@@ -98,7 +98,18 @@ main{display:grid;gap:16px;padding-top:14px}
 .row .nm{min-width:0;font-weight:700;overflow-wrap:anywhere}
 .row .sub{display:block;font-weight:400;font-size:12px;color:var(--muted)}
 /* 材料の写真（その他など、めったに出ないもの 2026/11/10 ユーザー） */
-.ithumb{float:left;width:56px;height:56px;object-fit:cover;border-radius:8px;margin:0 10px 0 0;border:1px solid var(--line);background:#fff}
+.ithumb{display:inline-block;vertical-align:middle;width:48px;height:48px;object-fit:cover;border-radius:8px;margin:0 0 0 10px;border:1px solid var(--line);background:#fff;cursor:zoom-in}
+.phview{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.92);display:flex;flex-direction:column}
+.phview .bar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;color:#fff;font-weight:700}
+.phview .bar button{background:#fff;color:#000;border:0;border-radius:10px;padding:10px 16px;font-size:16px;font-weight:700}
+.phview .area{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;touch-action:pan-x pan-y pinch-zoom}
+.phview .area img{max-width:100%;max-height:100%;object-fit:contain}
+.phview .area.zoom{display:block}
+.phview .area.zoom img{max-width:none;max-height:none;width:250%}
+.phview .tip{color:#ddd;text-align:center;font-size:13px;padding:6px 0 14px}
+.handph{display:flex;align-items:center;gap:10px}
+.handph .btn{width:auto;flex:none;padding:8px 12px;font-size:14px}
+.handph img{width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
 .iphoto{display:block;width:100%;max-height:52vh;object-fit:contain;border-radius:10px;border:1px solid var(--line);background:#fff}
 .phrow{display:flex;gap:8px;flex-wrap:wrap}
 .phrow .btn{flex:1;min-width:120px}
@@ -593,7 +604,7 @@ function renderList(){
   }
   list.replaceChildren(...(flp?[flp]:[]),...groups.map(([c,arr,gs])=>h("section",{class:"panel group"},h("h3",{text:c+"（"+arr.length+"）"}),
     arr.map(it=>ORDER?orderRow(it):h("button",{type:"button",class:"row"+(isLow(it)?" low":"")+(Number(it.qty)>0?" has":" zero"),onclick:()=>openItem(it.id)},
-      h("span",{class:"nm"},it.thumb?h("img",{class:"ithumb",src:it.thumb,alt:"",loading:"lazy"}):null,it.name,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
+      h("span",{class:"nm"},it.name,it.thumb?h("img",{class:"ithumb",src:it.thumb,alt:it.name+"の写真（押すと大きく見られます）",loading:"lazy",onclick:e=>{e.stopPropagation();viewPhoto(it);}}):null,isLow(it)?h("span",{class:"pill",text:"少ない"}):null,
         h("span",{class:"sub",text:((HASLEN(it.cat)||it.no)&&sizeText(it)?(sizeText(it)+" ・ "):"")+(SHOW_LOW&&Number(it.min)>0?("少ない目安 "+fmtN(it.min)+(it.unit||"")+" ・ "):"")+(it.updatedAt?("更新 "+fmtT(it.updatedAt)):"")})),
       h("span",{class:"qty"+(lowS(it)?" lowtxt":"")},fmtN(it.qty),h("small",{text:it.unit||""}),ELBOW(it.cat)?EPARTS.map(([k,l,f])=>h("span",{class:"eq",text:l.replace("溶接","").replace("エルボ","")+" "+fmtN(it[f]||0)+"個"})):null))),
     gs&&!q&&!ORDER&&!readOnly?gsForm(gs):null)));
@@ -984,6 +995,16 @@ async function dropPhoto(id){
   try{await deleteDoc(doc(fs,"photoFull",PH_KEY(id)));}catch(e){}
   await updateDoc(doc(fs,"items",id),{thumb:deleteField(),photoAt:deleteField(),photoBy:deleteField()});
 }
+// 写真を大きく見る（タップで拡大・もう一度タップで元に戻す）
+function viewPhoto(it){
+  const img=h("img",{src:it.thumb,alt:it.name+"の写真"});
+  getDoc(doc(fs,"photoFull",PH_KEY(it.id))).then(d=>{if(d.exists()&&d.data().img)img.src=d.data().img;}).catch(()=>{});
+  const area=h("div",{class:"area",onclick:()=>area.classList.toggle("zoom")},img);
+  const box=h("div",{class:"phview",role:"dialog","aria-modal":"true","aria-label":it.name+"の写真"},
+    h("div",{class:"bar"},h("span",{text:it.name}),h("button",{type:"button",onclick:()=>box.remove()},"閉じる")),
+    area,h("p",{class:"tip",text:"写真をタップすると大きくなります（もう一度タップで戻る）"}));
+  document.body.append(box);
+}
 const pickImage=()=>new Promise(ok=>{const f=h("input",{type:"file",accept:"image/*",style:"display:none"});
   f.addEventListener("change",()=>{ok(f.files&&f.files[0]||null);f.remove();});document.body.append(f);f.click();});
 $("aPh").addEventListener("change",()=>{const f=$("aPh").files[0],pv=$("aPhPrev");if(pv.src)URL.revokeObjectURL(pv.src);pv.hidden=!f;if(f)pv.src=URL.createObjectURL(f);});
@@ -1240,6 +1261,10 @@ else{
     xN=h("input",{class:"inp",type:"number",inputmode:"decimal",min:"0",step:"any",placeholder:"数",style:"width:84px;flex:none"}),
     xU=h("select",{class:"inp",style:"width:84px;flex:none","aria-label":"数え方"},UNITS.map(u=>h("option",{value:u},u))),
     xErr=h("p",{class:"err",hidden:true});
+  // 写真（なくてもOK）2026/11/10 ユーザー
+  let xFile=null;const xPrev=h("img",{alt:"えらんだ写真",hidden:true});
+  const xPhBtn=h("button",{class:"btn ghost",type:"button",onclick:async()=>{const f=await pickImage();if(!f)return;xFile=f;if(xPrev.src)URL.revokeObjectURL(xPrev.src);xPrev.src=URL.createObjectURL(f);xPrev.hidden=false;xPhBtn.textContent="写真を変える";xPhDel.hidden=false;}},"写真を付ける");
+  const xPhDel=h("button",{class:"btn ghost",type:"button",hidden:true,onclick:()=>{xFile=null;xPrev.hidden=true;xPhBtn.textContent="写真を付ける";xPhDel.hidden=true;}},"写真をやめる");
   const xGo=h("button",{class:"btn",type:"button",onclick:async()=>{
     const nm=xName.value.trim(),n=xN.value===""?0:Number(xN.value);
     if(!nm||!(n>=0)){xErr.textContent="材料の名前を入れてください。";xErr.hidden=false;return;}
@@ -1250,12 +1275,13 @@ else{
     try{const now=Date.now();
       const ref=await db.collection("items").add({name:nm,cat:"その他",sub:"",unit:xU.value,qty:n,min:0,createdAt:now,updatedAt:now,updatedBy:who});
       await db.collection("logs").add({at:now,kind:"new",itemId:ref.id,itemName:nm,unit:xU.value,n,after:n,who,memo:"手書きで登録"});
-      xName.value="";xN.value="";toast("「"+nm+"」を登録しました（"+fmtN(n)+xU.value+"）");
+      let phNg=false;if(xFile){try{await savePhoto(ref.id,xFile);}catch(y){phNg=true;}}
+      xName.value="";xN.value="";xPhDel.click();toast("「"+nm+"」を登録しました（"+fmtN(n)+xU.value+"）"+(phNg?"。写真は入りませんでした":""));
     }catch(x){xErr.textContent=errMsg(x);xErr.hidden=false;}
     xGo.disabled=readOnly;}},"登録する");
   $("list").insertAdjacentElement("beforebegin",h("section",{class:"panel handbox",id:"handbox",hidden:cat!=="その他"},
-    h("h3",{text:"一覧にない材料を書く"}),xName,h("div",{class:"handrow"},xN,xU,xGo),
-    h("p",{class:"hint",style:"margin:0",text:"登録すると下の一覧に入ります。そのあと押して、持ち出し・戻しを記録できます。"}),xErr));}
+    h("h3",{text:"一覧にない材料を書く"}),xName,h("div",{class:"handph"},xPhBtn,xPrev,xPhDel,h("small",{class:"hint",text:"写真はなくてもOK"})),h("div",{class:"handrow"},xN,xU,xGo),
+    h("p",{class:"hint",style:"margin:0",text:"登録すると下の一覧に入ります。写真は名前の右に出て、押すと大きく見られます。"}),xErr));}
 renderWho();renderCats();renderList();renderLog();show(view);
 (async()=>{
   if(!FIREBASE_CONFIG||!FIREBASE_CONFIG.apiKey){setBanner("まだ設定がすんでいません（firebase-config.js に Firebase の設定を入れてください）。");renderList();return;}
