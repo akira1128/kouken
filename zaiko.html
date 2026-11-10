@@ -302,7 +302,7 @@ details.edit form{padding:12px 0 0}
             <input class="inp" id="aWlQty" type="number" inputmode="decimal" min="0" step="any" value="0">
           </label>
         </div>
-        <div class="fl" id="aPhBox" hidden><span>写真 <em>めったに出ない材料は写真があると分かりやすい（なくてもOK）</em></span>
+        <div class="fl" id="aPhBox" hidden><span>写真 <em>めったに出ない材料は写真があると分かりやすい</em></span>
           <input class="inp" id="aPh" type="file" accept="image/*">
           <img id="aPhPrev" class="iphoto" alt="えらんだ写真" hidden>
         </div>
@@ -1281,7 +1281,7 @@ else{
     }catch(x){xErr.textContent=errMsg(x);xErr.hidden=false;}
     xGo.disabled=readOnly;}},"登録する");
   $("list").insertAdjacentElement("beforebegin",h("section",{class:"panel handbox",id:"handbox",hidden:cat!=="その他"},
-    h("h3",{text:"一覧にない材料を書く"}),xName,h("div",{class:"handph"},xPhBtn,xPrev,xPhDel,h("small",{class:"hint",text:"写真はなくてもOK"})),h("div",{class:"handrow"},xN,xU,xGo),
+    h("h3",{text:"一覧にない材料を書く"}),xName,h("div",{class:"handph"},xPhBtn,xPrev,xPhDel),h("div",{class:"handrow"},xN,xU,xGo),
     h("p",{class:"hint",style:"margin:0",text:"登録すると下の一覧に入ります。写真は名前の右に出て、押すと大きく見られます。"}),xErr));}
 renderWho();renderCats();renderList();renderLog();show(view);
 (async()=>{
