@@ -297,7 +297,7 @@ function drawHole(pts,R,r,al,cxm,t){
     const ye=Y(up?r:-r);   // 円の端
     s+=`<path d="M${x.toFixed(1)} ${ye.toFixed(1)} V${y.toFixed(1)}" stroke="var(--cut)" stroke-width="3"/>`+
       `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--cut)"/>`+
-      `<text x="${(x+10).toFixed(1)}" y="${((y+ye)/2+5).toFixed(1)}" font-size="15" font-weight="700" fill="var(--cut)">+${fmt(Math.max(0,e))}</text>`+
+      `<text x="${(x+12).toFixed(1)}" y="${(y+(up?-8:22)).toFixed(1)}" font-size="16" font-weight="700" fill="var(--cut)" stroke="#fff" stroke-width="4" paint-order="stroke">+${fmt(Math.max(0,e))}</text>`+
       `<text x="${(x-9).toFixed(1)}" y="${(y+(up?-6:16)).toFixed(1)}" text-anchor="end" font-size="12" fill="var(--muted)">${p.i}</text>`;
   });
   $("hole").setAttribute("viewBox",`0 0 ${W} ${H+16}`);$("hole").innerHTML=s;
