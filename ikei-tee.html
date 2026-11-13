@@ -148,9 +148,15 @@ td b{font-size:19px}
       <div><small>穴の長さ（横）</small><b id="mLen"></b></div>
       <div><small>穴の幅（周り）</small><b id="mWid"></b></div>
     </div>
+    <!-- 枝管と同じ太さの円を書いて、その円の端から 0の線・2の線 を何mm出すか（2026/11/13 ユーザー） -->
+    <div class="sum">
+      <div><small>まず円を書く</small><b id="mCir"></b></div>
+      <div><small>円の端から 0の線</small><b id="mE0"></b></div>
+      <div><small>円の端から 2の線</small><b id="mE2"></b></div>
+    </div>
     <div class="panel dev">
       <svg id="hole" viewBox="0 0 340 240"></svg>
-      <p class="cap">本管の上に十字の線を引き、真ん中から 横（本管の向き）と 周り（本管に沿って）を測る。小さい数字は線の番号。表の「−」は十字の反対側</p>
+      <p class="cap">本管の上に十字の線を引き、枝管の太さの円（点線）を書く。円の端から 0の線・2の線 を上の長さだけ外に出す。真ん中から 横（本管の向き）と 周り（本管に沿って）を測ってもよい。小さい数字は線の番号。表の「−」は十字の反対側</p>
     </div>
     <table class="panel">
       <thead><tr><th>線</th><th>横（mm）</th><th>周り（mm）</th></tr></thead>
@@ -250,6 +256,10 @@ function calc(){
   $("mCirc").innerHTML=fmt(circOf(D))+"<i>mm</i><small class=\"jk\">"+jkTag(D)+"</small>";$("mLen").innerHTML=fmt(len)+"<i>mm</i>";$("mWid").innerHTML=fmt(wid)+"<i>mm</i>";
   const sg=v=>(v<0?"−":"")+fmt(Math.abs(v));
   $("mrows").innerHTML=pts.map(p=>`<tr><td>${p.i}</td><td><b>${sg(p.x)}</b></td><td><b>${sg(p.s)}</b></td></tr>`).join("");
+  // 円（枝管の太さ）の端から、穴の線がどれだけ外に出るか（十字の真ん中からの長さ − 円の半径）
+  const ext=p=>{const e=Math.hypot(p.x,p.s)-r;return Math.abs(e)<0.05?0:e;};
+  const sx=e=>(e>0?"+":e<0?"−":"")+fmt(Math.abs(e));
+  $("mCir").innerHTML=fmt(d)+"<i>φ</i>";$("mE0").innerHTML=sx(ext(pts[0]))+"<i>mm</i>";$("mE2").innerHTML=sx(ext(pts[2]))+"<i>mm</i>";
   drawHole(pts,R,r,al,cxm,t);
   showTab("osu");
   $("inp").hidden=true;$("res").hidden=false;scrollTo(0,0);
@@ -285,7 +295,8 @@ function drawHole(pts,R,r,al,cxm,t){
   let path="";for(let k=0;k<=160;k++){const th=2*Math.PI*k/160;const x=t(th)*Math.cos(al)+r*Math.cos(th)*Math.sin(al)-cxm, v=R*Math.asin(Math.min(1,r*Math.sin(th)/R));path+=(k?"L":"M")+X(x).toFixed(1)+" "+Y(v).toFixed(1);}
   let s=`<path d="M14 ${cy} H${W-14}" stroke="var(--muted)" stroke-dasharray="6 5"/><path d="M${cx} ${cy-100} V${cy+100}" stroke="var(--muted)" stroke-dasharray="6 5"/>`+
     `<text x="${W-14}" y="${cy-6}" text-anchor="end" font-size="11" fill="var(--muted)">本管の向き</text>`+
-    `<path d="${path}Z" fill="var(--accent-soft)" stroke="var(--cut)" stroke-width="2.5"/>`;
+    `<path d="${path}Z" fill="var(--accent-soft)" stroke="var(--cut)" stroke-width="2.5"/>`+
+    `<circle cx="${cx}" cy="${cy}" r="${(r*sc).toFixed(1)}" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
   const seen=new Set();
   pts.forEach(p=>{
     const x=X(p.x), y=Y(p.s);
