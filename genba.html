@@ -1679,23 +1679,43 @@ const ordParam=new URLSearchParams(location.search).get("ord");
 if(ordParam!==null){ordSite=ordParam;keepOrdSite=true;store("kouken-ord-seen",String(Date.now()));}
 renderWho();show(ordParam!==null?"vOrders":siteId?"vSite":"vSites");
 if(new URLSearchParams(location.search).get("sent"))toast("材料を頼みました");
+// 決まった時間で待つのをやめる（返事が来ないまま止まらないように）
+function upTo(p,ms,v){return Promise.race([p,new Promise(r=>setTimeout(()=>r(v),ms))]);}
+// 「読み込んでいます…」のまま止まったら、1回だけ自動で開き直す。それでもだめならボタンを出す（2026/11/13 ユーザー）
+const RL="kouken-genba-reload";
+let noCache=false;try{const t=+(sessionStorage.getItem(RL)||0);noCache=Date.now()-t<60000;}catch(e){}
+function stuck(){return !sites.length&&$("scrim").hidden&&!!document.querySelector(".panel.empty")&&/読み込んでいます/.test(document.body.textContent);}
+function watch(){
+  setTimeout(()=>{
+    if(!stuck())return;
+    if(!noCache){try{sessionStorage.setItem(RL,String(Date.now()));}catch(e){}location.reload();return;}
+    setBanner("読み込みに時間がかかっています。");
+    const b=$("banner");if(b&&!b.querySelector("button")){const btn=document.createElement("button");btn.type="button";btn.textContent="読み込み直す";btn.style.cssText="margin-left:8px;padding:4px 12px;border-radius:8px;border:1px solid currentColor;background:#fff;font:inherit";btn.onclick=()=>{try{sessionStorage.setItem(RL,String(Date.now()));}catch(e){}location.reload();};b.appendChild(btn);}
+  },12000);
+}
+watch();
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&stuck())watch();});
 (async()=>{
   if(!FIREBASE_CONFIG||!FIREBASE_CONFIG.apiKey){setBanner("まだ設定がすんでいません（firebase-config.js）。");return;}
   try{
     const app=initializeApp(FIREBASE_CONFIG);
     fbApp=app;
-    try{fs=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});}catch(e){fs=getFirestore(app);}
+    // 前回「読み込んでいます…」のまま止まったときは、携帯の保存領域を使わずに読む（iPhoneで保存領域が固まることがあるため）
+    if(noCache){try{fs=initializeFirestore(app,{});}catch(e){fs=getFirestore(app);}}
+    else{try{fs=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});}catch(e){fs=getFirestore(app);}}
     const auth=getAuth(app);
-    await signInAnonymously(auth);uid=auth.currentUser.uid;
-    const m=await getDoc(doc(fs,"members",uid));
-    if(!m.exists())await askPin();
+    await upTo(signInAnonymously(auth),10000,null);
+    if(!auth.currentUser)throw new Error("auth");
+    uid=auth.currentUser.uid;
+    const m=await upTo(getDoc(doc(fs,"members",uid)),8000,null);  // 返事がないときは待たずに進む
+    if(m&&!m.exists())await askPin();
   }catch(e){fs=null;setBanner("つながりません。電波を確認して、ページを開き直してください。");return;}
-  try{const ed=await getDoc(doc(fs,"editors",uid));if(ed.exists())editor=ed.data().name||"";}catch(e){}
+  try{const ed=await upTo(getDoc(doc(fs,"editors",uid)),5000,null);if(ed&&ed.exists())editor=ed.data().name||"";}catch(e){}
   if(who==="西崎剣"&&editor!=="西崎剣"){who="";store("kouken-who","");renderWho();}  // 西崎の携帯でなければ「西崎」はえらべない
   renderWho();renderPush();
   if(me()==="西崎剣")importEstSites().catch(()=>{});  // 見積もりの現場を1回だけ入れる（使う人が西崎でも）
   const facesP=loadFaces();
-  if(siteId){await facesP;rollRunFace();}
+  if(siteId){await upTo(facesP,4000,null);rollRunFace();}
   // 現場（在庫・予定表と同じ一覧。施工中→これから→そのほか）
   onSnapshot(collection(fs,"sites"),s=>{
     sites=s.docs.map(d=>Object.assign({id:d.id},d.data())).filter(x=>x&&x.name&&x.active!==false)
