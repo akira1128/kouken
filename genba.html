@@ -201,6 +201,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding-top:12px}
 .grp-plan .grouph::before{background:none;border:2px dashed currentColor;width:9px;height:9px}
 .grp-other{border-left:5px solid var(--line)} .grp-other .grouph{color:var(--muted);background:var(--bg)}
 .grp-plan .sitecard b{color:var(--muted)}
+.grp-done{border-left:5px solid #f59e0b} .grp-done .grouph{color:#b45309;background:#fffbeb}
 /* 進行状況のメーター：いまの階／最上階。％は出さない。中身は流れるしま模様と光 2026/10/28 ユーザー */
 .meter{display:grid;gap:6px;margin:2px 0 4px}
 .meter .mh{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--muted);font-weight:700}
@@ -754,7 +755,7 @@ function openKoutei(k){
 function renderSites(){
   const box=$("vSites");
   if(!sites.length){box.replaceChildren(h("div",{class:"panel empty",text:fs?"現場がまだありません":"読み込んでいます…"}));return;}
-  const groups=[["施工中","",x=>x.status==="施工中","now"],["これから","",x=>x.status==="これから","next"],["予定","まだ決まっていない",x=>x.status==="予定","plan"],["見積もり","見積を出している",x=>x.status==="見積もり","est"],["そのほか","",x=>!(x.status in STATUS_ORDER),"other"]];
+  const groups=[["施工中","",x=>x.status==="施工中","now"],["これから","",x=>x.status==="これから","next"],["予定","まだ決まっていない",x=>x.status==="予定","plan"],["見積もり","見積を出している",x=>x.status==="見積もり","est"],["そのほか","",x=>!(x.status in STATUS_ORDER)&&x.status!=="終わった","other"],["完了した現場","",x=>x.status==="終わった","done"]];   // 終わった現場はいちばん下（2026/11/13 ユーザー）
   // 外注が施工している現場は、まとまりのいちばん下に出す（2026/10/28 ユーザー）
   const outs=x=>!!(x.info&&x.info.outsource);
   const nw=sites.filter(isNewSite);
