@@ -450,7 +450,8 @@ const FIELDS=[["address","住所","例：東京都八王子市明神町4-1"],
   ["gc","元請","例：株式会社エステック"],["outsource","外注（施工する会社）","例：竹内工業"],["contact","担当者","例：佐藤さん（設備）"],["tel","電話","例：090-1234-5678"],
   ["rules","入場ルール","例：朝礼8:00、新規入場は前日までに書類"],["caution","注意事項","例：17時以降は音の出る作業ダメ"],
   // 建物・時期・数量・仕様・進行状況も、現場の情報に入れる（2026/10/28 ユーザー）
-  ["building","建物","例：10階・81部屋（A棟・B棟）"],["kai","階数（一覧に出す）","例：14階（地下1階）"],["period","時期","例：2026年11月くらい？"],["volume","数量のめやす","例：配管 4,518m"],
+  ["building","建物","例：10階・81部屋（A棟・B棟）"],["kai","階数","例：地上14階・地下1階"],   // 建物の階数は現場の情報に出す（2026/11/13 ユーザー）
+  ["period","時期","例：2026年11月くらい？"],["volume","数量のめやす","例：配管 4,518m"],
   ["spec","保温の仕様","例：EA 1m ALK24K/25tロール＋亀甲金網"],["progress","進行状況","例：キッチンの結び 10階まで終わり"],
   // 予定表で使っている現場の呼び方。「この現場に行った人」を探すのに使う（2026/10/29）
   ["yotei","予定表での呼び方","例：大和田、大和田町（、で区切る）"]];
@@ -465,11 +466,8 @@ const MK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.6h18"/><pat
   '<rect x="6.9" y="13.5" width="1.5" height="1"/><rect x="9.9" y="13.5" width="1.5" height="1"/><rect x="12.9" y="13.5" width="1.5" height="1"/>'+
   '<rect x="17.3" y="5.9" width="0.9" height="1.5"/><rect x="17.3" y="9.5" width="0.9" height="1.5"/><rect x="17.3" y="13" width="0.9" height="1.5"/></g>'+
   '<path d="M9.8 20.6v-3.3h4.5v3.3M12.05 17.3v3.3"/></svg>';
-// 建物の階数（2026/11/13 ユーザー「マンションごとに建物の階数」）。現場の情報の「階数」を出す。なければメーターの最上階から
-const kaiOf=x=>{const k=((x.info||{}).kai||"").trim();if(k)return k;
-  const tw=Array.isArray(x.towers)&&x.towers.length?x.towers:null;const top=tw?Math.max(...tw.map(t=>+t.floors||0)):+x.floors||0;return top?top+"階":"";};
-const mark=x=>{if(!x.mansion)return null;const kai=kaiOf(x);const e=h("span",{class:"mk",title:"マンション","aria-label":"マンション"+(x.units?" "+x.units+"戸":"")+(kai?" "+kai:"")});
-  e.innerHTML=MK;const t=[x.units?x.units+"戸":"",kai].filter(Boolean).join("・");if(t)e.append(t);return e;};
+const mark=x=>{if(!x.mansion)return null;const e=h("span",{class:"mk",title:"マンション","aria-label":"マンション"+(x.units?" "+x.units+"戸":"")});
+  e.innerHTML=MK;if(x.units)e.append(x.units+"戸");return e;};
 const stClass=st=>st==="施工中"?"now":st==="これから"?"next":st==="予定"?"plan":st==="見積もり"?"est":"other";
 const shortSite=s=>(s||"").replace(/[（(]仮称[）)]\s*/g,"").replace(/\s*新築工事$/,"").trim();
 
