@@ -92,6 +92,7 @@ td b{font-size:19px}
 .lock{max-width:640px;margin:40px auto;padding:0 16px;display:grid;gap:10px;justify-items:center;text-align:center;color:var(--muted)}
 .lock b{font-size:18px;color:var(--ink)}
 .lock a{margin-top:6px;display:inline-block;padding:10px 20px;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:700;text-decoration:none}
+.sum b small.jk{display:block;font-size:11px;font-weight:500;color:var(--muted);letter-spacing:0}
 </style>
 </head>
 <body>
@@ -218,6 +219,14 @@ document.querySelectorAll(".keys button[data-k]").forEach(b=>b.onclick=()=>{
    枝管の円周を8等分した線 θ = 0°,45°,…,360° ごとに、本管の中心線に当たるまでの長さ
      t(θ) = ( √(R² − r²sin²θ) + r·cosθ·cosα ) ÷ sinα
    寸法 = 一番長い t − t(θ)（0の線からどれだけ短く切るか） */
+/* 旭産業 メタルジャケットナンバー寸法表（No.・外周mm・外径φ）2026/11/13 ユーザー
+   入れた太さ（φ）が表の外径と同じなら、円周は計算（π×φ）でなく表の外周を使う。例：80φ → 2番 外周250（計算だと251.3）
+   表にない太さは今までどおり計算 */
+const JK=[["特2",170,54],["特1",190,61],["0",215,68],["1",230,73],["2S",240,76],["2",250,80],["3S",265,84],["3",280,89],["4",300,96],["5S",315,100],["5",325,104],["6S",335,107],["6",345,110],["7S",355,113],["7",370,118],["8S",385,123],["8",400,127],["9S",410,131],["9",425,135],["10",455,145],["11",470,150],["12",490,156],["13",510,162],["14",540,172],
+  ["15",555,177],["16",575,183],["17",600,191],["18",620,197],["19S",635,202],["19",650,207],["20",670,213],["21",700,223],["22S",715,228],["22",730,232],["23",780,248],["24",795,253],["25",830,264],["26",860,274],["27",900,287],["28",935,298],["29",960,306],["30",990,315],["31",1020,325],["32",1050,334],["33",1120,357],["34",1150,366],["35",1200,382],["36",1250,398]];
+const jkOf=d=>JK.find(j=>Math.abs(j[2]-d)<0.05);
+const circOf=d=>{const j=jkOf(d);return j?j[1]:Math.PI*d;};
+const jkTag=d=>{const j=jkOf(d);return j?"（ジャケット"+j[0]+"番）":"（計算）";};
 function calc(){
   const d=parseFloat(st.B), D=parseFloat(st.M);
   if(!(d>0)){pick("B");$("err").textContent="枝管の太さ（φ）を入れてください。";return;}
@@ -225,11 +234,11 @@ function calc(){
   if(d>D){$("err").textContent="枝管は本管と同じか、細い太さにしてください。";return;}
   const r=d/2, R=D/2, al=st.ang*Math.PI/180;
   const t=th=>(Math.sqrt(Math.max(0,R*R-r*r*Math.sin(th)**2))+r*Math.cos(th)*Math.cos(al))/Math.sin(al);
-  const circ=Math.PI*d;
+  const circ=circOf(d);   // 表にある太さはジャケットの外周
   const ts=[...Array(N+1)].map((_,i)=>t(2*Math.PI*i/N)), tmax=Math.max(...ts);
   const vals=ts.map(x=>tmax-x);
   $("rSize").innerHTML=fmt(d)+"<i>φ</i> × "+fmt(D)+"<i>φ</i>";
-  $("rCirc").innerHTML=fmt(circ)+"<i>mm</i>";$("rHalf").innerHTML=fmt(circ/2)+"<i>mm</i>";$("rQuar").innerHTML=fmt(circ/4)+"<i>mm</i>";
+  $("rCirc").innerHTML=fmt(circ)+"<i>mm</i><small class=\"jk\">"+jkTag(d)+"</small>";$("rHalf").innerHTML=fmt(circ/2)+"<i>mm</i>";$("rQuar").innerHTML=fmt(circ/4)+"<i>mm</i>";
   drawDev(circ,vals,R,r,al,tmax);
   // メス：枝管の線が本管に当たる点を、本管の上に展開する
   //   横 x = t·cosα + r·cosθ·sinα（穴の真ん中から本管の向き）
@@ -238,7 +247,7 @@ function calc(){
   const xs=pts.map(p=>p.x), cxm=(Math.max(...xs)+Math.min(...xs))/2;
   pts.forEach(p=>{p.x-=cxm;if(Math.abs(p.x)<1e-9)p.x=0;if(Math.abs(p.s)<1e-9)p.s=0;});
   const len=Math.max(...xs)-Math.min(...xs), wid=2*R*Math.asin(Math.min(1,r/R));
-  $("mCirc").innerHTML=fmt(Math.PI*D)+"<i>mm</i>";$("mLen").innerHTML=fmt(len)+"<i>mm</i>";$("mWid").innerHTML=fmt(wid)+"<i>mm</i>";
+  $("mCirc").innerHTML=fmt(circOf(D))+"<i>mm</i><small class=\"jk\">"+jkTag(D)+"</small>";$("mLen").innerHTML=fmt(len)+"<i>mm</i>";$("mWid").innerHTML=fmt(wid)+"<i>mm</i>";
   const sg=v=>(v<0?"−":"")+fmt(Math.abs(v));
   $("mrows").innerHTML=pts.map(p=>`<tr><td>${p.i}</td><td><b>${sg(p.x)}</b></td><td><b>${sg(p.s)}</b></td></tr>`).join("");
   drawHole(pts,R,r,al,cxm,t);
