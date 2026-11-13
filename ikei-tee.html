@@ -151,11 +151,11 @@ td b{font-size:19px}
     <!-- 枝管と同じ太さの円を書いて、その円の端から 0の線・2の線 を何mm出すか（2026/11/13 ユーザー） -->
     <div class="sum s2">
       <div><small>まず円を書く</small><b id="mCir"></b></div>
-      <div><small>円の端から 2の線</small><b id="mE2"></b></div>
+      <div><small>円の端から上と下に</small><b id="mE2"></b></div>
     </div>
     <div class="panel dev">
       <svg id="hole" viewBox="0 0 340 240"></svg>
-      <p class="cap">本管の上に十字の線を引き、枝管の太さの円（点線）を書く。円の端から 2の線（上下）を、上の長さだけ外に出す</p>
+      <p class="cap">本管の上に十字の線を引き、枝管の太さの円（点線）を書く。円の上と下を、上の長さだけ外に出す</p>
     </div>
     </div>
     <button type="button" class="again" id="again">‹ 入力にもどる</button>
@@ -297,8 +297,7 @@ function drawHole(pts,R,r,al,cxm,t){
     const ye=Y(up?r:-r);   // 円の端
     s+=`<path d="M${x.toFixed(1)} ${ye.toFixed(1)} V${y.toFixed(1)}" stroke="var(--cut)" stroke-width="3"/>`+
       `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--cut)"/>`+
-      `<text x="${(x+12).toFixed(1)}" y="${(y+(up?-8:22)).toFixed(1)}" font-size="16" font-weight="700" fill="var(--cut)" stroke="#fff" stroke-width="4" paint-order="stroke">+${fmt(Math.max(0,e))}</text>`+
-      `<text x="${(x-9).toFixed(1)}" y="${(y+(up?-6:16)).toFixed(1)}" text-anchor="end" font-size="12" fill="var(--muted)">${p.i}</text>`;
+      `<text x="${(x+12).toFixed(1)}" y="${(y+(up?-8:22)).toFixed(1)}" font-size="16" font-weight="700" fill="var(--cut)" stroke="#fff" stroke-width="4" paint-order="stroke">+${fmt(Math.max(0,e))}</text>`;
   });
   $("hole").setAttribute("viewBox",`0 0 ${W} ${H+16}`);$("hole").innerHTML=s;
 }
