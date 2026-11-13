@@ -119,7 +119,7 @@ try{
   const ed=await getDoc(doc(getFirestore(app),"editors",auth.currentUser.uid));
   if(ed.exists()&&ed.data().name==="西崎剣"){
     const c=document.getElementById("benriCard"),a=document.createElement("a");
-    a.className="card";a.href="benri.html";a.innerHTML=c.innerHTML.replace('<span class="tag">準備中</span>','<span>異形チーズの寸法など</span>');
+    a.className="card";a.href="benri.html";a.innerHTML=c.innerHTML.replace('<span class="tag">準備中</span>','<span>チーズの寸法など</span>');
     c.replaceWith(a);
     // 西崎専用（アクセス履歴など）：西崎さんの携帯だけにカードを出す。ほかの人には何も出さない（2026/11/13 ユーザー）
     const n=document.createElement("a");n.className="card";n.href="nishizaki.html";
