@@ -94,6 +94,9 @@ td b{font-size:19px}
 .lock a{margin-top:6px;display:inline-block;padding:10px 20px;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:700;text-decoration:none}
 .sum b small.jk{display:block;font-size:11px;font-weight:500;color:var(--muted);letter-spacing:0}
 .zr{display:flex;justify-content:flex-end;margin:0 0 8px}.zr .seg button{font-size:14px;padding:5px 14px}
+.hori{padding:12px 14px;margin-top:10px}.hori h4{margin:0 0 8px;font-size:14px}
+.hori table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}.hori th,.hori td{border-top:1px solid var(--line);padding:6px 4px;text-align:center;font-size:14px}
+.hori th{font-size:12px;color:var(--muted);font-weight:500}.hori td b{font-size:17px}.hori p{margin:8px 0 0;font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -162,6 +165,7 @@ td b{font-size:19px}
       <svg id="hole" viewBox="0 0 340 240"></svg>
       <p class="cap">本管の上に十字の線を引き、枝管の太さの円（点線）を書く。円の上と下を、上の長さだけ外に出す</p>
     </div>
+    <div class="panel hori" id="hori" hidden></div>
     </div>
     <button type="button" class="again" id="again">‹ 入力にもどる</button>
   </section>
@@ -295,7 +299,7 @@ function drawDev(circ,vals,R,r,al,tmax){
 /* メスの絵：横が本管の向き、縦が本管のまわり。十字の真ん中から各点までの寸法を入れる */
 function drawHole(pts,R,r,al,cxm,t){
   const W=340, mx=Math.max(...pts.map(p=>Math.abs(p.x)),1), my=Math.max(...pts.map(p=>Math.abs(p.s)),1);
-  const sc=Math.min(140/mx,82/my), cx=W/2, cy=100, H=240;
+  const sc=Math.min(140/mx,82/my), cx=W/2, cy=100, H=240, same=Math.abs(R-r)<0.025;
   const X=x=>cx+x*sc, Y=v=>cy-v*sc;
   let path="";for(let k=0;k<=160;k++){const th=2*Math.PI*k/160;const x=t(th)*Math.cos(al)+r*Math.cos(th)*Math.sin(al)-cxm, v=R*Math.asin(Math.min(1,r*Math.sin(th)/R));path+=(k?"L":"M")+X(x).toFixed(1)+" "+Y(v).toFixed(1);}
   let s=`<path d="M14 ${cy} H${W-14}" stroke="var(--muted)" stroke-dasharray="6 5"/><path d="M${cx} ${cy-100} V${cy+100}" stroke="var(--muted)" stroke-dasharray="6 5"/>`+
@@ -303,9 +307,9 @@ function drawHole(pts,R,r,al,cxm,t){
     `<path d="${path}Z" fill="var(--accent-soft)" stroke="var(--cut)" stroke-width="2.5"/>`+
     `<circle cx="${cx}" cy="${cy}" r="${(r*sc).toFixed(1)}" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="4 3"/>`+
     // 円の真ん中に「80φ」と「コンパスの開き 40mm（半径）」（2026/11/13 ユーザー）
-    `<text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="22" font-weight="700" fill="var(--ink)">${fmt(2*r)}φ</text>`+
+    (same?"":`<text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="22" font-weight="700" fill="var(--ink)">${fmt(2*r)}φ</text>`+
     `<text x="${cx}" y="${cy+14}" text-anchor="middle" font-size="11.5" fill="var(--ink)">コンパスの開き</text>`+
-    `<text x="${cx}" y="${cy+30}" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">${fmt(r)}mm（半径）</text>`;
+    `<text x="${cx}" y="${cy+30}" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">${fmt(r)}mm（半径）</text>`);
   pts.filter(p=>p.i===2||p.i===6).forEach(p=>{
     const x=X(p.x), y=Y(p.s), up=p.s>0, e=Math.hypot(p.x,p.s)-r;
     const ye=Y(up?r:-r);   // 円の端
@@ -313,14 +317,25 @@ function drawHole(pts,R,r,al,cxm,t){
       `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--cut)"/>`+
       `<text x="${(x+12).toFixed(1)}" y="${(y+(up?-8:22)).toFixed(1)}" font-size="16" font-weight="700" fill="var(--cut)" stroke="#fff" stroke-width="4" paint-order="stroke">+${fmt(Math.max(0,e))}</text>`;
   });
-  // 同径チーズ（枝管と本管が同じ太さ）のときだけ：本管の向きの穴の長さを4等分して点線で出す（例 300φ→1個75mm）（2026/11/13 ユーザー）
-  if(Math.abs(2*R-2*r)<0.05){
+  // 同径チーズ（枝管と本管が同じ太さ）のときだけ：本管の向きの穴の長さを4等分して点線で出す（例 300φ→1個75mm）
+  // 点線ごとに「ホリの深さ」（十字の横の線から周りに測った長さ）も出す（2026/11/13 ユーザー）
+  const hb=$("hori");hb.hidden=!same;
+  if(same){
     const xs=pts.map(p=>p.x), x0=Math.min(...xs), x1=Math.max(...xs), q=(x1-x0)/4, yb=cy+my*sc;
-    for(let k=0;k<=4;k++){const x=X(x0+q*k);if(k>0&&k<4)s+=`<path d="M${x.toFixed(1)} ${(cy-my*sc).toFixed(1)} V${yb.toFixed(1)}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/>`;}
-    for(let k=0;k<4;k++){const xm=X(x0+q*(k+.5));s+=`<text x="${xm.toFixed(1)}" y="${(yb+18).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--accent)">${fmt(q)}</text>`;}
-    s+=`<path d="M${X(x0).toFixed(1)} ${(yb+5).toFixed(1)} H${X(x1).toFixed(1)}" stroke="var(--accent)" stroke-width="1"/>`;
+    const xOf=th=>t(th)*Math.cos(al)+r*Math.cos(th)*Math.sin(al)-cxm, sOf=th=>R*Math.asin(Math.min(1,r*Math.sin(th)/R));
+    // 横の位置 x の所の深さ（上半分 θ=0〜π で x を合わせる）
+    const depth=x=>{let a=0,b=Math.PI;const fa=xOf(a)-x;for(let k=0;k<60;k++){const m=(a+b)/2,fm=xOf(m)-x;if((fm>0)===(fa>0))a=m;else b=m;}return sOf((a+b)/2);};
+    const rows=[];
+    for(let k=1;k<4;k++){const xv=x0+q*k, x=X(xv), dv=depth(xv);rows.push([q*k,dv]);
+      s+=`<path d="M${x.toFixed(1)} ${Y(dv).toFixed(1)} V${Y(-dv).toFixed(1)}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/>`;}
+    for(let k=0;k<4;k++){const xm=X(x0+q*(k+.5));s+=`<text x="${xm.toFixed(1)}" y="${(yb+40).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--accent)">${fmt(q)}</text>`;}
+    s+=`<path d="M${X(x0).toFixed(1)} ${(yb+26).toFixed(1)} H${X(x1).toFixed(1)}" stroke="var(--accent)" stroke-width="1"/>`+
+      [0,1,2,3,4].map(k=>`<path d="M${X(x0+q*k).toFixed(1)} ${(yb+21).toFixed(1)} V${(yb+31).toFixed(1)}" stroke="var(--accent)" stroke-width="1"/>`).join("");
+    hb.innerHTML=`<h4>同径チーズ：本管の向きに4等分（1個 ${fmt(q)}mm）</h4><table><thead><tr><th>端からの長さ</th><th>0</th>${rows.map(r=>`<th>${fmt(r[0])}</th>`).join("")}<th>${fmt(x1-x0)}</th></tr></thead>`+
+      `<tbody><tr><th>ホリの深さ</th><td><b>0</b></td>${rows.map(r=>`<td><b>${fmt(r[1])}</b></td>`).join("")}<td><b>0</b></td></tr></tbody></table>`+
+      `<p>ホリの深さ＝十字の横の線（本管の向き）から、本管のまわりに沿って上（下も同じ）へ測る長さ</p>`;
   }
-  $("hole").setAttribute("viewBox",`0 0 ${W} ${H+16}`);$("hole").innerHTML=s;
+  $("hole").setAttribute("viewBox",`0 0 ${W} ${H+(same?36:16)}`);$("hole").innerHTML=s;
 }
 function showTab(k){$("tOsu").hidden=k!=="osu";$("tMesu").hidden=k!=="mesu";
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tab===k)));}
