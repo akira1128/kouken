@@ -98,6 +98,7 @@ td b{font-size:19px}
 .hori table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}.hori th,.hori td{border-top:1px solid var(--line);padding:6px 4px;text-align:center;font-size:14px}
 .hori th{font-size:12px;color:var(--muted);font-weight:500}.hori td b{font-size:17px}.hori p{margin:8px 0 0;font-size:12px;color:var(--muted)}
 .zo{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin:0 0 8px;font-size:14px;color:var(--muted)}.zo input{width:5.5em;font:inherit;font-size:16px;font-weight:700;color:var(--ink);padding:5px 8px;border:1px solid var(--line);border-radius:8px;text-align:right}
+.zo .zs button{font-size:14px;padding:4px 12px}
 </style>
 </head>
 <body>
@@ -147,7 +148,7 @@ td b{font-size:19px}
       <button type="button" data-zero="l" aria-pressed="false">左から0</button>
     </span></div>
     <!-- 好きな所を0にする：右（左）から○mmの所を0にして、そこから先はマイナス（2026/11/13 ユーザー） -->
-    <div class="zo"><span id="zSide">右</span>から <input id="zOff" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" aria-label="0にする所までの長さ"> mm の所を0にする</div>
+    <div class="zo"><span class="seg zs" role="group" aria-label="測りはじめるはし"><button type="button" data-zs="r" aria-pressed="true">右</button><button type="button" data-zs="l" aria-pressed="false">左</button></span>から <input id="zOff" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" aria-label="0にする所までの長さ"> mm の所を0にする</div>
     <div class="panel dev">
       <svg id="dev" viewBox="0 0 340 200"></svg>
       <p class="cap" id="cap"></p>
@@ -278,7 +279,7 @@ function calc(){
 function drawDev(circ,vals,R,r,al,tmax){
   lastDev=[circ,vals,R,r,al,tmax];
   document.querySelectorAll("[data-zero]").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.zero==="r")===zeroR)));
-  $("zSide").textContent=zeroR?"右":"左";if(document.activeElement!==$("zOff"))$("zOff").value=zOff?fmt(zOff):"";
+  document.querySelectorAll("[data-zs]").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.zs==="r")===zeroR)));if(document.activeElement!==$("zOff"))$("zOff").value=zOff?fmt(zOff):"";
   const off=Math.min(zOff,circ);   // 0にする所（選んだはしから off mm）
   const W=340, x0=14, x1=W-14, sx=(x1-x0)/circ;
   const vmax=Math.max(...vals,0.0001);
@@ -346,6 +347,8 @@ function showTab(k){$("tOsu").hidden=k!=="osu";$("tMesu").hidden=k!=="mesu";
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tab===k)));}
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 $("go").onclick=calc;
+// 「右から／左から」は、この欄でも切りかえられる（上の「右から0／左から0」と同じ）（2026/11/13 ユーザー）
+document.querySelectorAll("[data-zs]").forEach(b=>b.onclick=()=>{zeroR=b.dataset.zs==="r";try{localStorage.setItem("kouken-tee-zero",zeroR?"r":"l");}catch(e){}if(lastDev)drawDev(...lastDev);});
 $("zOff").oninput=()=>{zOff=Math.max(0,parseFloat($("zOff").value)||0);try{localStorage.setItem("kouken-tee-zoff",String(zOff));}catch(e){}if(lastDev)drawDev(...lastDev);};
 document.querySelectorAll("[data-zero]").forEach(b=>b.onclick=()=>{zeroR=b.dataset.zero==="r";try{localStorage.setItem("kouken-tee-zero",zeroR?"r":"l");}catch(e){}if(lastDev)drawDev(...lastDev);});
 $("again").onclick=()=>{$("res").hidden=true;$("inp").hidden=false;};
