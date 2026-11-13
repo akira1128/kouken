@@ -261,7 +261,7 @@ function calc(){
   // 円（枝管の太さ）の端から、穴の線がどれだけ外に出るか（十字の真ん中からの長さ − 円の半径）
   const ext=p=>{const e=Math.hypot(p.x,p.s)-r;return Math.abs(e)<0.05?0:e;};
   const sx=e=>(e>0?"+":e<0?"−":"")+fmt(Math.abs(e));
-  $("mCir").innerHTML=fmt(d)+"<i>φ</i><small class=\"jk\">コンパスの開き "+fmt(d/2)+"mm（半径）</small>";   // コンパスで書くときの開き（2026/11/13 ユーザー）$("mE2").innerHTML=sx(ext(pts[2]))+"<i>mm</i>";
+  $("mCir").innerHTML=fmt(d)+"<i>φ</i><small class=\"jk\">コンパスの開き "+fmt(d/2)+"mm（半径）</small>";$("mE2").innerHTML=sx(ext(pts[2]))+"<i>mm</i>";   // 円を書くコンパスの開き（半径）も出す（2026/11/13 ユーザー）
   drawHole(pts,R,r,al,cxm,t);
   showTab("osu");
   $("inp").hidden=true;$("res").hidden=false;scrollTo(0,0);
