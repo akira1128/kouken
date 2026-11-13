@@ -149,19 +149,14 @@ td b{font-size:19px}
       <div><small>穴の幅（周り）</small><b id="mWid"></b></div>
     </div>
     <!-- 枝管と同じ太さの円を書いて、その円の端から 0の線・2の線 を何mm出すか（2026/11/13 ユーザー） -->
-    <div class="sum">
+    <div class="sum s2">
       <div><small>まず円を書く</small><b id="mCir"></b></div>
-      <div><small>円の端から 0の線</small><b id="mE0"></b></div>
       <div><small>円の端から 2の線</small><b id="mE2"></b></div>
     </div>
     <div class="panel dev">
       <svg id="hole" viewBox="0 0 340 240"></svg>
-      <p class="cap">本管の上に十字の線を引き、枝管の太さの円（点線）を書く。円の端から 0の線・2の線 を上の長さだけ外に出す。小さい数字は線の番号</p>
+      <p class="cap">本管の上に十字の線を引き、枝管の太さの円（点線）を書く。円の端から 2の線（上下）を、上の長さだけ外に出す</p>
     </div>
-    <table class="panel">
-      <thead><tr><th>線</th><th>横（mm）</th><th>周り（mm）</th></tr></thead>
-      <tbody id="mrows"></tbody>
-    </table>
     </div>
     <button type="button" class="again" id="again">‹ 入力にもどる</button>
   </section>
@@ -255,11 +250,11 @@ function calc(){
   const len=Math.max(...xs)-Math.min(...xs), wid=2*R*Math.asin(Math.min(1,r/R));
   $("mCirc").innerHTML=fmt(circOf(D))+"<i>mm</i><small class=\"jk\">"+jkTag(D)+"</small>";$("mLen").innerHTML=fmt(len)+"<i>mm</i>";$("mWid").innerHTML=fmt(wid)+"<i>mm</i>";
   const sg=v=>(v<0?"−":"")+fmt(Math.abs(v));
-  $("mrows").innerHTML=pts.filter(p=>p.i%2===0).map(p=>`<tr><td>${p.i}</td><td><b>${sg(p.x)}</b></td><td><b>${sg(p.s)}</b></td></tr>`).join("");
+  if($("mrows"))$("mrows").innerHTML=pts.filter(p=>p.i%2===0).map(p=>`<tr><td>${p.i}</td><td><b>${sg(p.x)}</b></td><td><b>${sg(p.s)}</b></td></tr>`).join("");
   // 円（枝管の太さ）の端から、穴の線がどれだけ外に出るか（十字の真ん中からの長さ − 円の半径）
   const ext=p=>{const e=Math.hypot(p.x,p.s)-r;return Math.abs(e)<0.05?0:e;};
   const sx=e=>(e>0?"+":e<0?"−":"")+fmt(Math.abs(e));
-  $("mCir").innerHTML=fmt(d)+"<i>φ</i>";$("mE0").innerHTML=sx(ext(pts[0]))+"<i>mm</i>";$("mE2").innerHTML=sx(ext(pts[2]))+"<i>mm</i>";
+  $("mCir").innerHTML=fmt(d)+"<i>φ</i>";$("mE2").innerHTML=sx(ext(pts[2]))+"<i>mm</i>";
   drawHole(pts,R,r,al,cxm,t);
   showTab("osu");
   $("inp").hidden=true;$("res").hidden=false;scrollTo(0,0);
@@ -297,12 +292,13 @@ function drawHole(pts,R,r,al,cxm,t){
     `<text x="${W-14}" y="${cy-6}" text-anchor="end" font-size="11" fill="var(--muted)">本管の向き</text>`+
     `<path d="${path}Z" fill="var(--accent-soft)" stroke="var(--cut)" stroke-width="2.5"/>`+
     `<circle cx="${cx}" cy="${cy}" r="${(r*sc).toFixed(1)}" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
-  pts.filter(p=>p.i%2===0).forEach(p=>{
-    const x=X(p.x), y=Y(p.s);
-    if(p.s!==0)s+=`<path d="M${x.toFixed(1)} ${cy} V${y.toFixed(1)}" stroke="var(--accent)" stroke-width="1.5"/>`+
-      `<text x="${(x+(p.x>=0?6:-6)).toFixed(1)}" y="${((y+cy)/2+4).toFixed(1)}" text-anchor="${p.x>=0?"start":"end"}" font-size="12.5" font-weight="700" fill="var(--accent)">${fmt(Math.abs(p.s))}</text>`;
-    s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--cut)"/>`+
-      `<text x="${(x+(p.x>0?9:p.x<0?-9:0)).toFixed(1)}" y="${(y+(p.s>0?-8:p.s<0?16:-8)).toFixed(1)}" text-anchor="${p.x>0?"start":p.x<0?"end":"middle"}" font-size="12" fill="var(--muted)">${p.i}</text>`;
+  pts.filter(p=>p.i===2||p.i===6).forEach(p=>{
+    const x=X(p.x), y=Y(p.s), up=p.s>0, e=Math.hypot(p.x,p.s)-r;
+    const ye=Y(up?r:-r);   // 円の端
+    s+=`<path d="M${x.toFixed(1)} ${ye.toFixed(1)} V${y.toFixed(1)}" stroke="var(--cut)" stroke-width="3"/>`+
+      `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--cut)"/>`+
+      `<text x="${(x+10).toFixed(1)}" y="${((y+ye)/2+5).toFixed(1)}" font-size="15" font-weight="700" fill="var(--cut)">+${fmt(Math.max(0,e))}</text>`+
+      `<text x="${(x-9).toFixed(1)}" y="${(y+(up?-6:16)).toFixed(1)}" text-anchor="end" font-size="12" fill="var(--muted)">${p.i}</text>`;
   });
   $("hole").setAttribute("viewBox",`0 0 ${W} ${H+16}`);$("hole").innerHTML=s;
 }
