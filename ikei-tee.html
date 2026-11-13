@@ -313,6 +313,13 @@ function drawHole(pts,R,r,al,cxm,t){
       `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--cut)"/>`+
       `<text x="${(x+12).toFixed(1)}" y="${(y+(up?-8:22)).toFixed(1)}" font-size="16" font-weight="700" fill="var(--cut)" stroke="#fff" stroke-width="4" paint-order="stroke">+${fmt(Math.max(0,e))}</text>`;
   });
+  // 同径チーズ（枝管と本管が同じ太さ）のときだけ：本管の向きの穴の長さを4等分して点線で出す（例 300φ→1個75mm）（2026/11/13 ユーザー）
+  if(Math.abs(2*R-2*r)<0.05){
+    const xs=pts.map(p=>p.x), x0=Math.min(...xs), x1=Math.max(...xs), q=(x1-x0)/4, yb=cy+my*sc;
+    for(let k=0;k<=4;k++){const x=X(x0+q*k);if(k>0&&k<4)s+=`<path d="M${x.toFixed(1)} ${(cy-my*sc).toFixed(1)} V${yb.toFixed(1)}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/>`;}
+    for(let k=0;k<4;k++){const xm=X(x0+q*(k+.5));s+=`<text x="${xm.toFixed(1)}" y="${(yb+18).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--accent)">${fmt(q)}</text>`;}
+    s+=`<path d="M${X(x0).toFixed(1)} ${(yb+5).toFixed(1)} H${X(x1).toFixed(1)}" stroke="var(--accent)" stroke-width="1"/>`;
+  }
   $("hole").setAttribute("viewBox",`0 0 ${W} ${H+16}`);$("hole").innerHTML=s;
 }
 function showTab(k){$("tOsu").hidden=k!=="osu";$("tMesu").hidden=k!=="mesu";
