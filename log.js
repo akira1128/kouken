@@ -7,7 +7,7 @@ import {getFirestore,doc,getDoc,addDoc,collection} from "https://www.gstatic.com
 
 const f=location.pathname.split("/").pop()||"index.html";
 const PAGE={"":"メニュー","index.html":"メニュー","genba.html":"現場一覧","zaiko.html":/order=tanpatsu/.test(location.search)?"材料の注文":/order=/.test(location.search)?"材料を頼む":"工場在庫",
-  "yotei.html":"予定表","shukei.html":"集計","benri.html":"便利ツール","ikei-tee.html":"異形チーズ","rireki.html":"アクセス履歴"}[f]||f;
+  "yotei.html":"予定表","shukei.html":"集計","benri.html":"便利ツール","ikei-tee.html":"異形チーズ","rireki.html":"アクセス履歴","nishizaki.html":"西崎専用"}[f]||f;
 const KEY="kouken-log-"+PAGE;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
