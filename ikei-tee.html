@@ -93,6 +93,7 @@ td b{font-size:19px}
 .lock b{font-size:18px;color:var(--ink)}
 .lock a{margin-top:6px;display:inline-block;padding:10px 20px;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:700;text-decoration:none}
 .sum b small.jk{display:block;font-size:11px;font-weight:500;color:var(--muted);letter-spacing:0}
+.zr{display:flex;justify-content:flex-end;margin:0 0 8px}.zr .seg button{font-size:14px;padding:5px 14px}
 </style>
 </head>
 <body>
@@ -137,6 +138,10 @@ td b{font-size:19px}
       <div><small>円周の 1/2</small><b id="rHalf"></b></div>
       <div><small>円周の 1/4</small><b id="rQuar"></b></div>
     </div>
+    <div class="zr"><span class="seg" role="group" aria-label="円周の0の位置">
+      <button type="button" data-zero="r" aria-pressed="true">右から0</button>
+      <button type="button" data-zero="l" aria-pressed="false">左から0</button>
+    </span></div>
     <div class="panel dev">
       <svg id="dev" viewBox="0 0 340 200"></svg>
       <p class="cap" id="cap"></p>
@@ -228,6 +233,8 @@ const JK=[["特2",170,54],["特1",190,61],["0",215,68],["1",230,73],["2S",240,76
 const jkOf=d=>JK.find(j=>Math.abs(j[2]-d)<0.05);
 const circOf=d=>{const j=jkOf(d);return j?j[1]:Math.PI*d;};
 const jkTag=d=>{const j=jkOf(d);return j?"（ジャケット"+j[0]+"番）":"（計算）";};
+let zeroR=true, lastDev=null;
+try{zeroR=localStorage.getItem("kouken-tee-zero")!=="l";}catch(e){}
 function calc(){
   const d=parseFloat(st.B), D=parseFloat(st.M);
   if(!(d>0)){pick("B");$("err").textContent="枝管の太さ（φ）を入れてください。";return;}
@@ -261,6 +268,8 @@ function calc(){
 }
 /* 展開図：横が枝管の円周、縦の線が8等分の線。線の上に寸法、下に線の番号 */
 function drawDev(circ,vals,R,r,al,tmax){
+  lastDev=[circ,vals,R,r,al,tmax];
+  document.querySelectorAll("[data-zero]").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.zero==="r")===zeroR)));
   const W=340, x0=14, x1=W-14, sx=(x1-x0)/circ;
   const vmax=Math.max(...vals,0.0001);
   let sy=sx, big=false;
@@ -276,11 +285,11 @@ function drawDev(circ,vals,R,r,al,tmax){
     const x=X(i).toFixed(1);
     s+=`<path d="M${x} ${base} V${Y(v).toFixed(1)}" stroke="var(--accent)" stroke-width="${v>0?2:1}"/>`+
        `<text x="${x}" y="${(Y(v)-7).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">${fmt(v)}</text>`+
-       `<text x="${x}" y="${(base+18).toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--muted)">${fmt(circ*(N-i)/N)}</text>`;   // 線の下は円周の長さ。右はしを0にして左へ数える（2026/11/13 ユーザー）
+       `<text x="${x}" y="${(base+18).toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--muted)">${fmt(circ*(zeroR?N-i:i)/N)}</text>`;   // 線の下は円周の長さ。右から0／左から0 を選べる（2026/11/13 ユーザー）
   });
   s+=`<path d="${path}" fill="none" stroke="var(--cut)" stroke-width="2.5"/>`;
   $("dev").setAttribute("viewBox",`0 0 ${W} ${H.toFixed(0)}`);$("dev").innerHTML=s;
-  $("cap").textContent="横：枝管の円周（"+fmt(circ)+"mm）を8等分。下の数字は右はし（0）からの長さ。縦の数字は下の線から測る。赤い線が切り口"+(big?"（高さは見やすく拡大）":"");
+  $("cap").textContent="横：枝管の円周（"+fmt(circ)+"mm）を8等分。下の数字は"+(zeroR?"右":"左")+"はし（0）からの長さ。縦の数字は下の線から測る。赤い線が切り口"+(big?"（高さは見やすく拡大）":"");
 }
 /* メスの絵：横が本管の向き、縦が本管のまわり。十字の真ん中から各点までの寸法を入れる */
 function drawHole(pts,R,r,al,cxm,t){
@@ -305,6 +314,7 @@ function showTab(k){$("tOsu").hidden=k!=="osu";$("tMesu").hidden=k!=="mesu";
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tab===k)));}
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 $("go").onclick=calc;
+document.querySelectorAll("[data-zero]").forEach(b=>b.onclick=()=>{zeroR=b.dataset.zero==="r";try{localStorage.setItem("kouken-tee-zero",zeroR?"r":"l");}catch(e){}if(lastDev)drawDev(...lastDev);});
 $("again").onclick=()=>{$("res").hidden=true;$("inp").hidden=false;};
 render();
 </script>
