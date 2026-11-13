@@ -305,30 +305,29 @@ function drawHole(pts,R,r,al,cxm,t){
   let s=`<path d="M14 ${cy} H${W-14}" stroke="var(--muted)" stroke-dasharray="6 5"/><path d="M${cx} ${cy-100} V${cy+100}" stroke="var(--muted)" stroke-dasharray="6 5"/>`+
     `<text x="${W-14}" y="${cy-6}" text-anchor="end" font-size="11" fill="var(--muted)">本管の向き</text>`+
     `<path d="${path}Z" fill="var(--accent-soft)" stroke="var(--cut)" stroke-width="2.5"/>`+
-    `<circle cx="${cx}" cy="${cy}" r="${(r*sc).toFixed(1)}" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="4 3"/>`+
+    (same?"":`<circle cx="${cx}" cy="${cy}" r="${(r*sc).toFixed(1)}" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="4 3"/>`)+
     // 円の真ん中に「80φ」と「コンパスの開き 40mm（半径）」（2026/11/13 ユーザー）
     (same?"":`<text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="22" font-weight="700" fill="var(--ink)">${fmt(2*r)}φ</text>`+
     `<text x="${cx}" y="${cy+14}" text-anchor="middle" font-size="11.5" fill="var(--ink)">コンパスの開き</text>`+
     `<text x="${cx}" y="${cy+30}" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--ink)">${fmt(r)}mm（半径）</text>`);
-  pts.filter(p=>p.i===2||p.i===6).forEach(p=>{
+  if(!same)pts.filter(p=>p.i===2||p.i===6).forEach(p=>{
     const x=X(p.x), y=Y(p.s), up=p.s>0, e=Math.hypot(p.x,p.s)-r;
     const ye=Y(up?r:-r);   // 円の端
     s+=`<path d="M${x.toFixed(1)} ${ye.toFixed(1)} V${y.toFixed(1)}" stroke="var(--cut)" stroke-width="3"/>`+
       `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--cut)"/>`+
       `<text x="${(x+12).toFixed(1)}" y="${(y+(up?-8:22)).toFixed(1)}" font-size="16" font-weight="700" fill="var(--cut)" stroke="#fff" stroke-width="4" paint-order="stroke">+${fmt(Math.max(0,e))}</text>`;
   });
-  // 同径チーズ（枝管と本管が同じ太さ）のときだけ：本管の向きの線（十字の横の線）と平行な点線を、上と下に1本ずつ引く。
-  // 間は太さの1/4（例 300φ→75mm）。丸の外まで通して、ホリの深さを分かりやすくする（2026/11/13 ユーザー）
+  // 同径チーズ（枝管と本管が同じ太さ）のときだけ：穴の上と下（丸の外）に本管の向きの点線を引き、
+  // 穴の長さ（横）を4等分した目もり（例 300φ→75mmずつ）を付ける。中の円・+の長さは出さない（2026/11/13 ユーザー）
   const hb=$("hori");if(hb)hb.hidden=true;
   if(same){
-    const q=2*r/4, yu=Y(q), yd=Y(-q);
-    s+=`<path d="M14 ${yu.toFixed(1)} H${W-14}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="6 4"/>`+
-       `<path d="M14 ${yd.toFixed(1)} H${W-14}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="6 4"/>`+
-       // 左はしに間の長さ
-       `<path d="M30 ${yu.toFixed(1)} V${yd.toFixed(1)}" stroke="var(--accent)" stroke-width="1"/>`+
-       [yu,cy,yd].map(y=>`<path d="M25 ${(+y).toFixed(1)} H35" stroke="var(--accent)" stroke-width="1"/>`).join("")+
-       `<text x="38" y="${((yu+cy)/2+5).toFixed(1)}" font-size="13" font-weight="700" fill="var(--accent)" stroke="#fff" stroke-width="4" paint-order="stroke">${fmt(q)}</text>`+
-       `<text x="38" y="${((yd+cy)/2+5).toFixed(1)}" font-size="13" font-weight="700" fill="var(--accent)" stroke="#fff" stroke-width="4" paint-order="stroke">${fmt(q)}</text>`;
+    const xs=pts.map(p=>p.x), x0=Math.min(...xs), x1=Math.max(...xs), q=(x1-x0)/4;
+    const yu=Y(my)-16, yd=Y(-my)+16;
+    [yu,yd].forEach((y,u)=>{
+      s+=`<path d="M14 ${y.toFixed(1)} H${W-14}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="6 4"/>`;
+      for(let k=0;k<=4;k++){const x=X(x0+q*k);s+=`<path d="M${x.toFixed(1)} ${(y-6).toFixed(1)} V${(y+6).toFixed(1)}" stroke="var(--accent)" stroke-width="2"/>`;}
+      for(let k=0;k<4;k++){const xm=X(x0+q*(k+.5));s+=`<text x="${xm.toFixed(1)}" y="${(u?y+20:y-9).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--accent)">${fmt(q)}</text>`;}
+    });
   }
   $("hole").setAttribute("viewBox",`0 0 ${W} ${H+16}`);$("hole").innerHTML=s;
 }
