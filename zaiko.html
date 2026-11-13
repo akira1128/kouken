@@ -148,8 +148,8 @@ label.fl em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .hint{font-size:13px;color:var(--muted);margin:0}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);
-  padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px);
-  display:grid;grid-template-columns:repeat(3,1fr)}
+  padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:min(env(safe-area-inset-bottom,0px),34px);
+  display:grid;grid-template-columns:repeat(3,1fr);transform:translateZ(0)}   /* iPhone・iPadで下の余白がふくらんで途中に止まるのを防ぐ（2026/11/13） */
 nav.tabs button{border:0;background:none;padding:10px 4px 12px;font-size:14px;color:var(--muted);display:grid;justify-items:center;gap:3px}
 nav.tabs button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2}
 nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
@@ -1318,5 +1318,15 @@ renderWho();renderCats();renderList();renderLog();show(view);
 })();
 </script>
 <script type="module" src="log.js"></script>
+<script>/* iPhone・iPadで、キーボードを閉じた後や画面を回した後に、下のメニューが途中に止まるのを直す（2026/11/13 ユーザー） */
+(function(){
+  function fix(){var n=document.querySelector("nav.tabs");if(!n)return;
+    setTimeout(function(){window.scrollTo(window.scrollX,window.scrollY);n.style.display="none";void n.offsetHeight;n.style.display="";},120);}
+  document.addEventListener("focusout",fix);
+  window.addEventListener("orientationchange",fix);
+  window.addEventListener("pageshow",fix);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)fix();});
+  if(window.visualViewport){var t;window.visualViewport.addEventListener("resize",function(){clearTimeout(t);t=setTimeout(fix,200);});}
+})();</script>
 </body>
 </html>
