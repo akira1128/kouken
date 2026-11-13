@@ -91,12 +91,12 @@ a.card:active{transform:scale(.98)}
       <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>
       <b>集計</b>
     </a>
-    <!-- 便利ツール：西崎さんだけが開ける。ほかの人には「準備中」と出す（2026/11/01 ユーザー） -->
-    <div class="card soon" id="benriCard" aria-disabled="true">
+    <!-- 便利ツール：全員に開放（2026/11/14 ユーザー）。前は西崎さんだけ -->
+    <a class="card" id="benriCard" href="benri.html">
       <span class="ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg></span>
       <b>便利ツール</b>
-      <span class="tag">準備中</span>
-    </div>
+      <span>チーズの寸法など</span>
+    </a>
   </div>
   <p class="note">株式会社コウケン 社内用。リンクと暗証番号とアプリ内の情報は、社外の人に教えないでください。<br>退職者が出た場合は暗証番号を変更し、新しい番号をあらためてお知らせします。</p>
 </main>
@@ -118,9 +118,7 @@ try{
   await signInAnonymously(auth);
   const ed=await getDoc(doc(getFirestore(app),"editors",auth.currentUser.uid));
   if(ed.exists()&&ed.data().name==="西崎剣"){
-    const c=document.getElementById("benriCard"),a=document.createElement("a");
-    a.className="card";a.href="benri.html";a.innerHTML=c.innerHTML.replace('<span class="tag">準備中</span>','<span>チーズの寸法など</span>');
-    c.replaceWith(a);
+    const a=document.getElementById("benriCard");
     // 西崎専用（アクセス履歴など）：西崎さんの携帯だけにカードを出す。ほかの人には何も出さない（2026/11/13 ユーザー）
     const n=document.createElement("a");n.className="card";n.href="nishizaki.html";
     n.innerHTML='<span class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><b>西崎専用</b>';
