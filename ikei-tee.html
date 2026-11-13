@@ -299,7 +299,8 @@ function drawDev(circ,vals,R,r,al,tmax){
 /* メスの絵：横が本管の向き、縦が本管のまわり。十字の真ん中から各点までの寸法を入れる */
 function drawHole(pts,R,r,al,cxm,t){
   const W=340, mx=Math.max(...pts.map(p=>Math.abs(p.x)),1), my=Math.max(...pts.map(p=>Math.abs(p.s)),1);
-  const sc=Math.min(140/mx,82/my), cx=W/2, cy=100, H=240, same=Math.abs(R-r)<0.025;
+  const same=Math.abs(R-r)<0.025, myy=same?Math.max(my,circOf(2*R)/4):my;
+  const sc=Math.min(140/mx,82/myy), cx=W/2, cy=100, H=240;
   const X=x=>cx+x*sc, Y=v=>cy-v*sc;
   let path="";for(let k=0;k<=160;k++){const th=2*Math.PI*k/160;const x=t(th)*Math.cos(al)+r*Math.cos(th)*Math.sin(al)-cxm, v=R*Math.asin(Math.min(1,r*Math.sin(th)/R));path+=(k?"L":"M")+X(x).toFixed(1)+" "+Y(v).toFixed(1);}
   let s=`<path d="M14 ${cy} H${W-14}" stroke="var(--muted)" stroke-dasharray="6 5"/><path d="M${cx} ${cy-100} V${cy+100}" stroke="var(--muted)" stroke-dasharray="6 5"/>`+
@@ -317,17 +318,15 @@ function drawHole(pts,R,r,al,cxm,t){
       `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--cut)"/>`+
       `<text x="${(x+12).toFixed(1)}" y="${(y+(up?-8:22)).toFixed(1)}" font-size="16" font-weight="700" fill="var(--cut)" stroke="#fff" stroke-width="4" paint-order="stroke">+${fmt(Math.max(0,e))}</text>`;
   });
-  // 同径チーズ（枝管と本管が同じ太さ）のときだけ：穴の上と下（丸の外）に本管の向きの点線を引き、
-  // 穴の長さ（横）を4等分した目もり（例 300φ→75mmずつ）を付ける。中の円・+の長さは出さない（2026/11/13 ユーザー）
+  // 同径チーズ（枝管と本管が同じ太さ）のときだけ：本管の円周を4等分（例 96φ→ジャケット4番 外周300→75mm）。
+  // 本管の向きの線（十字の横の線）から上と下に75mmの所へ、丸の外まで点線を引く＝ホリの深さ（2026/11/13 ユーザー）
   const hb=$("hori");if(hb)hb.hidden=true;
   if(same){
-    const xs=pts.map(p=>p.x), x0=Math.min(...xs), x1=Math.max(...xs), q=(x1-x0)/4;
-    const yu=Y(my)-16, yd=Y(-my)+16;
-    [yu,yd].forEach((y,u)=>{
-      s+=`<path d="M14 ${y.toFixed(1)} H${W-14}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="6 4"/>`;
-      for(let k=0;k<=4;k++){const x=X(x0+q*k);s+=`<path d="M${x.toFixed(1)} ${(y-6).toFixed(1)} V${(y+6).toFixed(1)}" stroke="var(--accent)" stroke-width="2"/>`;}
-      for(let k=0;k<4;k++){const xm=X(x0+q*(k+.5));s+=`<text x="${xm.toFixed(1)}" y="${(u?y+20:y-9).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--accent)">${fmt(q)}</text>`;}
-    });
+    const q=circOf(2*R)/4, yu=Y(q), yd=Y(-q);
+    s+=`<path d="M14 ${yu.toFixed(1)} H${W-14}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="6 4"/>`+
+       `<path d="M14 ${yd.toFixed(1)} H${W-14}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="6 4"/>`+
+       `<text x="40" y="${((yu+cy)/2+5).toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="var(--accent)" stroke="#fff" stroke-width="4" paint-order="stroke">${fmt(q)}</text>`+
+       `<text x="40" y="${((yd+cy)/2+5).toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="var(--accent)" stroke="#fff" stroke-width="4" paint-order="stroke">${fmt(q)}</text>`;
   }
   $("hole").setAttribute("viewBox",`0 0 ${W} ${H+16}`);$("hole").innerHTML=s;
 }
