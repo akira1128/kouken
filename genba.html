@@ -602,8 +602,10 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("clic
 // 新しい現場：「施工中」「これから」で、入れてから14日以内、この携帯でまだ開いていないもの
 const NEW_DAYS=14;
 const seenNew=()=>{try{return new Set(JSON.parse(store("kouken-seen-new")||"[]"));}catch(e){return new Set();}};
-const isNewSite=x=>!!((x.status==="施工中"||x.status==="これから")&&x.createdAt&&Date.now()-x.createdAt<NEW_DAYS*86400000&&!seenNew().has(x.id));   // 並べ替えで数として使うので true/false にする
-function openSite(id){{const sn=seenNew();if(!sn.has(id)){sn.add(id);store("kouken-seen-new",JSON.stringify([...sn]));}}rollRunFace();for(const k in meterW)if(k.startsWith(id+"/"))delete meterW[k];siteId=id;history.replaceState(null,"","?site="+encodeURIComponent(id));show("vSite");}
+// 前からある現場を施工中・これからに上げたときは newAt を入れて、もう一度 NEW にする（2026/11/13 ユーザー 上池台）
+const newKey=x=>x.newAt?x.id+"@"+x.newAt:x.id;
+const isNewSite=x=>{const t=x.newAt||x.createdAt;return !!((x.status==="施工中"||x.status==="これから")&&t&&Date.now()-t<NEW_DAYS*86400000&&!seenNew().has(newKey(x)));};   // 並べ替えで数として使うので true/false にする
+function openSite(id){{const sn=seenNew(),x=sites.find(t=>t.id===id),nk=x?newKey(x):id;if(!sn.has(nk)){sn.add(nk);store("kouken-seen-new",JSON.stringify([...sn]));}}rollRunFace();for(const k in meterW)if(k.startsWith(id+"/"))delete meterW[k];siteId=id;history.replaceState(null,"","?site="+encodeURIComponent(id));show("vSite");}
 function render(){
   if(view==="vSites")renderSites();else if(view==="vSite")renderSite();else if(view==="vOrders")renderOrders();else renderSum();
   renderNotice();
