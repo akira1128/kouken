@@ -123,7 +123,7 @@ try{
     c.replaceWith(a);
     // 西崎専用（アクセス履歴など）：西崎さんの携帯だけにカードを出す。ほかの人には何も出さない（2026/11/13 ユーザー）
     const n=document.createElement("a");n.className="card";n.href="nishizaki.html";
-    n.innerHTML='<span class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><b>西崎専用</b><span>アクセス履歴など</span>';
+    n.innerHTML='<span class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><b>西崎専用</b>';
     a.after(n);
   }
 }catch(e){}
