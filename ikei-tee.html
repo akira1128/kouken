@@ -276,11 +276,11 @@ function drawDev(circ,vals,R,r,al,tmax){
     const x=X(i).toFixed(1);
     s+=`<path d="M${x} ${base} V${Y(v).toFixed(1)}" stroke="var(--accent)" stroke-width="${v>0?2:1}"/>`+
        `<text x="${x}" y="${(Y(v)-7).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--ink)">${fmt(v)}</text>`+
-       `<text x="${x}" y="${(base+18).toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--muted)">${fmt(circ*i/N)}</text>`;   // 線の下は0の線からの円周の長さ（2026/11/13 ユーザー）
+       `<text x="${x}" y="${(base+18).toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="700" fill="var(--muted)">${fmt(circ*(N-i)/N)}</text>`;   // 線の下は円周の長さ。右はしを0にして左へ数える（2026/11/13 ユーザー）
   });
   s+=`<path d="${path}" fill="none" stroke="var(--cut)" stroke-width="2.5"/>`;
   $("dev").setAttribute("viewBox",`0 0 ${W} ${H.toFixed(0)}`);$("dev").innerHTML=s;
-  $("cap").textContent="横：枝管の円周（"+fmt(circ)+"mm）を8等分。下の数字は0の線からの長さ。縦の数字は下の線から測る。赤い線が切り口"+(big?"（高さは見やすく拡大）":"");
+  $("cap").textContent="横：枝管の円周（"+fmt(circ)+"mm）を8等分。下の数字は右はし（0）からの長さ。縦の数字は下の線から測る。赤い線が切り口"+(big?"（高さは見やすく拡大）":"");
 }
 /* メスの絵：横が本管の向き、縦が本管のまわり。十字の真ん中から各点までの寸法を入れる */
 function drawHole(pts,R,r,al,cxm,t){
