@@ -57,8 +57,8 @@ main{max-width:640px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-rig
 .fld{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:start;gap:0;border:2px solid var(--line);background:var(--surface);
   border-radius:12px;padding:4px 12px;min-width:104px;justify-content:center;box-shadow:var(--shadow)}
 .fld small{font-size:13px;color:var(--muted);font-weight:700;white-space:nowrap}
-.fld em{font-style:normal;font-size:11.5px;color:var(--muted);min-height:1.3em}
-.fld b{font-size:26px;line-height:1.15;font-variant-numeric:tabular-nums;min-width:2.2em;min-height:1.15em;text-align:left}
+.fld em{font-style:normal;font-size:10.5px;color:var(--muted);white-space:nowrap}.fld em:empty{display:none}
+.fld b{font-size:22px;line-height:1.15;font-variant-numeric:tabular-nums;min-width:2.2em;min-height:1.15em;text-align:left}
 .fld[aria-pressed="true"]{box-shadow:0 0 0 3px rgba(11,92,171,.25)}
 .fld i{font-style:normal;font-size:15px;color:var(--muted)}
 .fld[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
@@ -101,7 +101,7 @@ td b{font-size:19px}
 .hori th{font-size:12px;color:var(--muted);font-weight:500}.hori td b{font-size:17px}.hori p{margin:8px 0 0;font-size:12px;color:var(--muted)}
 .zo{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin:0 0 8px;font-size:14px;color:var(--muted)}.zo input{width:5.5em;font:inherit;font-size:16px;font-weight:700;color:var(--ink);padding:5px 8px;border:1px solid var(--line);border-radius:8px;text-align:right}
 .zo .zs button{font-size:14px;padding:4px 12px}
-.zo{flex-wrap:nowrap;gap:6px}.stp{display:inline-flex;align-items:center;gap:4px}.stp button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;font:inherit;font-size:14px;font-weight:700;color:var(--ink);touch-action:manipulation}.stp b{min-width:3.6em;text-align:center;font-size:18px;color:var(--ink)}
+.zo{flex-wrap:wrap}.stp{display:inline-flex;align-items:center;gap:4px}.stp button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;font:inherit;font-size:14px;font-weight:700;color:var(--ink);touch-action:manipulation}.stp b{min-width:3.6em;text-align:center;font-size:18px;color:var(--ink)}
 .err:empty{display:none}.fig{padding:4px 8px}
 </style>
 </head>
@@ -122,7 +122,7 @@ td b{font-size:19px}
     <div class="panel fig">
       <svg id="tee" viewBox="0 0 340 230" aria-hidden="true"></svg>
       <button type="button" class="fld" id="fB" style="left:78%;top:24%" aria-pressed="true"><small>枝管 φ</small><b id="vB"></b><em id="jB"></em></button>
-      <button type="button" class="fld" id="fM" style="left:24%;top:86%" aria-pressed="false"><small>本管 φ</small><b id="vM"></b><em id="jM"></em></button>
+      <button type="button" class="fld" id="fM" style="left:22%;top:90%" aria-pressed="false"><small>本管 φ</small><b id="vM"></b><em id="jM"></em></button>
     </div>
     <p class="err" id="err" role="alert"></p>
     <div class="keys">
@@ -151,7 +151,7 @@ td b{font-size:19px}
       <button type="button" data-zero="l" aria-pressed="false">左から0</button>
     </span></div>
     <!-- 好きな所を0にする：右（左）から○mmの所を0にして、そこから先はマイナス（2026/11/13 ユーザー） -->
-    <div class="zo"><span class="seg zs" role="group" aria-label="測りはじめるはし"><button type="button" data-zs="r" aria-pressed="true">右</button><button type="button" data-zs="l" aria-pressed="false">左</button></span><span class="stp"><button type="button" data-st="-10">−10</button><button type="button" data-st="-1">−1</button><b id="zOff">0</b><button type="button" data-st="1">＋1</button><button type="button" data-st="10">＋10</button></span></div>
+    <div class="zo"><span class="seg zs" role="group" aria-label="測りはじめるはし"><button type="button" data-zs="r" aria-pressed="true">右</button><button type="button" data-zs="l" aria-pressed="false">左</button></span>から <input id="zOff" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" aria-label="0にする所までの長さ"> mm の所を0にする</div>
     <div class="panel dev">
       <svg id="dev" viewBox="0 0 340 200"></svg>
       <p class="cap" id="cap"></p>
@@ -214,7 +214,7 @@ function drawTee(){
 }
 function render(){
   $("vB").textContent=st.B;$("vM").textContent=st.M;
-  const jt=v=>{const j=v&&jkOf(parseFloat(v));return j?"ジャケット"+j[0]+"番（外周"+j[1]+"）":"";};$("jB").textContent=jt(st.B);$("jM").textContent=jt(st.M);
+  const jt=v=>{const j=v&&jkOf(parseFloat(v));return j?"ジャケット"+j[0]+"番・外周"+j[1]:"";};$("jB").textContent=jt(st.B);$("jM").textContent=jt(st.M);
   $("fB").setAttribute("aria-pressed",String(st.cur==="B"));$("fM").setAttribute("aria-pressed",String(st.cur==="M"));
   document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.ang===st.ang)));
   drawTee();
@@ -284,7 +284,7 @@ function calc(){
 function drawDev(circ,vals,R,r,al,tmax){
   lastDev=[circ,vals,R,r,al,tmax];
   document.querySelectorAll("[data-zero]").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.zero==="r")===zeroR)));
-  document.querySelectorAll("[data-zs]").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.zs==="r")===zeroR)));$("zOff").textContent=fmt(zOff)+"mm";
+  document.querySelectorAll("[data-zs]").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.zs==="r")===zeroR)));if(document.activeElement!==$("zOff"))$("zOff").value=zOff?fmt(zOff):"";
   const off=Math.min(zOff,circ);   // 0にする所（選んだはしから off mm）
   const W=340, x0=14, x1=W-14, sx=(x1-x0)/circ;
   const vmax=Math.max(...vals,0.0001);
@@ -354,7 +354,7 @@ document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>showTab(b.datas
 $("go").onclick=calc;
 // 「右から／左から」は、この欄でも切りかえられる（上の「右から0／左から0」と同じ）（2026/11/13 ユーザー）
 document.querySelectorAll("[data-zs]").forEach(b=>b.onclick=()=>{zeroR=b.dataset.zs==="r";try{localStorage.setItem("kouken-tee-zero",zeroR?"r":"l");}catch(e){}if(lastDev)drawDev(...lastDev);});
-document.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{zOff=Math.max(0,Math.round((zOff+ +b.dataset.st)*10)/10);if(lastDev)drawDev(...lastDev);});
+$("zOff").oninput=()=>{zOff=Math.max(0,parseFloat($("zOff").value)||0);if(lastDev)drawDev(...lastDev);};
 document.querySelectorAll("[data-zero]").forEach(b=>b.onclick=()=>{zeroR=b.dataset.zero==="r";try{localStorage.setItem("kouken-tee-zero",zeroR?"r":"l");}catch(e){}if(lastDev)drawDev(...lastDev);});
 $("again").onclick=()=>{$("res").hidden=true;$("inp").hidden=false;};
 render();
