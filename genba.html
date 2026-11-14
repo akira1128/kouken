@@ -1402,7 +1402,7 @@ function orderRow(o){
     o.memo?h("div",{class:"mm",text:"メモ："+o.memo}):null,
     delivLine(o),
     editor==="西崎剣"?doneBtn(o):(o.done?h("div",{class:"donemark",text:"✓ 注文済み"}):null),
-    editor==="西崎剣"?ecBtn(o):null);
+    editor==="西崎剣"?(vendorOf(o)?h("div",{class:"ecrow"},h("span",{class:"hint",text:vendorOf(o)+"に注文する現場（グラスロンではない）"})):ecBtn(o)):null);
 }
 /* 注文日・配達日・配達時間・受け取りの人（2026/11/04 ユーザー）。orders/{id} の ddate・dtime・recv。書くのは編集する人 */
 function delivLine(o){
@@ -1526,6 +1526,8 @@ function ecKeys(name, sub){
 }
 // ジャケット・エルボの色は材料のID（jk色-番号・el色-番号）から
 const ecSub=l=>{const m=(l.itemId||"").match(/^(?:jk|el|e4)(\d+)-/);return m?(["ガルバリウム","ステン","アイボリー","ニュークリーム","シルバー","グレー","ホワイト","ブルー","キャメル","ダルエース黒","ブラック","ニューシルバー","ブラウン","新茶"][m[1]]||""):"";};
+// 注文先がグラスロンでない現場・注文（例 中防不燃＝関東ロックウール 2026/11/14 ユーザー）は「グラスロンに注文」を出さない
+const vendorOf=o=>{const x=sites.find(s=>s.id===o.siteId);const v=o.vendor||(x&&x.vendor)||"";return v&&!/グラスロン/.test(v)?v:"";};
 function ecBtn(o){
   const lines=(o.lines||[]).filter(l=>!l.make).map(l=>({n:l.name,q:Number(l.qty)||0,u:l.unit||"",k:ecKeys((l.name||"").trim(),ecSub(l))})).filter(l=>l.q>0);
   const miss=lines.filter(l=>!l.k.length).length;
