@@ -1270,6 +1270,8 @@ function renderSite(){
     h("section",{class:"panel sec"},
       h("h3",{text:"作業のコツ・部屋ごとのメモ"}),
       notes.length?h("ul",{class:"notes"},notes.map(n=>h("li",null,h("span",{class:"tx",text:n.text}),
+        // メモにPDFを付けたとき（西崎さんがここから入れる 2026/11/14 ユーザー）
+        n.url?h("a",{class:"btn ghost small",href:n.url,target:"_blank",rel:"noopener",style:{display:"inline-block",marginTop:"6px",textDecoration:"none"}},"PDF："+(n.fname||"開く")):null,
         h("span",{class:"meta"},nick(n.who)+"　"+md(ymd(new Date(n.at)))+" "+hm(n.at),
           (editor||n.who===me())?h("button",{type:"button",class:"del",onclick:async b=>{const t=b.currentTarget;
             if(t.dataset.ok!=="1"){t.dataset.ok="1";t.textContent="本当に消す";return;}
