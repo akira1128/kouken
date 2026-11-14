@@ -102,7 +102,7 @@ td b{font-size:19px}
 .hori th{font-size:12px;color:var(--muted);font-weight:500}.hori td b{font-size:17px}.hori p{margin:8px 0 0;font-size:12px;color:var(--muted)}
 .zo{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin:0 0 8px;font-size:14px;color:var(--muted)}.zo input{width:5.5em;font:inherit;font-size:16px;font-weight:700;color:var(--ink);padding:5px 8px;border:1px solid var(--line);border-radius:8px;text-align:right}
 .zo .zs button{font-size:14px;padding:4px 12px}
-.zo{flex-wrap:wrap}.stp{display:inline-flex;align-items:center;gap:4px}.stp button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;font:inherit;font-size:14px;font-weight:700;color:var(--ink);touch-action:manipulation}.stp b{min-width:2.6em;text-align:center;font-size:18px;color:var(--ink)}
+.zo{flex-wrap:nowrap;gap:6px}.stp{display:inline-flex;align-items:center;gap:4px}.stp button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;font:inherit;font-size:14px;font-weight:700;color:var(--ink);touch-action:manipulation}.stp b{min-width:3.6em;text-align:center;font-size:18px;color:var(--ink)}
 .err:empty{display:none}.fig{padding:4px 8px}
 </style>
 </head>
@@ -155,7 +155,7 @@ td b{font-size:19px}
       <button type="button" data-zero="l" aria-pressed="false">左から0</button>
     </span></div>
     <!-- 好きな所を0にする：右（左）から○mmの所を0にして、そこから先はマイナス（2026/11/13 ユーザー） -->
-    <div class="zo"><span class="seg zs" role="group" aria-label="測りはじめるはし"><button type="button" data-zs="r" aria-pressed="true">右</button><button type="button" data-zs="l" aria-pressed="false">左</button></span>から <span class="stp"><button type="button" data-st="-10">−10</button><button type="button" data-st="-1">−1</button><b id="zOff">0</b><button type="button" data-st="1">＋1</button><button type="button" data-st="10">＋10</button></span> mm を0</div>
+    <div class="zo"><span class="seg zs" role="group" aria-label="測りはじめるはし"><button type="button" data-zs="r" aria-pressed="true">右</button><button type="button" data-zs="l" aria-pressed="false">左</button></span><span class="stp"><button type="button" data-st="-10">−10</button><button type="button" data-st="-1">−1</button><b id="zOff">0</b><button type="button" data-st="1">＋1</button><button type="button" data-st="10">＋10</button></span></div>
     <div class="panel dev">
       <svg id="dev" viewBox="0 0 340 200"></svg>
       <p class="cap" id="cap"></p>
@@ -287,7 +287,7 @@ function calc(){
 function drawDev(circ,vals,R,r,al,tmax){
   lastDev=[circ,vals,R,r,al,tmax];
   document.querySelectorAll("[data-zero]").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.zero==="r")===zeroR)));
-  document.querySelectorAll("[data-zs]").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.zs==="r")===zeroR)));$("zOff").textContent=fmt(zOff);
+  document.querySelectorAll("[data-zs]").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.zs==="r")===zeroR)));$("zOff").textContent=fmt(zOff)+"mm";
   const off=Math.min(zOff,circ);   // 0にする所（選んだはしから off mm）
   const W=340, x0=14, x1=W-14, sx=(x1-x0)/circ;
   const vmax=Math.max(...vals,0.0001);
