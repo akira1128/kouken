@@ -53,11 +53,14 @@ main{max-width:640px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-rig
 .seg button{border:0;background:transparent;border-radius:999px;padding:6px 16px;font-weight:700;font-size:16px;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .fig{position:relative;padding:8px}
-.fig svg{display:block;width:100%;height:auto}
-.fld{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:4px;border:2px solid var(--line);background:var(--surface);
+.fig svg{display:block;width:100%;height:auto;max-height:24vh}
+.vals{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.fld{position:relative;display:grid;justify-items:start;gap:0;border:2px solid var(--line);background:var(--surface);
   border-radius:12px;padding:4px 12px;min-width:104px;justify-content:center;box-shadow:var(--shadow)}
-.fld small{font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap}
-.fld b{font-size:22px;font-variant-numeric:tabular-nums;min-width:2.2em;text-align:right}
+.fld small{font-size:13px;color:var(--muted);font-weight:700;white-space:nowrap}
+.fld em{font-style:normal;font-size:11.5px;color:var(--muted);min-height:1.3em}
+.fld b{font-size:30px;line-height:1.15;font-variant-numeric:tabular-nums;min-width:2.2em;min-height:1.15em;text-align:left}
+.fld[aria-pressed="true"]{box-shadow:0 0 0 3px rgba(11,92,171,.25)}
 .fld i{font-style:normal;font-size:15px;color:var(--muted)}
 .fld[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .fld[aria-pressed="true"] b::after{content:"";display:inline-block;width:2px;height:.9em;background:var(--accent);margin-left:2px;vertical-align:-2px;animation:blink 1s steps(1) infinite}
@@ -67,7 +70,7 @@ main{max-width:640px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-rig
 
 /* 電卓のボタン */
 .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
-.keys button{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 0;font-size:24px;font-weight:500;box-shadow:var(--shadow)}
+.keys button{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 0;font-size:26px;font-weight:600;box-shadow:var(--shadow);touch-action:manipulation}
 .keys button:active{background:var(--accent-soft)}
 .keys .fn{background:#f6e3e1;border-color:#e8c4c0;color:#8a2c22;font-size:18px;font-weight:700}
 .keys .go{grid-column:span 2;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-size:19px;font-weight:700}
@@ -99,6 +102,7 @@ td b{font-size:19px}
 .hori th{font-size:12px;color:var(--muted);font-weight:500}.hori td b{font-size:17px}.hori p{margin:8px 0 0;font-size:12px;color:var(--muted)}
 .zo{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin:0 0 8px;font-size:14px;color:var(--muted)}.zo input{width:5.5em;font:inherit;font-size:16px;font-weight:700;color:var(--ink);padding:5px 8px;border:1px solid var(--line);border-radius:8px;text-align:right}
 .zo .zs button{font-size:14px;padding:4px 12px}
+.zo{flex-wrap:wrap}.stp{display:inline-flex;align-items:center;gap:4px}.stp button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;font:inherit;font-size:14px;font-weight:700;color:var(--ink);touch-action:manipulation}.stp b{min-width:2.6em;text-align:center;font-size:18px;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -117,10 +121,12 @@ td b{font-size:19px}
     </div>
     <div class="panel fig">
       <svg id="tee" viewBox="0 0 340 230" aria-hidden="true"></svg>
-      <button type="button" class="fld" id="fB" style="left:50%;top:9%" aria-pressed="true"><small>枝管</small><i>φ</i><b id="vB"></b></button>
-      <button type="button" class="fld" id="fM" style="left:20%;top:88%" aria-pressed="false"><small>本管</small><i>φ</i><b id="vM"></b></button>
     </div>
-    <p class="hint">数字の欄を押してから、下のボタンで太さ（φ）を入れてください。</p>
+    <!-- 入力欄は大きく2つ並べる。押した方に入る（入れている方は青）。「次へ」で切りかえ（2026/11/14 ユーザー「数字を打つところが使いづらい」） -->
+    <div class="vals">
+      <button type="button" class="fld" id="fB" aria-pressed="true"><small>枝管 φ</small><b id="vB"></b><em id="jB"></em></button>
+      <button type="button" class="fld" id="fM" aria-pressed="false"><small>本管 φ</small><b id="vM"></b><em id="jM"></em></button>
+    </div>
     <p class="err" id="err" role="alert"></p>
     <div class="keys">
       <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" class="fn" data-k="del">DEL</button>
@@ -148,7 +154,7 @@ td b{font-size:19px}
       <button type="button" data-zero="l" aria-pressed="false">左から0</button>
     </span></div>
     <!-- 好きな所を0にする：右（左）から○mmの所を0にして、そこから先はマイナス（2026/11/13 ユーザー） -->
-    <div class="zo"><span class="seg zs" role="group" aria-label="測りはじめるはし"><button type="button" data-zs="r" aria-pressed="true">右</button><button type="button" data-zs="l" aria-pressed="false">左</button></span>から <input id="zOff" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" aria-label="0にする所までの長さ"> mm の所を0にする</div>
+    <div class="zo"><span class="seg zs" role="group" aria-label="測りはじめるはし"><button type="button" data-zs="r" aria-pressed="true">右</button><button type="button" data-zs="l" aria-pressed="false">左</button></span>から <span class="stp"><button type="button" data-st="-10">−10</button><button type="button" data-st="-1">−1</button><b id="zOff">0</b><button type="button" data-st="1">＋1</button><button type="button" data-st="10">＋10</button></span> mm を0</div>
     <div class="panel dev">
       <svg id="dev" viewBox="0 0 340 200"></svg>
       <p class="cap" id="cap"></p>
@@ -206,10 +212,11 @@ function drawTee(){
     (st.ang===90?`<path d="M${cx+16} ${cy} V${cy-16} H${cx}" fill="none" stroke="var(--muted)"/>`
       :`<path d="M${cx+30} ${cy} A30 30 0 0 0 ${(cx+30*Math.cos(a)).toFixed(1)} ${(cy-30*Math.sin(a)).toFixed(1)}" fill="none" stroke="var(--muted)"/><text x="${cx+38}" y="${cy-8}" font-size="14" font-weight="700" fill="var(--muted)">45°</text>`);
   // 枝管の欄は枝管の先に合わせる
-  $("fB").style.left=(+tc[0]/340*100)+"%";
+
 }
 function render(){
   $("vB").textContent=st.B;$("vM").textContent=st.M;
+  const jt=v=>{const j=v&&jkOf(parseFloat(v));return j?"ジャケット"+j[0]+"番（外周"+j[1]+"）":"";};$("jB").textContent=jt(st.B);$("jM").textContent=jt(st.M);
   $("fB").setAttribute("aria-pressed",String(st.cur==="B"));$("fM").setAttribute("aria-pressed",String(st.cur==="M"));
   document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.ang===st.ang)));
   drawTee();
@@ -220,7 +227,7 @@ document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{st.ang=+b.dat
 document.querySelectorAll(".keys button[data-k]").forEach(b=>b.onclick=()=>{
   const k=b.dataset.k;let v=st[st.cur];$("err").textContent="";
   if(k==="ac"){st.B="";st.M="";st.cur="B";st.fresh=true;render();return;}
-  if(k==="next"){pick(st.cur==="B"?"M":"B");return;}
+  if(k==="next"){if(st.cur==="M"&&st.B&&st.M){calc();return;}pick(st.cur==="B"?"M":"B");return;}
   if(k==="del"){v=v.slice(0,-1);st.fresh=false;}
   else{ if(st.fresh)v="";st.fresh=false;
     if(k==="."&&v.includes("."))return;
@@ -279,7 +286,7 @@ function calc(){
 function drawDev(circ,vals,R,r,al,tmax){
   lastDev=[circ,vals,R,r,al,tmax];
   document.querySelectorAll("[data-zero]").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.zero==="r")===zeroR)));
-  document.querySelectorAll("[data-zs]").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.zs==="r")===zeroR)));if(document.activeElement!==$("zOff"))$("zOff").value=zOff?fmt(zOff):"";
+  document.querySelectorAll("[data-zs]").forEach(b=>b.setAttribute("aria-pressed",String((b.dataset.zs==="r")===zeroR)));$("zOff").textContent=fmt(zOff);
   const off=Math.min(zOff,circ);   // 0にする所（選んだはしから off mm）
   const W=340, x0=14, x1=W-14, sx=(x1-x0)/circ;
   const vmax=Math.max(...vals,0.0001);
@@ -349,7 +356,7 @@ document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>showTab(b.datas
 $("go").onclick=calc;
 // 「右から／左から」は、この欄でも切りかえられる（上の「右から0／左から0」と同じ）（2026/11/13 ユーザー）
 document.querySelectorAll("[data-zs]").forEach(b=>b.onclick=()=>{zeroR=b.dataset.zs==="r";try{localStorage.setItem("kouken-tee-zero",zeroR?"r":"l");}catch(e){}if(lastDev)drawDev(...lastDev);});
-$("zOff").oninput=()=>{zOff=Math.max(0,parseFloat($("zOff").value)||0);if(lastDev)drawDev(...lastDev);};
+document.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{zOff=Math.max(0,Math.round((zOff+ +b.dataset.st)*10)/10);if(lastDev)drawDev(...lastDev);});
 document.querySelectorAll("[data-zero]").forEach(b=>b.onclick=()=>{zeroR=b.dataset.zero==="r";try{localStorage.setItem("kouken-tee-zero",zeroR?"r":"l");}catch(e){}if(lastDev)drawDev(...lastDev);});
 $("again").onclick=()=>{$("res").hidden=true;$("inp").hidden=false;};
 render();
