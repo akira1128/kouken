@@ -195,7 +195,8 @@ function drawTee(){
   const top1=P(L,-w), top2=P(L,w), b1=foot(-w), b2=foot(w);
   const mid=[((+b1[0]+ +b2[0])/2).toFixed(1),(118+12).toFixed(1)];   // 切り口は本管の丸みに沿って少し下がる
   const tc=P(L,0);
-  $("fB").style.left=Math.min(84,(+tc[0]+92)/340*100)+"%";$("fB").style.top=Math.max(14,(+tc[1]+20)/230*100)+"%";
+  // 枝管の欄は筒のすぐ右・筒の高さの真ん中あたり（2026/11/14 ユーザーが印を付けた所）
+  {const mc=P(L*0.55,0);$("fB").style.left=Math.min(82,(+mc[0]+w+66)/340*100)+"%";$("fB").style.top=Math.max(18,Math.min(60,(+mc[1])/230*100))+"%";}
   $("tee").innerHTML=
     // 本管（枝管が真ん中に来るよう、左右を cx=170 でそろえる）
     `<path d="M60 118 H280 A16 32 0 0 1 280 182 H60" fill="var(--pipe)" stroke="var(--pipe-line)" stroke-width="2"/>
