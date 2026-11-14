@@ -53,7 +53,7 @@ main{max-width:640px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-rig
 .seg button{border:0;background:transparent;border-radius:999px;padding:6px 16px;font-weight:700;font-size:16px;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .fig{position:relative;padding:8px}
-.fig svg{display:block;width:100%;height:auto;max-height:24vh}
+.fig svg{display:block;width:100%;height:auto;max-height:19vh}
 .vals{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .fld{position:relative;display:grid;justify-items:start;gap:0;border:2px solid var(--line);background:var(--surface);
   border-radius:12px;padding:4px 12px;min-width:104px;justify-content:center;box-shadow:var(--shadow)}
@@ -69,7 +69,7 @@ main{max-width:640px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-rig
 .err{color:#b42318;font-weight:700;font-size:14px;text-align:center;margin:8px 0 0;min-height:1.4em}
 
 /* 電卓のボタン */
-.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
 .keys button{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 0;font-size:26px;font-weight:600;box-shadow:var(--shadow);touch-action:manipulation}
 .keys button:active{background:var(--accent-soft)}
 .keys .fn{background:#f6e3e1;border-color:#e8c4c0;color:#8a2c22;font-size:18px;font-weight:700}
@@ -103,6 +103,7 @@ td b{font-size:19px}
 .zo{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin:0 0 8px;font-size:14px;color:var(--muted)}.zo input{width:5.5em;font:inherit;font-size:16px;font-weight:700;color:var(--ink);padding:5px 8px;border:1px solid var(--line);border-radius:8px;text-align:right}
 .zo .zs button{font-size:14px;padding:4px 12px}
 .zo{flex-wrap:wrap}.stp{display:inline-flex;align-items:center;gap:4px}.stp button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;font:inherit;font-size:14px;font-weight:700;color:var(--ink);touch-action:manipulation}.stp b{min-width:2.6em;text-align:center;font-size:18px;color:var(--ink)}
+.err:empty{display:none}.fig{padding:4px 8px}
 </style>
 </head>
 <body>
