@@ -560,7 +560,7 @@ async function importEstSites(){
 
 /* ---------- 下から出るパネル ---------- */
 function openSheet(...kids){
-  const s=$("scrim");s.replaceChildren(h("div",{class:"sheet",role:"dialog","aria-modal":"true"},kids));s.hidden=false;
+  const s=$("scrim");s.replaceChildren(h("div",{class:"sheet",role:"dialog","aria-modal":"true"},kids.flat(Infinity)));s.hidden=false;   // 中の配列も1つずつ並べる（2026/11/14）
   const close=()=>{s.hidden=true;s.replaceChildren();};
   s.onclick=e=>{if(e.target===s)close();};
   s.firstChild.prepend(h("button",{type:"button",class:"sheetback","aria-label":"もどる",onclick:close},h("b",{text:"‹"}),"戻る"));
@@ -1542,8 +1542,9 @@ async function ecSend(o,lines,btn){
     openSheet(h("h2",{text:"グラスロンのカートに入れました"}),
       h("p",{class:"hint",text:"お届け先："+(j.delivery||"―")+(dl?"":"（この現場のお届け先が決まっていないので会社あて。カートで変えてください）")}),
       h("ul",{class:"eclist"},j.ok.map(l=>h("li",null,h("b",{text:l.ec}),"　"+l.q+l.u))),
-      j.ng.length?[h("p",{class:"err",text:"グラスロンで見つからなかった材料（自分で入れてください）"}),h("ul",{class:"eclist"},j.ng.map(l=>h("li",{text:l.n+"　"+l.q+l.u})))]:null,
-      (j.msgs||[]).length?h("p",{class:"err",text:j.msgs.join("　")}):null,
+      // 見つからなかった材料は1つずつ並べる（配列のまま渡すと「[object …]」と出ていた 2026/11/14）
+      ...(j.ng.length?[h("p",{class:"err",text:"グラスロンで見つからなかった材料（自分で入れてください）"}),h("ul",{class:"eclist"},j.ng.map(l=>h("li",{text:l.n+"　"+l.q+l.u})))]:[]),
+      ((m=>m.length?h("p",{class:"err",text:m.join("　")}):null)((j.msgs||[]).flat(Infinity).filter(x=>typeof x==="string"&&x.trim()))),
       h("p",{class:"hint",text:"ホーム画面のグラスロンを開いて、お届け先「"+(j.delivery||"")+"」でログインし、カートを見て到着希望日などを入れて注文を確定してください。"}));
   }catch(e){toast("カートに入れられませんでした："+(e&&e.message||e));}
   btn.disabled=false;btn.textContent=old;
