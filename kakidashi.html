@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ja" translate="no" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light only">
+<meta name="google" content="notranslate">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>現場データの書き出し｜株式会社コウケン</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+/* 現場データの書き出し（パソコン用。原田さんの「現場ごと」ページ（NAS share「⭐️harada（保管）」）に入れるため 2026/11/17 ユーザー）
+   アプリのメニューには出さない。開けるのは editors に登録した西崎さん・原田さんだけ。
+   現場（sites）・予定表（events）・現場に頼んだ材料（orders）・材料屋さんの納品（deliveries）を、そのままファイルに書き出すだけ。
+   お金のデータはこのアプリにはないので入らない。写真などの大きなデータは書き出さない。 */
+:root{--bg:#fff5ef;--surface:#fff;--line:#f2d6c9;--ink:#3d2620;--muted:#7a5a50;--accent:#c4583f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;font-size:16px;line-height:1.6}
+header{background:#f9d5c4;color:#5c2c1f}
+header div{max-width:760px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:14px}
+header h1{margin:0;font-size:21px}
+.back{font:inherit;color:#5c2c1f;background:none;cursor:pointer;font-weight:700;font-size:15px;border:1px solid rgba(92,44,31,.35);border-radius:8px;padding:4px 12px}
+main{max-width:760px;margin:0 auto;padding:24px 20px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;text-align:center}
+.box b{display:block;font-size:19px;margin-bottom:6px}
+.go{font:inherit;font-size:18px;font-weight:700;background:var(--accent);color:#fff;border:0;border-radius:10px;padding:14px 28px;cursor:pointer;margin-top:14px}
+.go:disabled{opacity:.5;cursor:default}
+.note{color:var(--muted);font-size:14px;margin-top:14px}
+</style>
+</head>
+<body>
+<header><div><button type="button" class="back" id="back">‹ 戻る</button><h1>現場データの書き出し</h1></div></header>
+<main><div class="box" id="box"><b>確かめています…</b></div></main>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,signInAnonymously} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,collection,doc,getDoc,getDocs} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {FIREBASE_CONFIG} from "./firebase-config.js";
+
+const EDITORS=["西崎剣","原田弓子"], BOSS="西崎剣";
+const $=id=>document.getElementById(id);
+$("back").onclick=()=>{if(history.length>1)history.back();else window.close();};
+const p2=n=>String(n).padStart(2,"0");
+
+/* 写真などの大きな文字（data: で始まるもの・とても長いもの）は書き出さない */
+function slim(v){
+  if(typeof v==="string")return v.startsWith("data:")||v.length>3000?undefined:v;
+  if(Array.isArray(v))return v.map(slim).filter(x=>x!==undefined);
+  if(v&&typeof v==="object"){const o={};for(const [k,x] of Object.entries(v)){const y=slim(x);if(y!==undefined)o[k]=y;}return o;}
+  return v;
+}
+async function grab(fs,name){
+  const s=await getDocs(collection(fs,name));
+  return s.docs.map(d=>Object.assign({_id:d.id},slim(d.data())));
+}
+
+try{
+  const app=initializeApp(FIREBASE_CONFIG);
+  const auth=getAuth(app);await signInAnonymously(auth);
+  const fs=getFirestore(app);
+  const ed=await getDoc(doc(fs,"editors",auth.currentUser.uid));
+  const name=ed.exists()?ed.data().name:"";
+  if(!EDITORS.includes(name)){
+    $("box").innerHTML='<b>このページは、西崎さんと原田さんだけが開けます</b><span>先にこのパソコンで<a href="yotei.html">予定表</a>を開き、いちばん下の「編集する人はこちら」で名前をえらんで、編集用の番号を入れてください（1回だけ）。そのあと、このページを開き直してください。</span>';
+  }else{
+    $("box").innerHTML='<b>現場のデータを書き出します</b><span>ボタンを押すと、現場・予定表・頼んだ材料・納品のデータが、ダウンロードのフォルダに入ります。</span><br><button type="button" class="go" id="go">⬇ 書き出す</button><p class="note" id="st"></p>';
+    $("go").onclick=async()=>{
+      $("go").disabled=true;$("st").textContent="読み込んでいます…";
+      try{
+        const out={at:new Date().toISOString(),by:name,sites:await grab(fs,"sites"),events:await grab(fs,"events"),orders:await grab(fs,"orders"),deliveries:await grab(fs,"deliveries")};
+        if(name===BOSS){try{out.memos=await grab(fs,"memos");}catch(e){}}
+        const d=new Date(), fn=`現場データ_${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}.json`;
+        const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(out)],{type:"application/json"}));a.download=fn;
+        document.body.appendChild(a);a.click();a.remove();
+        $("st").innerHTML=`書き出しました（現場 ${out.sites.length}・予定 ${out.events.length}・頼んだ材料 ${out.orders.length}・納品 ${out.deliveries.length}）。<br>ダウンロードのフォルダの「${fn}」です。Claudeに「現場ごとを更新して」と言ってください。`;
+      }catch(e){$("st").textContent="書き出せませんでした。インターネットにつながっているか確認して、もう一度押してください。";}
+      $("go").disabled=false;
+    };
+  }
+}catch(e){
+  $("box").innerHTML='<b>読み込めませんでした</b><span>インターネットにつながっているか確認して、開き直してください。</span>';
+}
+</script>
+</body>
+</html>
