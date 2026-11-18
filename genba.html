@@ -828,7 +828,8 @@ function rollRunFace(){
 /* マンションの共用部・外部屋上のメーター（2026/10/30 ユーザー）。見込み人工はだれでも入れられ、あとで変えられる。入れた人の名前を出す。人工は1人工きざみ
    データ：x.parts.kyo／x.parts.okujo＝{total:見込み人工, totalBy, totalAt, done:済み人工, by, at} */
 // 共用部・外部屋上は複数にできる（2026/10/30 ユーザー）。数は x.kyoCount／x.okujoCount、2つ目からは parts.kyo2・okujo2…、名前は「共用部2」「外部屋上2」
-const PART_KINDS=[["kyo","共用部","kyoCount"],["okujo","外部屋上","okujoCount"]];
+// 共用部はダクトと排水管で分ける（2026/11/18 ユーザー）。今までの共用部（parts.kyo…）の記録はそのまま「共用部排水管」になる。ダクトは parts.kyod…
+const PART_KINDS=[["kyod","共用部ダクト","kyodCount"],["kyo","共用部排水管","kyoCount"],["okujo","外部屋上","okujoCount"]];
 function partMeters(x){
   if(!x.mansion)return [];
   return PART_KINDS.flatMap(([base,name,cf])=>{
