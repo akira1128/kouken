@@ -151,7 +151,7 @@ label.fl em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px}
 .hint{font-size:13px;color:var(--muted);margin:0}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);
   padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px));padding-bottom:min(env(safe-area-inset-bottom,0px),34px);
-  display:grid;grid-template-columns:repeat(3,1fr);transform:translateZ(0)}   /* iPhone・iPadで下の余白がふくらんで途中に止まるのを防ぐ（2026/11/13） */
+  display:grid;grid-template-columns:repeat(3,1fr)}   /* 2026/11/18 translateZ(0) はやめた（古い位置に残ることがあるため。ずれは下のスクリプトで直す） */
 nav.tabs button{border:0;background:none;padding:10px 4px 12px;font-size:14px;color:var(--muted);display:grid;justify-items:center;gap:3px}
 nav.tabs button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2}
 nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
@@ -1330,6 +1330,13 @@ renderWho();renderCats();renderList();renderLog();show(view);
   window.addEventListener("pageshow",fix);
   document.addEventListener("visibilitychange",function(){if(!document.hidden)fix();});
   if(window.visualViewport){var t;window.visualViewport.addEventListener("resize",function(){clearTimeout(t);t=setTimeout(fix,200);});}
+  // スクロールが止まったときも、メニューが画面の下にくっついているか確かめて、ずれていたら付け直す（2026/11/18 ユーザー「たまに固定されてない」）
+  function snap(){var n=document.querySelector("nav.tabs");if(!n||n.hidden)return;
+    var r=n.getBoundingClientRect();
+    if(r.height&&Math.abs(r.bottom-window.innerHeight)>2){n.style.display="none";void n.offsetHeight;n.style.display="";}}
+  var st;window.addEventListener("scroll",function(){clearTimeout(st);st=setTimeout(snap,250);},{passive:true});
+  document.addEventListener("touchend",function(){setTimeout(snap,400);},{passive:true});
+  window.addEventListener("resize",function(){setTimeout(snap,300);});
 })();</script>
 </body>
 </html>
