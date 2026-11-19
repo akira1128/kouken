@@ -390,6 +390,8 @@ const HASTHK=c=>c==="コイル"||c==="板";
 /* 板は「50×605×910」（すべてmm）と出す（2026/10/28） */
 const ISPLATE=c=>c==="板";
 /* 旭産業ラッキングカバーの番号 → [外周mm, 外径φ]（akira2「旭産業_ラッキングカバーサイズ表.pdf」2026/10/8） */
+// らくえるは No.16 まで（LAG_NO の先頭から26個）。つかみエルボの外周（グラスロン エルボ価格表 2026.12 の 580〜1500）
+const RAKU_N=26, TSUKAMI_G=[580,600,620,640,660,680,700,720,740,760,780,800,820,840,860,880,900,920,940,960,980,1000,1050,1100,1150,1200,1250,1300,1350,1400,1450,1500];
 const LAG_NO=[["特2",170,54],["特1",190,61],["0",215,68],["1",230,73],["2S",240,76],["2",250,80],["3S",265,84],["3",280,89],["4",300,96],["5S",315,100],["5",325,104],
   ["6S",335,107],["6",345,110],["7S",355,113],["7",370,118],["8S",385,123],["8",400,127],["9S",410,131],["9",425,135],["10",455,145],["11",470,150],["12",490,156],
   ["13",510,162],["14",540,172],["15",555,177],["16",575,183],["17",600,191],["18",620,197],["19S",635,202],["19",650,207],["20",670,213],["21",700,223],
@@ -1086,7 +1088,7 @@ function askPin(){
 const SPECS=[["20t",0,["15A","20A","25A","32A","40A","50A","65A","80A"]],["25t",0,["100A","125A","150A"]],["30t",1,["15A","20A","25A","32A","40A","50A"]],
   ["40t",2,["32A","40A","50A","65A","80A","100A","125A","150A","200A","250A","300A"]],["50t",3,["200A","250A","300A"]]];
 /* 材料を足したり、名前・種類を移す処理を足したときは、この数を1つ上げる（上げないと動かない） */
-const MIGRATE_VER=21;   // 21：アーマT-060（2026/11/06）   // 20：黒艶消しテープ100幅・アーマM-060/M-076・エアロM38035〜M38060/M63028（2026/11/06）   // 19：アーマフレックスを11181の請求書から追加、ボンドを「テープ・ボンド」へ（2026/11/06）   // 18：アーマフレックスの品目（村商の請求書から 2026/11/06）   // 17：エアロフレックス・アーマフレックスのカテゴリ、エアロテープを移す（2026/11/05）   // 16：GWP 生（グラスウール保温筒・外装なし）を足した（2026/11/04）   // 15：ホワイト0.3・ニューシルバー0.27のコイル（2026/11/03）   // 14：PF保温筒に塩ビ直管（2026/11/03）   // 13：ワイヤードブランケット 100×605×2000（2026/11/03）   // 12：ワイヤードブランケットを足した（2026/11/03）   // 11：ニューシルバー・ブラウン・新茶（2026/11/03）   // 10：黒艶消しテープをアクリルの下へ（2026/11/03）   // 9：砲金バルブにもダルエース黒・ブラック（2026/11/03）   // 8：ジャケット・エルボにダルエース黒・ブラック（2026/11/03）   // 7：ビニールテープをペフチューブのテープへ（2026/11/03）   // 6：ペフチューブを足した（2026/11/03）   // 5：スチロールカバーをグラスロンの請求書の名前に（2026/11/03）   // 2：ジャケット・エルボをグラスロンの請求書の名前にし、45°を足した（2026/11/03）
+const MIGRATE_VER=22;   // 22：つかみエルボ（外周580〜1500）を足し、らくえる No.17以上（在庫0）を消した（2026/11/19）   // 21：アーマT-060（2026/11/06）   // 20：黒艶消しテープ100幅・アーマM-060/M-076・エアロM38035〜M38060/M63028（2026/11/06）   // 19：アーマフレックスを11181の請求書から追加、ボンドを「テープ・ボンド」へ（2026/11/06）   // 18：アーマフレックスの品目（村商の請求書から 2026/11/06）   // 17：エアロフレックス・アーマフレックスのカテゴリ、エアロテープを移す（2026/11/05）   // 16：GWP 生（グラスウール保温筒・外装なし）を足した（2026/11/04）   // 15：ホワイト0.3・ニューシルバー0.27のコイル（2026/11/03）   // 14：PF保温筒に塩ビ直管（2026/11/03）   // 13：ワイヤードブランケット 100×605×2000（2026/11/03）   // 12：ワイヤードブランケットを足した（2026/11/03）   // 11：ニューシルバー・ブラウン・新茶（2026/11/03）   // 10：黒艶消しテープをアクリルの下へ（2026/11/03）   // 9：砲金バルブにもダルエース黒・ブラック（2026/11/03）   // 8：ジャケット・エルボにダルエース黒・ブラック（2026/11/03）   // 7：ビニールテープをペフチューブのテープへ（2026/11/03）   // 6：ペフチューブを足した（2026/11/03）   // 5：スチロールカバーをグラスロンの請求書の名前に（2026/11/03）   // 2：ジャケット・エルボをグラスロンの請求書の名前にし、45°を足した（2026/11/03）
 /* あとから足す材料（なければ作る。数は0）。order が大きいほど一覧の下に出る */
 const EXTRA_ITEMS=[
   ...["15A","20A","25A","32A","40A","50A"].map(a=>({id:"alk30-"+a,name:"ALKP保温筒 "+a+"×30t",cat:"ALK（P）保温筒",unit:"本",order:1})), // 2026/10/28 使う頻度が少ないので20tの下に
@@ -1116,8 +1118,12 @@ const EXTRA_ITEMS=[
     .map(([n,t],i)=>({id:"plate"+i,name:n+" "+t+"t",cat:"板",unit:"枚",order:i,thk:t,wid:605,len:910})),
   // ジャケット・エルボ：旭産業の番号 特2〜36 を色ごとに（2026/10/28 ユーザー「番号は36番まで」）
   // 名前は東京グラスロンの請求書と同じ（〇〇ジャケット (旭)・〇〇らくえる (旭)＝90°・〇〇らくえる 45°(旭)）（2026/11/03 ユーザー）
+  // らくえるは No.16 まで（それより大きいサイズは無い 2026/11/19 ユーザー）。ジャケットは36番まで
   ...JE_COLORS.flatMap((col,ci)=>[["jk","ジャケット (旭)","本",0],["el","らくえる (旭)","個",1],["e4","らくえる 45°(旭)","個",2]].flatMap(([k,n,u,t])=>
-    LAG_NO.map(([no],ni)=>({id:k+ci+"-"+no,name:col+n+" No."+no,cat:"ジャケット・エルボ",sub:col,unit:u,order:t*100+ni,no})))),
+    (k==="jk"?LAG_NO:LAG_NO.slice(0,RAKU_N)).map(([no],ni)=>({id:k+ci+"-"+no,name:col+n+" No."+no,cat:"ジャケット・エルボ",sub:col,unit:u,order:t*100+ni,no})))),
+  // つかみエルボ（らくえる以外のエルボ）：外周の数字で注文する。サイズはグラスロンのエルボ価格表（外周180〜1500）のうち、らくえる No.16（外周575）より大きいもの（2026/11/19 ユーザー）
+  ...JE_COLORS.flatMap((col,ci)=>[["tg","つかみエルボ (旭)",1],["th","つかみエルボ 45°(旭)",2]].flatMap(([k,n,t])=>
+    TSUKAMI_G.map((g,gi)=>({id:k+ci+"-"+g,name:col+n+" #"+g,cat:"ジャケット・エルボ",sub:col,unit:"個",order:t*100+60+gi,gaishu:g})))),
   // 砲金バルブ：配管サイズと厚み 15A〜50A×20t・30t を色ごとに（2026/11/03 ユーザー）。20t が上、30t が下
   ...JE_COLORS.flatMap((col,ci)=>[["20t","hk",0],["30t","hkt",10]].flatMap(([t,k,o])=>["15A","20A","25A","32A","40A","50A"].map((a,ai)=>({id:k+ci+"-"+a,name:col+"砲金バルブ "+a+"×"+t,cat:"砲金バルブ・メクラキャップ",sub:col,unit:"個",order:o+ai})))),
   // GWP 生（グラスウール保温筒・外装なし）：名前とサイズはグラスロンECと同じ（2026/11/04 ユーザー「PF保温筒の右」）。並びは厚みごと
@@ -1213,6 +1219,12 @@ async function renameJE(){
   const list=EXTRA_ITEMS.filter(x=>x.cat==="ジャケット・エルボ"&&!x.id.startsWith("e4"));
   for(let k=0;k<list.length;k+=400){const b=writeBatch(fs);list.slice(k,k+400).forEach(x=>b.update(doc(fs,"items",x.id),{name:x.name}));try{await b.commit();}catch(e){}}   // 1回に500件までなので分ける
 }
+// らくえるは No.16 まで。No.17以上の「らくえる」の材料は、在庫が0なら消す（在庫が残っているものは消さない 2026/11/19）
+async function dropBigRaku(){
+  const big=new Set(LAG_NO.slice(RAKU_N).map(([no])=>no));
+  const ds=(await getDocs(collection(fs,"items"))).docs.filter(d=>/^e[l4]\d+-/.test(d.id)&&big.has(d.id.replace(/^e[l4]\d+-/,""))&&!(Number(d.data().qty)>0));
+  for(let k=0;k<ds.length;k+=400){const b=writeBatch(fs);ds.slice(k,k+400).forEach(d=>b.delete(d.ref));try{await b.commit();}catch(e){}}
+}
 async function migrateCats(){
   const q=await getDocs(collection(fs,"items"));
   for(const d of q.docs){const x=d.data(),c=newCat(x);if(c)await updateDoc(d.ref,{cat:c});
@@ -1305,7 +1317,7 @@ renderWho();renderCats();renderList();renderLog();show(view);
   // 材料を作る・名前や種類を移す処理は、版（MIGRATE_VER）が上がったときに1回だけ。毎回やると全部の材料を読むので
   try{
     const m=await getDoc(doc(fs,"items","_meta"));const done=m.exists()?Number(m.data().ver)||0:0;
-    if(done<MIGRATE_VER){await migrateCats();if(done<2)await renameJE();if(done<5)await renamePF();if(done<7)await moveTape();if(done<19)try{await updateDoc(doc(fs,"items","amb-ck461a"),{sub:"テープ・ボンド",order:10});}catch(e){}if(done<19)for(const c of ["50035R","50042R","50050R","50060R"])try{await updateDoc(doc(fs,"items","amr-"+c),{order:Number(c.slice(2,5))});}catch(e){}if(done<19)for(const c of ARMA_TUBES)try{await updateDoc(doc(fs,"items","amt-"+c),{order:"MRTU".indexOf(c[0])*1000+Number(c.slice(2))});}catch(e){}if(done<17)for(const id of AERO_TAPE)try{await updateDoc(doc(fs,"items",id),{cat:"エアロフレックス",sub:"テープ・ボンド"});}catch(e){}if(done<10)for(const id of ["tape4-0","tape4-1"])try{await updateDoc(doc(fs,"items",id),{order:1.5});}catch(e){}await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
+    if(done<MIGRATE_VER){await migrateCats();if(done<22)await dropBigRaku();if(done<2)await renameJE();if(done<5)await renamePF();if(done<7)await moveTape();if(done<19)try{await updateDoc(doc(fs,"items","amb-ck461a"),{sub:"テープ・ボンド",order:10});}catch(e){}if(done<19)for(const c of ["50035R","50042R","50050R","50060R"])try{await updateDoc(doc(fs,"items","amr-"+c),{order:Number(c.slice(2,5))});}catch(e){}if(done<19)for(const c of ARMA_TUBES)try{await updateDoc(doc(fs,"items","amt-"+c),{order:"MRTU".indexOf(c[0])*1000+Number(c.slice(2))});}catch(e){}if(done<17)for(const id of AERO_TAPE)try{await updateDoc(doc(fs,"items",id),{cat:"エアロフレックス",sub:"テープ・ボンド"});}catch(e){}if(done<10)for(const id of ["tape4-0","tape4-1"])try{await updateDoc(doc(fs,"items",id),{order:1.5});}catch(e){}await ensureItems();await setDoc(doc(fs,"items","_meta"),{ver:MIGRATE_VER,at:Date.now()});}
   }catch(e){}
   onSnapshot(collection(fs,"items"),s=>{
     items=s.docs.filter(d=>!d.id.startsWith("_")).map(d=>Object.assign({id:d.id},d.data())).filter(x=>!x.deleted).sort((a,b)=>rank(a)-rank(b)||(a.name||"").localeCompare(b.name||"","ja",{numeric:true}));
