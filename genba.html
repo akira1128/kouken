@@ -1146,7 +1146,8 @@ function siteVisits(x){
   // 予定表で別の現場と一緒に入っている日（例：中防不燃と水谷中学校の加工を半日ずつ）は、手で足す（x.visitAdd：[{date,people,n,kako,note}]、n＝1人あたりの人工 2026/11/19 ユーザー）
   for(const a of x.visitAdd||[]){
     if(!a||!a.date)continue;
-    const r=days[a.date]||(days[a.date]={date:a.date,people:[],kako:false,notes:[],w:{}});
+    // 工場での加工は、同じ日の現場とは別の行にする（現場に行った人まで「工場で加工」にならないように）
+    const key=a.date+(a.kako?"#加工":""), r=days[key]||(days[key]={date:a.date,people:[],kako:false,notes:[],w:{}});
     (a.people||[]).forEach(n=>{if(!r.people.includes(n))r.people.push(n);r.w[n]=Number(a.n)||1;});
     if(a.kako)r.kako=true;if(a.note&&!r.notes.includes(a.note))r.notes.push(a.note);
   }
@@ -1174,7 +1175,7 @@ function fillVisits(box,x){
     // 予定表に入っていない月がある現場は、正しい人工を手で入れておく（x.ninkuFix：{n,src}）。例：大阪南港＝冷凍倉庫比較表（2026/10/31 ユーザー）
     x.ninkuFix?h("p",{class:"vsum"},"のべ ",h("b",{text:x.ninkuFix.n+"人工"}),"（"+(x.ninkuFix.src||"手入力")+"）",
       past.length?h("small",{style:{display:"block",color:"var(--muted)"},text:"予定表から数えた分："+nin+"人工（"+past.length+"日・"+md(past[past.length-1].date)+"〜）"}):null):
-    past.length?h("p",{class:"vsum"},"のべ ",h("b",{text:nin+"人工"}),"（"+past.length+"日）"):null,
+    past.length?h("p",{class:"vsum"},"のべ ",h("b",{text:nin+"人工"}),"（"+new Set(past.map(r=>r.date)).size+"日）"):null,
     past.length?h("ul",{class:"vwho"},Object.entries(cnt).sort((a,b)=>b[1]-a[1]||last[b[0]].localeCompare(last[a[0]])).map(([n,c])=>
       h("li",null,h("b",{text:nick(n)}),h("span",{text:c+"日"}),h("small",{text:"最後 "+md(last[n])})))):null,
     past.length?h("ul",{class:"visits"},past.map(row)):h("p",{class:"empty",text:events.length?"予定表にこの現場の日はまだありません":"読み込んでいます…"}),
