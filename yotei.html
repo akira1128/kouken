@@ -652,7 +652,7 @@ $("tday").addEventListener("click",()=>{sel=todayS();ym=sel.slice(0,7);openWeek=
 // 月・週・メンバー：指について横に動き、はなすと次（前）の月・週へすべって切りかわる
 const EZ="cubic-bezier(.22,.8,.24,1)";
 let swiping=false;
-function swipeable(el){
+function swipeable(el,go=move){
   let sx=null,sy=0,dx=0,axis="",t0=0;
   const setX=x=>{el.style.transform=x?"translateX("+x+"px)":"";};
   el.addEventListener("touchstart",e=>{if(swiping)return;sx=e.touches[0].clientX;sy=e.touches[0].clientY;dx=0;axis="";t0=Date.now();},{passive:true});
@@ -672,7 +672,7 @@ function swipeable(el){
     swiping=true;
     const dir=dx<0?1:-1;
     if(!reduceMotion())await el.animate([{transform:"translateX("+dx+"px)",opacity:1},{transform:"translateX("+(-dir*w)+"px)",opacity:.2}],{duration:170,easing:"ease-in"}).finished.catch(()=>{});
-    setX(0);move(dir);
+    setX(0);go(dir);
     if(!reduceMotion())await el.animate([{transform:"translateX("+(dir*w*.5)+"px)",opacity:.2},{transform:"none",opacity:1}],{duration:260,easing:EZ}).finished.catch(()=>{});
     swiping=false;
   };
@@ -680,6 +680,8 @@ function swipeable(el){
   el.addEventListener("touchcancel",end,{passive:true});
 }
 swipeable($("cal"));swipeable($("mem"));
+// 一番下の「えらんだ日の予定」：左へスワイプで次の日、右へスワイプで前の日（2026/11/19 ユーザー）
+swipeable($("dayPanel"),dir=>select(addDays(sel,dir)));
 
 /* ---------- 下から出るパネル ---------- */
 function openSheet(...kids){
