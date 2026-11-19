@@ -1147,7 +1147,8 @@ function siteVisits(x){
   for(const a of x.visitAdd||[]){
     if(!a||!a.date)continue;
     // 工場での加工は、同じ日の現場とは別の行にする（現場に行った人まで「工場で加工」にならないように）
-    const key=a.date+(a.kako?"#加工":""), r=days[key]||(days[key]={date:a.date,people:[],kako:false,notes:[],w:{}});
+    // fix:true は、予定表から出た同じ日の行の人工だけ直す（例：中防不燃の11/18 しおん・ロンを0.5に）
+    const key=a.date+(a.kako&&!a.fix?"#加工":""), r=days[key]||(days[key]={date:a.date,people:[],kako:false,notes:[],w:{}});
     (a.people||[]).forEach(n=>{if(!r.people.includes(n))r.people.push(n);r.w[n]=Number(a.n)||1;});
     if(a.kako)r.kako=true;if(a.note&&!r.notes.includes(a.note))r.notes.push(a.note);
   }
