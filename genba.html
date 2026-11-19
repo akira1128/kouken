@@ -1138,10 +1138,17 @@ function siteVisits(x){
     const kako=e.site===FACTORY, note=[!kako&&!k.full.includes(e.site)?"予定表："+e.site:"",e.memo].filter(Boolean).join("　");
     let d=pd(e.date);const end=e.end&&e.end>e.date?pd(e.end):d;
     for(let i=0;d<=end&&i<92;i++,d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1)){
-      const key=ymd(d), r=days[key]||(days[key]={date:key,people:[],kako:false,notes:[]});
+      const key=ymd(d), r=days[key]||(days[key]={date:key,people:[],kako:false,notes:[],w:{}});
       (e.people||[]).forEach(n=>{if(!r.people.includes(n))r.people.push(n);});
       if(kako)r.kako=true;if(note&&!r.notes.includes(note))r.notes.push(note);
     }
+  }
+  // 予定表で別の現場と一緒に入っている日（例：中防不燃と水谷中学校の加工を半日ずつ）は、手で足す（x.visitAdd：[{date,people,n,kako,note}]、n＝1人あたりの人工 2026/11/19 ユーザー）
+  for(const a of x.visitAdd||[]){
+    if(!a||!a.date)continue;
+    const r=days[a.date]||(days[a.date]={date:a.date,people:[],kako:false,notes:[],w:{}});
+    (a.people||[]).forEach(n=>{if(!r.people.includes(n))r.people.push(n);r.w[n]=Number(a.n)||1;});
+    if(a.kako)r.kako=true;if(a.note&&!r.notes.includes(a.note))r.notes.push(a.note);
   }
   return Object.values(days);
 }
@@ -1157,8 +1164,10 @@ function fillVisits(box,x){
   const past=all.filter(r=>r.date<=today).sort((a,b)=>b.date.localeCompare(a.date));
   const next=all.filter(r=>r.date>today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,10);
   // 人ごとの日数と最後に行った日（メンバーが変わっても、だれに聞けばよいか分かるように）
-  const cnt={},last={};let nin=0;past.forEach(r=>r.people.forEach(n=>{cnt[n]=(cnt[n]||0)+1;nin++;if(!last[n])last[n]=r.date;}));
-  const row=r=>h("li",null,h("b",{text:md(r.date)}),h("span",{text:r.people.map(nick).join("・")||"―"}),
+  // 人工は1人1日＝1。半日（visitAdd の n＝0.5）はその分だけ数える
+  const wt=(r,n)=>r.w&&r.w[n]!=null?r.w[n]:1, f1=v=>Math.round(v*10)/10;
+  const cnt={},last={};let nin=0;past.forEach(r=>r.people.forEach(n=>{cnt[n]=f1((cnt[n]||0)+wt(r,n));nin=f1(nin+wt(r,n));if(!last[n])last[n]=r.date;}));
+  const row=r=>h("li",null,h("b",{text:md(r.date)}),h("span",{text:r.people.map(n=>nick(n)+(wt(r,n)!==1?wt(r,n):"")).join("・")||"―"}),
     r.kako?h("span",{class:"tag",text:"工場で加工"}):null,r.notes.length?h("span",{class:"memo",text:r.notes.join("　")}):null);
   box.replaceChildren(h("div",{class:"sec"},
     h("h3",{text:"この現場に行った履歴"}),
