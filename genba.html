@@ -458,6 +458,7 @@ const FIELDS=[["address","住所","例：東京都八王子市明神町4-1"],
 const LONG=new Set(["route","parking","rules","caution","building","spec","progress"]);
 /* 現場の状態。「予定」はまだ決まっていない現場（どれにするかは西崎さんが決める 2026/10/28） */
 const STATUSES=["施工中","これから","予定","見積もり","終わった"];
+const SHOW_EST=false;
 const STATUS_ORDER={"施工中":0,"これから":1,"予定":2,"見積もり":3};
 const MK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20.6h18"/><path d="M15.9 20.6V3.4h3.7v17.2"/><path d="M4.7 5.8v14.8"/>'+
   '<path d="M4.2 4.6h11.7v1.3H4.2zM4.2 8.1h11.7v1.3H4.2zM4.2 11.6h11.7v1.3H4.2zM4.2 15.1h11.7v1.3H4.2z"/>'+
@@ -748,13 +749,14 @@ function openKoutei(k){
 function renderSites(){
   const box=$("vSites");
   if(!sites.length){box.replaceChildren(h("div",{class:"panel empty",text:fs?"現場がまだありません":"読み込んでいます…"}));return;}
+  // 見積もりの欄はひとまず出さない（2026/11/25 ユーザー「見積もりのメニュー自体も一度消して」。戻すときは SHOW_EST を true）
   const groups=[["施工中","",x=>x.status==="施工中","now"],["これから","",x=>x.status==="これから","next"],["予定","まだ決まっていない",x=>x.status==="予定","plan"],["見積もり","見積を出している",x=>x.status==="見積もり","est"],["そのほか","",x=>!(x.status in STATUS_ORDER)&&x.status!=="終わった","other"],["完了した現場","",x=>x.status==="終わった","done"]];   // 終わった現場はいちばん下（2026/11/13 ユーザー）
   // 外注が施工している現場は、まとまりのいちばん下に出す（2026/10/28 ユーザー）
   const outs=x=>!!(x.info&&x.info.outsource);
   const nw=sites.filter(isNewSite);
   const bar=nw.length?h("button",{type:"button",class:"newbar",onclick:()=>openSite(nw[0].id)},h("span",{class:"newb",text:"NEW"}),
     h("span",null,"新しい現場が入りました：",h("b",{text:nw.map(x=>shortSite(x.name)).join("、")})),h("span",{class:"go",text:"›"})):null;
-  box.replaceChildren(...[bar,uretCal()].filter(Boolean),...groups.filter(([,,f,k])=>k==="est"||sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>isNewSite(b)-isNewSite(a)||outs(a)-outs(b));   // 新しい現場はいちばん上
+  box.replaceChildren(...[bar,uretCal()].filter(Boolean),...groups.filter(([,,f,k])=>k==="est"?SHOW_EST:sites.some(f)).map(([t,sub,f,k])=>{const arr=sites.filter(f).sort((a,b)=>isNewSite(b)-isNewSite(a)||outs(a)-outs(b));   // 新しい現場はいちばん上
     return h("section",{class:"panel grp-"+k,style:{marginBottom:"14px"}},h("h3",{class:"grouph"},t+"　"+arr.length+"件",sub?h("small",{text:"（"+sub+"）"}):null),
       k==="est"&&!arr.length?h("p",{class:"empty",text:"見積もり中の現場はまだありません"}):null,
       // 見積もりの現場は西崎さんの指示でこちらから入れる（アプリに足すボタンは出さない 2026/10/30 ユーザー）
